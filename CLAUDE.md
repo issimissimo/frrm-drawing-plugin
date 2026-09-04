@@ -73,6 +73,16 @@ Fasi 4–10 (UI definitiva, IndexedDB, export, plugin WP, moderazione, gallery, 
 
 Se una sessione futura comincia a costruire persistenza, backend o integrazione WP, va nominato prima di scrivere il codice.
 
+## Pubblicazione
+
+**Online:** <https://issimissimo.com/temp/frrm-drawing-plugin/>
+
+Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si puo' spostare.
+
+Credenziali FTP in `~\.claude\.secretstp-siteground.env`, condivise fra i progetti del workspace; le regole d'uso stanno in `~\.claudeules\credenziali.md`.
+
+**Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frrm-drawing-plugin/`.
+
 ## Regole di questa cartella
 
 - Sessione a sé. Aprire VSCode / Claude Code **direttamente su questa cartella**, mai sulla root `Claude_Workspace`: memoria e cronologia sono indicizzate sul percorso.
