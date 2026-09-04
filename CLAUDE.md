@@ -77,9 +77,10 @@ Se una sessione futura comincia a costruire persistenza, backend o integrazione 
 
 **Online:** <https://issimissimo.com/temp/frrm-drawing-plugin/>
 
-Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si puo' spostare.
+Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
 
-Credenziali FTP in `~\.claude\.secretstp-siteground.env`, condivise fra i progetti del workspace; le regole d'uso stanno in `~\.claudeules\credenziali.md`.
+Credenziali FTP in `~/.claude/.secrets/ftp-siteground.env`, condivise fra i progetti del workspace; le regole d'uso stanno in `~\.claude
+ules\credenziali.md`.
 
 **Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frrm-drawing-plugin/`.
 
