@@ -1,0 +1,12 @@
+# Output degli strumenti di QA
+.playwright-mcp/
+*.tmp.mjs
+
+# Screenshot di lavoro
+gesso*.png
+fase*-*.png
+
+# Sistema
+Thumbs.db
+.DS_Store
+node_modules/

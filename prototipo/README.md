@@ -1,0 +1,181 @@
+# Prototipo — avvio
+
+Il codice usa ES modules: aprire `index.html` con doppio click **non funziona**, il browser blocca i moduli su `file://`. Serve un server statico.
+
+```
+cd prototipo
+python -m http.server 8123 --bind 0.0.0.0
+```
+
+- Desktop: <http://localhost:8123/>
+- Telefono sulla stessa wifi: `http://<ip-del-pc>:8123/`
+
+L'IP si trova con `ipconfig`. Se il telefono non raggiunge il PC, quasi sempre è il firewall di Windows che blocca la porta, non il codice.
+
+## Test
+
+```
+node test/run.js
+```
+
+29 test sulle funzioni pure, nessuna dipendenza. Coprono filtro, ricampionamento e semplificazione. Ciò che resta soggettivo — "un cerchio sembra un cerchio", quanto smoothing è giusto — si verifica a mano sul telefono.
+
+## Stato: Fase 3
+
+Effetto gessetto. Il tratto **non viene disegnato: viene timbrato**, ripetendo lungo la curva una piccola impronta irregolare pre-renderizzata (`chalk.js`). Nessuna linea, per quanto lavorata, restituisce bordi sfrangiati, grana e opacità irregolare tutti insieme.
+
+Pipeline completa:
+
+| Quando | Cosa | Dove |
+|---|---|---|
+| a ogni campione | One Euro Filter | `filter.js` |
+| a ogni campione | pseudo-pressione dalla velocità | `pen.js` |
+| a fine gesto | semplificazione RDP | `geom.js` |
+| a ogni render | Catmull-Rom + ricampionamento | `geom.js` |
+| a ogni render | timbratura delle impronte | `chalk.js` |
+
+**Il fondo lavagna è un colore pieno nel CSS, senza texture** (scelta del 04/09/2026). Il canvas dei tratti è quindi trasparente: il cancellino lavora in `destination-out` e, se il fondo fosse dipinto insieme ai tratti, aprirebbe buchi neri invece di scoprire la lavagna.
+
+### Tre scelte contro il brief §5.2, tutte per costo
+
+**Il passo dei timbri è legato alla larghezza** (un terzo), non al passo fisso di 2,5 unità della polilinea. Le impronte sono larghe quanto il tratto, quindi a un terzo si sovrappongono già a sufficienza: 90 timbri per tratto invece di 800.
+
+**La polvere sta dentro l'impronta**, non è uno scatter disegnato a parte: sono granelli isolati oltre il disco centrale, e così costano zero.
+
+**Niente rotazione per timbro**, che imporrebbe un `save`/`rotate`/`restore` ogni volta. La varietà viene da otto impronte diverse pescate a caso.
+
+### Cosa fa sembrare gesso quello che si vede
+
+Il primo tentativo produceva una matita grigia. Due correzioni:
+
+**La grana deve essere a macchie larghe** (5 celle su 96 px). L'impronta viene disegnata a una frazione della dimensione sorgente — da 96 px a una ventina — quindi una grana fine si media via e restituisce un grigio uniforme.
+
+**Servono vuoti veri, non zone più chiare.** Sotto una soglia l'opacità va a zero e la lavagna traspare: è il buco a fare il gesso. Un interno solo più chiaro legge come inchiostro diluito.
+
+### Perché il tratto non salta più quando alzi il dito
+
+A fine gesto il tratto **non viene ri-renderizzato: si travasano i pixel** dell'overlay sul livello persistente (`board.commitOverlay`). Il risultato è che ciò che si è visto disegnare resta esattamente com'era: **0% di pixel cambiati**, contro il 41,8% della prima versione.
+
+Ci sono voluti tre tentativi, e i due scartati valgono la pena di essere ricordati.
+
+**Semplificazione incrementale durante il tratto** (consolidare i punti già passati invece di rifare tutto a `pointerup`). Portava il salto da 41,8% a 29%: meglio, non risolto. È rimasta comunque, perché rende il tratto vivo già quasi identico al salvato.
+
+**Aspetto del timbro legato alla posizione anziché alla sequenza.** Sembrava la soluzione elegante — un timbro in più non avrebbe sfasato tutti gli altri — e invece **peggiorava**: uno spostamento di due unità passava dal 2,8% al 16,5% dei pixel, perché ogni micro-movimento della curva ricalcolava l'aspetto di ogni impronta.
+
+La causa vera è che aggiungere un solo campione cambia la curva Catmull-Rom *e* il numero di impronte: non è eliminabile ri-renderizzando, qualunque generatore si usi.
+
+**Nessun ridisegno dal modello a fine gesto, nemmeno per la gomma.** All'inizio la gomma faceva un `repaint()` completo per agire sui tratti sottostanti nell'ordine giusto — e così la prima gommata ricostruiva *tutti* i tratti, cambiando la grana dell'intero disegno. Non serve: la gomma ha già inciso il livello durante il gesto, in `destination-out`. Il risultato corretto è già a schermo.
+
+**Il prezzo, dichiarato:** il livello dei tratti diverge dal modello. Su **undo, redo o ridimensionamento** il disegno viene ricostruito e la grana cambia (un tratto ri-renderizzato ha circa il 20-30% di pixel in più di quello travasato, per via degli arrotondamenti sull'alpha premoltiplicato). **La forma resta identica**, cambia solo la texture. È il momento giusto in cui pagarlo: mentre si disegna si guarda il tratto che si sta facendo, dopo un undo si guarda il disegno intero.
+
+### La gomma cancella mentre si muove il dito
+
+Non è scontato, e nella prima versione non funzionava: il tratto in corso vive sull'overlay, ma la gomma lavora in `destination-out` e sull'overlay cancellava l'overlay — vuoto. Non si vedeva nulla fino al rilascio.
+
+La gomma va quindi applicata **direttamente al livello dei tratti, e solo sul pezzo nuovo**: ridisegnarla tutta a ogni frame cancellerebbe sessanta volte lo stesso punto. Da qui il parametro `da` di `timbra()`.
+
+Per lo stesso motivo **la gomma non viene semplificata** (`eps 0`): se i punti cambiassero sotto, l'indice dei timbri già applicati non corrisponderebbe più. Con questa scelta lo scarto al rilascio è **1,8%**, era il 45,3%.
+
+### Verificato
+
+| | |
+|---|---|
+| due render dello stesso Drawing | **0 pixel diversi** (il seed funziona) |
+| stesso Drawing a 800 / 1600 / 3200 px | differenza media 0,44% |
+| 40 tratti, 8359 timbri, ridisegno completo | 26,5 ms su desktop |
+| costo di un singolo tratto | 0,17 ms |
+
+Il costo per tratto è ciò che si paga a ogni frame mentre si disegna: con quel margine il budget di 8 ms non è in discussione. Il ridisegno completo si paga solo su undo, resize e cancellino.
+
+### La taratura dello smoothing — chiusa
+
+Livello scelto: **Molto** (`eps 10`), confermato sul telefono il 31/08/2026.
+
+**La leva è l'epsilon della semplificazione RDP, non il filtro.** One Euro toglie il tremore ad alta frequenza; è la semplificazione geometrica a rendere il tratto *disegnato bene*.
+
+Misura: rugosità = variazione angolare media fra segmenti consecutivi, in gradi. È ciò che l'occhio legge come "tremolante". Una curva pulita sta a **0,30**.
+
+| livello | eps | rugosità | effetto |
+|---|---|---|---|
+| **Molto** (scelto) | 10 | **0,31** | liscio come una curva disegnata |
+| Medio | 3 | 0,7 | ripulito ma riconoscibile |
+| Poco | 1 | 3,5 | il gesto com'è, tremore compreso |
+
+Il selettore nella barra resta come strumento: in Fase 3 la texture del gessetto cambierà la resa e potrebbe valere la pena riguardarlo. Va rimosso con la UI definitiva della Fase 4.
+
+**Due trappole, per non ripercorrerle.**
+
+Una versione precedente faceva variare **solo `beta`**, e i tre livelli risultavano indistinguibili: `beta` interviene sopra una certa velocità, e a mano lenta — cioè proprio quando si guarda lo smoothing — non cambia nulla. Un test copre ora il caso.
+
+Neppure abbassare `minCutoff` serve: il tremore gonfia la stima di velocità (±4 unità a 55 Hz valgono ~440 unità/s apparenti), quindi `beta·velocità` domina e il filtro scambia il tremore per un gesto veloce.
+
+**`beta` non è un compromesso.** A parità di epsilon la rugosità resta 0,30 per qualunque `beta` fra 0,02 e 0,3, mentre il lag passa da 6,7 a 0,5 unità. Si è scelto **0,2**: il valore migliore, senza contropartita.
+
+Il prezzo di `eps 10` è il dettaglio fine: un tratto molto corto può venire ridotto a una linea retta.
+
+### Verificato
+
+| | |
+|---|---|
+| stesso Drawing a scale 800 / 1600 / 3200 px | differenza media 0,13%, massimo 6,7% sui bordi |
+| due render identici | 0 pixel diversi |
+| compressione tipica | 4 punti salvati → 643 disegnati |
+
+La prima riga è la Definition of Done della fase. Regge **per costruzione**, non per attenzione: il contesto è trasformato in unità di lavagna una volta sola in `board.js`, quindi il codice di render non sa nulla di scala, pixel o DPR e non ha modo di dipenderne.
+
+## Il pannello Info
+
+Serve sul telefono, dove non c'è una console.
+
+| Voce | Cosa dice |
+|---|---|
+| **`FPS TRATTO`** | **la misura che conta.** Media sull'intero tratto, resta leggibile dopo il rilascio |
+| `fps ora` | istantaneo, solo mentre il dito è giù |
+| `frame max` | frame peggiore del tratto corrente |
+| `timer` | risoluzione reale di `performance.now()` |
+| `eventi/s` | quanti `pointermove` arrivano davvero dal sistema |
+| `ultimo tratto` | campioni grezzi → punti salvati → punti disegnati |
+| `smoothing` | il livello attivo e il suo eps |
+
+Tre avvertenze su come si leggono.
+
+**Guardare `FPS TRATTO`, non `frame max`.** `performance.now()` è quantizzato per sicurezza: 1 ms su Safari iOS, 0,1 ms su Chrome. A 1 ms di granularità un frame da 16,7 ms viene riportato come 16 o 17, e le misure di singolo frame restano indicative.
+
+**`frame max` si azzera a ogni tratto**, e il primo frame dopo il `pointerdown` viene scartato: contiene il risveglio del rAF, che Safari rallenta a pagina ferma. È latenza di avvio, non costo di disegno.
+
+**`coalesced 1` non è un difetto in sé.** Il coalescing serve solo quando il touch campiona più in fretta di quanto lo schermo disegni.
+
+## Misurato su device reali (30/08/2026)
+
+| | iPhone 13 Pro / Safari | Galaxy S10 / Chrome |
+|---|---|---|
+| FPS tratto | 60 | 60 |
+| frame max | 21 ms | 16,9 ms |
+| timer | 1,00 ms | 0,10 ms |
+| **refresh (rAF)** | **62 Hz** | **62 Hz** |
+| eventi/s | 52–54 | 57–59 |
+| dpr | 2 | 2 |
+| `getCoalescedEvents` | assente | assente |
+
+Il rAF gira a 60 Hz su entrambi, ProMotion incluso: Safari limita le pagine web a 60 anche sui display a 120 Hz. Con ~55 eventi/s si riceve quasi un campione per frame, e il coalescing non aggiungerebbe fluidità.
+
+**Ma i campioni sono radi**, ed è la ragione per cui il ricampionamento interpola su una curva invece di decimare: a ~55 campioni/s un gesto veloce li lascia distanti ~29 unità, mentre ne serve uno ogni 2,5.
+
+## File
+
+```
+index.html      pagina + CSS anti-scroll (la parte fragile su iOS)
+package.json    solo per dire a node che i .js sono ES modules
+src/palette.js  costanti da fase-0-specifiche.md
+src/board.js    due canvas, DPR, schermo -> lavagna logica
+src/input.js    pointer events, un dito solo, coalesced
+src/filter.js   One Euro Filter
+src/geom.js     Catmull-Rom, ricampionamento, RDP
+src/model.js    Drawing / Stroke, undo, redo
+src/pen.js      costruisce lo stroke mentre il dito si muove
+src/render.js   render puro e deterministico
+src/main.js     colla e diagnostica
+test/run.js     test delle funzioni pure
+```
+
+I due canvas (`base` e `overlay`) servono perché a fine gesto lo stroke grezzo viene sostituito da quello semplificato: con un canvas solo, cancellare il tratto provvisorio costringerebbe a un ridisegno completo a ogni tratto.
