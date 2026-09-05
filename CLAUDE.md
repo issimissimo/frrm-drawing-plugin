@@ -29,7 +29,9 @@ Due scostamenti dal brief, entrambi documentati in `prototipo/README.md`:
 
   Il risultato non ovvio: **lo smoothing si governa con l'epsilon RDP, non con il filtro**. A parità di epsilon la levigatezza è identica per qualunque `beta`, quindi `beta` va messo al valore che minimizza il lag e basta. Chi tentasse di aumentare lo smoothing agendo su `minCutoff` o `beta` non otterrà nulla: il tremore gonfia la stima di velocità e il filtro lo scambia per un gesto veloce.
 
-**Fase 3 scritta, da validare sul device.** Effetto gessetto in `prototipo/src/chalk.js`: il tratto è timbrato, non disegnato. 29 test.
+**Fase 3 chiusa.** Effetto gessetto in `prototipo/src/chalk.js`: il tratto è timbrato, non disegnato. 29 test. Validata sul device il 04/09/2026: sembra gesso, 60 fps, il tratto non salta al rilascio e la gomma cancella sotto il dito.
+
+**Con la Fase 3 si chiude il perimetro concordato (Fasi 1–3).** Il prototipo standalone è completo.
 
 **Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 
@@ -82,6 +84,16 @@ Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non s
 Credenziali FTP in `~/.claude/.secrets/ftp-siteground.env`, condivise fra i progetti del workspace; le regole d’uso stanno in `~/.claude/rules/credenziali.md`.
 
 **Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frrm-drawing-plugin/`.
+
+## Regole di lavoro
+
+**Commit automatico su GitHub a feature completata.** Quando una funzionalità è implementata *e verificata*, si committa e si pusha senza chiedere — deciso il 05/09/2026.
+
+Vale a feature riuscita, non a ogni salvataggio: il criterio è che i test passino e che la cosa sia stata provata. Un lavoro a metà o un esperimento non si pushano.
+
+Il remote non contiene il token (`git remote -v` mostra l'URL pulito): il push chiede le credenziali, oppure lo si fa con l'MCP `github`. Token in `~/.claude/.secrets/github-pat.txt`.
+
+Repo: <https://github.com/issimissimo/frrm-drawing-plugin> — pubblico.
 
 ## Regole di questa cartella
 
