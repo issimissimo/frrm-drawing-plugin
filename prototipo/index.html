@@ -6,14 +6,40 @@
      zoom, che su un'app di disegno e' un incidente, non una funzione. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>Lavagna — Fase 3</title>
+<title>Lavagna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
   :root {
     --page:  #15171A;
-    --panel: #1F2225;
+    --board: #1F2225;
     --ink:   #C8CCD0;
     --dim:   #71777C;
+    --off:   #565C61;
     --rule:  #2A2E32;
+
+    /* Il gessetto e' l'unita' di misura della mensola: tutto il resto si
+       allinea alla sua base e al suo centro. */
+    --stick-w: 30px;
+    --stick-h: 94px;
+    --lift:    24px;
+    --slot:    36px;
+    --icon:    46px;
+    /* I tre segni valgono 10 / 22 / 44 unita' di lavagna: qui si convertono
+       in pixel una volta sola, cosi' il rapporto 2,2x resta visibile. */
+    --wscale:  0.43px;
+  }
+
+  @media (max-width: 700px) {
+    :root {
+      --stick-w: 22px;
+      --stick-h: 64px;
+      --lift:    18px;
+      --slot:    34px;
+      --icon:    44px;
+      --wscale:  0.34px;
+    }
   }
 
   /* La pagina non deve poter scorrere in nessun modo: e' il difetto numero
@@ -32,7 +58,7 @@
 
   body {
     color: var(--ink);
-    font: 500 12px/1.4 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font: 400 14px/1.4 'Atkinson Hyperlegible', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;          /* niente menu da long press */
@@ -52,10 +78,10 @@
   #stage {
     flex: 1;
     min-height: 0;                        /* senza questo il flex non si stringe */
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 10px;
   }
 
   /* I due canvas sono sovrapposti: il tratto in corso sta sopra i tratti
@@ -65,8 +91,7 @@
      ai tratti. */
   .layers {
     position: relative;
-    background: #1F2225;
-    border-radius: 3px;
+    background: var(--board);
     overflow: hidden;
   }
   .layers canvas { display: block; }
@@ -78,58 +103,261 @@
     cursor: crosshair;
   }
 
-  .bar {
+  /* ---------- uscita ----------
+     Sta nell'angolo piu' lontano dagli strumenti e porta un'etichetta: la
+     sola freccia verrebbe letta come "annulla". */
+  #btn-back {
+    position: absolute;
+    top: 6px;
+    left: 6px;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 9px 12px;
-    border-top: 1px solid var(--rule);
-    flex-wrap: wrap;
-  }
-
-  .bar .title {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
+    gap: 8px;
+    height: 44px;
+    padding: 0 14px 0 10px;
+    background: none;
+    border: 0;
     color: var(--dim);
-    margin-right: auto;
-  }
-
-  button {
     font: inherit;
-    font-weight: 600;
-    color: var(--ink);
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    border-radius: 4px;
-    padding: 9px 14px;
-    min-height: 40px;
+    font-size: 13px;
     cursor: pointer;
     touch-action: manipulation;
   }
-  button:hover:not(:disabled) { border-color: #3A4046; }
-  button:disabled { opacity: 0.35; cursor: default; }
-  button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--page); }
-  button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  #btn-back:hover { color: var(--ink); }
 
-  /* Controllo di taratura: serve alla Fase 2 per scegliere beta sul device.
-     Va via con la UI definitiva della Fase 4. */
-  .glab {
+  /* ---------- mensola ---------- */
+
+  .ledge {
+    display: grid;
+    align-items: end;
+    background: var(--page);
+    grid-template-columns: auto auto 1fr auto auto;
+    grid-template-areas: "widths tools . cmds send";
+    column-gap: 26px;
+    padding: 0 34px 22px;
+  }
+
+  @media (max-width: 700px) {
+    .ledge {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "tools  tools"
+        "widths cmds"
+        "send   send";
+      column-gap: 8px;
+      row-gap: 6px;
+      padding: 6px 12px 16px;
+    }
+    /* Specificita' alzata di proposito: la regola base di .tools sta piu'
+       in basso nel foglio e a parita' di peso vincerebbe lei. */
+    .ledge .tools { gap: 10px; }
+  }
+
+  #widths { grid-area: widths; }
+  .tools  { grid-area: tools; }
+  .cmds   { grid-area: cmds; }
+
+  /* Gessetti e cancellino sono lo stesso gruppo: se stanno in due colonne di
+     griglia separate, la colonna dei comandi (piu' larga) strozza quella dei
+     gessetti e su un telefono da 360px si riducono a 18px l'uno. */
+  .tools {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    min-width: 0;
+  }
+  #chalks { flex: 1 1 auto; }
+
+  /* Su desktop lo spazio c'e': i gessetti tengono la larghezza nominale e
+     restano staccati. Su telefono devono poter scendere sotto --slot, o a
+     360px sforano. */
+  @media (min-width: 701px) {
+    .tools .chalk { flex: 0 0 var(--slot); }
+  }
+  #btn-send { grid-area: send; }
+
+  /* ---------- gessetti ----------
+     La selezione e' il gessetto sollevato. Nessun bordo, nessun anello,
+     nessuna spunta: la posizione porta l'informazione. */
+
+  #chalks { display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
+
+  .chalk, .eraser {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: calc(var(--stick-h) + var(--lift));
+  }
+  .chalk { flex: 1 1 var(--slot); min-width: 0; }
+  .eraser { width: calc(var(--slot) * 1.7); --glow: #8A939944; }
+
+  .stick, .felt {
+    transition: transform .16s cubic-bezier(.2, .9, .3, 1), opacity .16s;
+    opacity: 0.72;
+  }
+  .felt { opacity: 0.85; }
+  .stick {
+    width: var(--stick-w);
+    height: var(--stick-h);
+    border-radius: 7px 7px 3px 3px;
+    background: var(--grad);
+  }
+  .felt {
+    width: calc(var(--slot) * 1.55);
+    height: calc(var(--stick-h) * 0.56);
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(96deg, #3A4046 0%, #646C73 42%, #4A5158 100%);
+  }
+  .felt::before {
+    content: '';
+    display: block;
+    height: 26%;
+    background: #4A4038;                  /* il dorso di legno: e' un blocco, non un gesso */
+  }
+
+  [aria-pressed="true"] .stick,
+  [aria-pressed="true"] .felt {
+    opacity: 1;
+    transform: translateY(calc(var(--lift) * -1));
+    box-shadow: 0 14px 20px -12px rgba(0, 0, 0, 0.85), 0 0 26px -4px var(--glow);
+  }
+  /* Col cancellino in mano nessun gessetto e' alzato, ma restano tutti
+     leggibili: non e' il momento di spegnere la palette. */
+  .chalks-idle .stick { opacity: 1; }
+
+  .chalk:focus-visible, .eraser:focus-visible,
+  .cmd:focus-visible, #btn-back:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  /* ---------- spessori ----------
+     Tre segni di gesso nel colore corrente: colore e spessore si leggono
+     insieme, non in due controlli separati. */
+
+  #widths { display: flex; align-items: center; gap: 10px; }
+
+  .wbtn {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    height: var(--stick-h);
+    display: flex;
+    align-items: center;
+  }
+  .wbtn i {
+    display: block;
+    width: 46px;
+    background: var(--c);
+    border-radius: 999px;
+    opacity: 0.28;
+    transition: opacity .16s, transform .16s;
+  }
+  @media (max-width: 700px) { .wbtn i { width: 30px; } }
+  .wbtn[aria-pressed="true"] i { opacity: 1; transform: translateY(-6px); }
+
+  /* ---------- comandi ----------
+     Registro opposto agli strumenti: icone di linea, monocrome, piu' piccole. */
+
+  .cmds { display: flex; align-items: center; justify-content: flex-end; height: var(--stick-h); }
+
+  .cmd {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    width: var(--icon);
+    height: var(--icon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color .14s;
+  }
+  .cmd:hover:not(:disabled) { color: #FAF8F3; }
+  .cmd:disabled { color: #3C4247; cursor: default; }
+  #btn-clear { color: var(--dim); margin-left: 16px; }
+
+  /* ---------- invia ----------
+     Disabilitato: l'invio e' Fase 6 e non esiste ancora un backend. */
+
+  #btn-send {
+    -webkit-appearance: none;
+    appearance: none;
+    /* Si allinea al centro del gessetto come tutto il resto della mensola,
+       non al centro della riga: la riga e' piu' alta per via del sollevamento. */
+    align-self: end;
+    margin-bottom: calc((var(--stick-h) - 50px) / 2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 50px;
+    padding: 0 24px;
+    border: 0;
+    border-radius: 25px;
+    background: #23272B;
+    color: var(--off);
+    font: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    cursor: default;
+  }
+  @media (max-width: 700px) {
+    #btn-send {
+      height: 48px; padding: 0 16px; font-size: 14px; gap: 8px;
+      width: 100%;
+      justify-content: center;
+      margin: 4px 0 0;
+    }
+  }
+
+  /* ---------- taratura (solo con ?debug=1) ---------- */
+
+  #debug[hidden] { display: none; }
+  #debug {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+  }
+  #debug button {
+    font: inherit;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--board);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 8px 12px;
+    min-height: 38px;
+    cursor: pointer;
+  }
+  #debug button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--page); }
+  #debug .glab {
     font-size: 9px; font-weight: 700; letter-spacing: 0.11em;
     text-transform: uppercase; color: var(--dim); margin-right: 2px;
   }
-  .seg { display: flex; gap: 2px; }
-  .seg button { padding: 9px 10px; }
-
-  /* Pastiglie di colore: strumento di Fase 3 per giudicare la texture su
-     tutta la palette. La UI vera, con i gessetti, e' Fase 4. */
-  #seg-color { gap: 4px; }
-  #seg-color button {
-    width: 30px; min-height: 30px; padding: 0;
-    border-radius: 50%; border: 1px solid transparent;
-  }
-  #seg-color button[aria-pressed="true"] { border-color: var(--ink); }
 
   #hud {
     position: fixed;
@@ -150,30 +378,72 @@
 <body>
 
 <div class="app">
+
   <div id="stage">
     <div class="layers" id="layers">
       <canvas id="base"></canvas>
       <canvas id="overlay"></canvas>
     </div>
+
+    <button type="button" id="btn-back">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/>
+        <path d="M10 12h11"/><path d="M14 8l-4 4 4 4"/>
+      </svg>
+      <span>Torna al sito</span>
+    </button>
   </div>
-  <div class="bar">
-    <span class="title">Lavagna · Fase 3</span>
-    <div class="seg" id="seg-tool" role="group" aria-label="Strumento">
-      <button type="button" data-tool="chalk" aria-pressed="true">Gesso</button>
-      <button type="button" data-tool="eraser">Gomma</button>
+
+  <div class="ledge">
+
+    <div id="widths" role="group" aria-label="Spessore"></div>
+
+    <div class="tools">
+      <div id="chalks" role="group" aria-label="Gessetto"></div>
+      <button type="button" class="eraser" id="tool-eraser" aria-pressed="false" aria-label="Cancellino">
+        <span class="felt"></span>
+      </button>
     </div>
-    <div class="seg" id="seg-color" role="group" aria-label="Colore"></div>
+
+    <div class="cmds">
+      <button type="button" class="cmd" id="btn-undo" aria-label="Annulla" disabled>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8h11a5 5 0 0 1 0 10H8"/><path d="M7 4L3 8l4 4"/>
+        </svg>
+      </button>
+      <button type="button" class="cmd" id="btn-redo" aria-label="Rifai" disabled>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8H10a5 5 0 0 0 0 10h6"/><path d="M17 4l4 4-4 4"/>
+        </svg>
+      </button>
+      <button type="button" class="cmd" id="btn-clear" aria-label="Cancella tutto">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h16"/><path d="M9 7V5h6v2"/>
+          <path d="M6 7l1 13h10l1-13"/><path d="M10 11v6"/><path d="M14 11v6"/>
+        </svg>
+      </button>
+    </div>
+
+    <button type="button" id="btn-send" disabled>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>
+      </svg>
+      <span>INVIA</span>
+    </button>
+
+  </div>
+
+  <!-- Taratura di Fase 2/3: fuori dalla UI, si accende con ?debug=1 -->
+  <div id="debug" hidden>
     <span class="glab">Smoothing</span>
-    <div class="seg" id="seg-smooth" role="group" aria-label="Livello di smoothing">
+    <div class="seg" id="seg-smooth" role="group" aria-label="Livello di smoothing" style="display:flex;gap:2px">
       <button type="button" data-smooth="molto" aria-pressed="true">Molto</button>
       <button type="button" data-smooth="medio">Medio</button>
       <button type="button" data-smooth="poco">Poco</button>
     </div>
-    <button type="button" id="btn-undo" disabled>Annulla</button>
-    <button type="button" id="btn-redo" disabled>Rifai</button>
-    <button type="button" id="btn-hud" aria-pressed="false">Info</button>
-    <button type="button" id="btn-clear">Pulisci</button>
+    <button type="button" id="btn-hud" aria-pressed="false" style="margin-left:auto">Info</button>
   </div>
+
 </div>
 
 <pre id="hud" hidden></pre>

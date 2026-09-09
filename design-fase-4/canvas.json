@@ -1,0 +1,38 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Desktop — mensola", "is_interactive": true },
+    { "file": "Mobile.dc.html", "x": 1560, "y": 0, "w": 390, "h": 844, "title": "Telefono — mensola", "is_interactive": true },
+    { "file": "DirectionB.dc.html", "x": 2070, "y": 0, "w": 390, "h": 844, "title": "Telefono — tasca (alternativa)", "is_interactive": true }
+  ],
+  "annotations": [
+    {
+      "id": "nota-mensola",
+      "x": 0,
+      "y": -210,
+      "w": 470,
+      "text": "MENSOLA\n\nI gessetti sono oggetti, non pastiglie di colore: la selezione e' il gessetto sollevato dalla mensola. Nessun bordo, nessun anello, nessuna spunta — la posizione porta l'informazione.\n\nStessa grammatica per il cancellino: proporzione e materia diverse, ma si prende allo stesso modo."
+    },
+    {
+      "id": "nota-registri",
+      "x": 510,
+      "y": -210,
+      "w": 470,
+      "text": "DUE REGISTRI\n\nStrumenti = oggetti fisici, grandi e colorati.\nComandi (annulla, rifai, cestino, invia) = icone di linea, monocrome, piu' piccole, all'estremita' opposta.\n\nGli spessori sono tre segni di gesso NEL COLORE CORRENTE: colore e spessore si leggono insieme."
+    },
+    {
+      "id": "nota-uscita",
+      "x": 1020,
+      "y": -210,
+      "w": 420,
+      "text": "USCITA\n\n\"Torna al sito\" sta in alto a sinistra, il punto piu' lontano dagli strumenti, e porta un'etichetta di testo: l'icona da sola verrebbe letta come Annulla.\n\nDa verificare col dito: e' abbastanza fuori mano da non premerlo per sbaglio disegnando?"
+    },
+    {
+      "id": "nota-tasca",
+      "x": 2070,
+      "y": -210,
+      "w": 390,
+      "text": "TASCA (alternativa)\n\nUn solo gessetto in vista, si tocca e la palette esce. Guadagna ~85px di lavagna e toglie il Rifai.\n\nCosto: un bambino di 5 anni non sa che gli altri colori esistono finche' non tocca. La mensola non ha discovery cost."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

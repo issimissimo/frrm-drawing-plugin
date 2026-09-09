@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif; }
+    a { color: #71777C; text-decoration: none; }
+    a:hover { color: #C8CCD0; }
+    * { box-sizing: border-box; }
+    .lift { transition: transform .16s cubic-bezier(.2,.9,.3,1), opacity .16s; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background: #1F2225; color: #C8CCD0; overflow: hidden;">
+
+  <div style="flex: 1; min-height: 0; position: relative;">
+
+    <svg viewBox="0 -60 390 760" width="390" height="760" style="position: absolute; inset: 0; display: block;">
+      <defs>
+        <filter id="gessoB" x="-15%" y="-15%" width="130%" height="130%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="4" result="n"></feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+        </filter>
+      </defs>
+      <g filter="url(#gessoB)" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.86">
+        <circle cx="304" cy="118" r="34" stroke="#C9B957" stroke-width="6"></circle>
+        <g stroke="#C9B957" stroke-width="5">
+          <path d="M304 62 L304 42"></path><path d="M248 118 L228 118"></path>
+          <path d="M264 78 L250 64"></path><path d="M344 78 L358 64"></path>
+          <path d="M264 158 L250 172"></path>
+        </g>
+        <path d="M62 128 q-20 -30 14 -40 q7 -30 41 -22 q20 -29 52 -7 q37 -8 34 30 q28 9 13 39 z" stroke="#71BFFF" stroke-width="5"></path>
+        <path d="M96 356 L96 508 L274 508 L274 356" stroke="#FAF8F3" stroke-width="7"></path>
+        <path d="M78 358 L185 278 L292 358" stroke="#FB9795" stroke-width="8"></path>
+        <path d="M162 508 L162 436 L211 436 L211 508" stroke="#F197C2" stroke-width="6"></path>
+        <circle cx="238" cy="404" r="18" stroke="#3BCFCF" stroke-width="6"></circle>
+        <path d="M14 540 Q120 522 214 546 T384 532" stroke="#85CC87" stroke-width="8"></path>
+        <g stroke="#85CC87" stroke-width="5">
+          <path d="M58 536 l-9 -24"></path><path d="M84 534 l7 -26"></path>
+          <path d="M290 542 l-8 -22"></path><path d="M322 540 l10 -24"></path>
+        </g>
+        <path d="M36 236 q38 -48 70 -6 q31 41 68 -8" stroke="#C9A3F5" stroke-width="7"></path>
+        <path d="M330 540 L330 476" stroke="#85CC87" stroke-width="5"></path>
+        <circle cx="330" cy="460" r="16" stroke="#F1A366" stroke-width="6"></circle>
+      </g>
+    </svg>
+
+    <a href="#" style="position: absolute; top: 10px; left: 8px; display: flex; align-items: center; gap: 7px; height: 44px; padding: 0 12px; font-size: 13px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"></path>
+        <path d="M10 12h11"></path><path d="M14 8l-4 4 4 4"></path>
+      </svg>
+      <span>Torna al sito</span>
+    </a>
+  </div>
+
+  <!-- tasca: la palette esce solo quando serve -->
+  <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+    <div style="background: #15171A; padding: 10px 12px 0; display: flex; align-items: flex-end; gap: 3px;">
+      <sc-for list="{{ chalks }}" as="c" hint-placeholder-count="9">
+        <div onClick="{{ c.pick }}" style="width: 38px; height: 82px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer;">
+          <div class="lift" style="{{ c.style }}"></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="background: #15171A; display: flex; align-items: center; gap: 0; padding: 11px 12px 22px;">
+
+    <div onClick="{{ toggle }}" style="width: 52px; height: 46px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+      <div style="{{ currentStyle }}"></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 7px; margin-left: 6px;">
+      <sc-for list="{{ widths }}" as="w" hint-placeholder-count="3">
+        <div onClick="{{ w.pick }}" class="lift" style="{{ w.style }}"></div>
+      </sc-for>
+    </div>
+
+    <div onClick="{{ pickEraser }}" style="width: 44px; height: 46px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: 10px;">
+      <div class="lift" style="{{ eraserStyle }}">
+        <div style="height: 8px; background: #4A4038;"></div>
+      </div>
+    </div>
+
+    <div onClick="{{ undo }}" style="width: 42px; height: 46px; display: flex; align-items: center; justify-content: center; color: #C8CCD0; cursor: pointer; margin-left: auto;">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 8h11a5 5 0 0 1 0 10H8"></path><path d="M7 4L3 8l4 4"></path>
+      </svg>
+    </div>
+    <div onClick="{{ clear }}" style="width: 42px; height: 46px; display: flex; align-items: center; justify-content: center; color: #71777C; cursor: pointer;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16"></path><path d="M9 7V5h6v2"></path>
+        <path d="M6 7l1 13h10l1-13"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>
+      </svg>
+    </div>
+
+    <div style="margin-left: 8px; display: flex; align-items: center; gap: 7px; height: 44px; padding: 0 15px; border-radius: 22px; background: #23272B; color: #565C61; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; cursor: default;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 3L10.5 13.5"></path><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"></path>
+      </svg>
+      <span>INVIA</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { chalk: 'corallo', width: 'medio', tool: 'chalk', open: true };
+  }
+
+  mix(hex, target, t) {
+    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const a = p(hex), b = p(target);
+    return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  }
+
+  stick(hex, w, h, r) {
+    const light = this.mix(hex, '#FFFFFF', 0.30);
+    const dark = this.mix(hex, '#000000', 0.38);
+    return 'width: ' + w + 'px; height: ' + h + 'px; border-radius: ' + r + ';'
+      + 'background: linear-gradient(96deg, ' + dark + ' 0%, ' + hex + ' 26%, ' + light + ' 48%, ' + hex + ' 74%, ' + dark + ' 100%);';
+  }
+
+  renderVals() {
+    const s = this.state || {};
+    const tool = s.tool || 'chalk';
+    const CHALKS = [
+      ['bianco', '#FAF8F3'], ['giallo', '#C9B957'], ['arancio', '#F1A366'],
+      ['corallo', '#FB9795'], ['rosa', '#F197C2'], ['lilla', '#C9A3F5'],
+      ['azzurro', '#71BFFF'], ['acqua', '#3BCFCF'], ['verde', '#85CC87']
+    ];
+    const curHex = (CHALKS.find(function (c) { return c[0] === s.chalk; }) || CHALKS[0])[1];
+    const self = this;
+
+    const chalks = CHALKS.map(function (pair) {
+      const id = pair[0], hex = pair[1];
+      const on = tool === 'chalk' && s.chalk === id;
+      return {
+        id: id,
+        pick: function () { self.setState({ chalk: id, tool: 'chalk', open: false }); },
+        style: self.stick(hex, 24, 62, '5px 5px 2px 2px')
+          + 'transform: translateY(' + (on ? '-16px' : '0px') + ');'
+          + 'box-shadow: ' + (on ? '0 12px 16px -9px rgba(0,0,0,.85), 0 0 20px -3px ' + hex + '55' : 'none') + ';'
+          + 'opacity: ' + (on ? '1' : '0.72') + ';'
+      };
+    });
+
+    const WIDTHS = [['sottile', 4], ['medio', 8], ['grosso', 15]];
+    const widths = WIDTHS.map(function (pair) {
+      const id = pair[0], h = pair[1];
+      const on = s.width === id;
+      return {
+        id: id,
+        pick: function () { self.setState({ width: id }); },
+        style: 'width: 26px; height: ' + h + 'px; border-radius: ' + (h / 2) + 'px;'
+          + 'background: ' + curHex + '; cursor: pointer;'
+          + 'opacity: ' + (on ? '1' : '0.28') + ';'
+      };
+    });
+
+    const erOn = tool === 'eraser';
+    return {
+      open: s.open === undefined ? false : s.open,
+      chalks: chalks,
+      widths: widths,
+      toggle: function () { self.setState({ open: !s.open }); },
+      currentStyle: this.stick(curHex, 44, 26, '4px')
+        + 'opacity: ' + (erOn ? '0.4' : '1') + ';'
+        + 'box-shadow: 0 0 20px -4px ' + curHex + (erOn ? '00' : '66') + ';',
+      pickEraser: function () { self.setState({ tool: 'eraser', open: false }); },
+      eraserStyle: 'width: 38px; height: 30px; border-radius: 4px; overflow: hidden;'
+        + 'background: linear-gradient(96deg, #2C3136 0%, #4B5258 40%, #3A4046 100%);'
+        + 'box-shadow: ' + (erOn ? '0 0 20px -4px #8A939966' : 'none') + ';'
+        + 'opacity: ' + (erOn ? '1' : '0.55') + ';',
+      undo: function () {},
+      clear: function () {}
+    };
+  }
+}
+</script>
+</body>
+</html>

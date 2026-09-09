@@ -17,7 +17,7 @@
  * payload, e viene rifatto al render, dove costa nulla ed e' deterministico.
  */
 
-import { BOARD_W, BOARD_H } from './palette.js';
+import { BOARD_W, boardHeight } from './palette.js';
 
 export const VERSION = 1;
 
@@ -26,7 +26,7 @@ let nextId = 1;
 export function createDrawing() {
   return {
     version: VERSION,
-    board: { w: BOARD_W, h: BOARD_H },
+    board: { w: BOARD_W, h: boardHeight() },
     strokes: [],
   };
 }

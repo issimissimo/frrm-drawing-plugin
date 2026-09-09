@@ -16,9 +16,7 @@
  * costringerebbe a un ridisegno completo a ogni tratto.
  */
 
-import { BOARD_W, BOARD_H, DPR_CAP } from './palette.js';
-
-const ASPECT = BOARD_W / BOARD_H;
+import { BOARD_W, boardHeight, freezeBoardHeight, DPR_CAP } from './palette.js';
 
 export function createBoard(baseCanvas, overlayCanvas, host) {
   // Trasparente, non opaco: il colore della lavagna sta nel CSS sotto il
@@ -40,9 +38,16 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
   function layout() {
     const availW = host.clientWidth;
     const availH = host.clientHeight;
+
+    // Il rapporto della lavagna si decide qui, alla prima chiamata, e da
+    // quel momento e' fisso: vedi freezeBoardHeight(). Ruotare il telefono
+    // dopo lascia delle bande, ma non tocca quel che c'e' gia' disegnato.
+    freezeBoardHeight(availW / availH);
+    const aspect = BOARD_W / boardHeight();
+
     cssW = availW;
-    cssH = cssW / ASPECT;
-    if (cssH > availH) { cssH = availH; cssW = cssH * ASPECT; }
+    cssH = cssW / aspect;
+    if (cssH > availH) { cssH = availH; cssW = cssH * aspect; }
 
     dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
     const pxW = Math.round(cssW * dpr);
@@ -66,7 +71,7 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
     if (!rect) rect = baseCanvas.getBoundingClientRect();
     return {
       x: ((clientX - rect.left) / rect.width) * BOARD_W,
-      y: ((clientY - rect.top) / rect.height) * BOARD_H,
+      y: ((clientY - rect.top) / rect.height) * boardHeight(),
     };
   }
 

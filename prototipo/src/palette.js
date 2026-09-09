@@ -9,7 +9,32 @@
 
 /** Lavagna logica: tutte le coordinate degli stroke vivono qui dentro. */
 export const BOARD_W = 1600;
-export const BOARD_H = 1200;
+
+/**
+ * L'altezza NON e' una costante: la lavagna prende il rapporto dello schermo
+ * su cui viene aperta (Fase 4), altrimenti su un telefono in verticale il 4:3
+ * si riduce a una striscia.
+ *
+ * Ma viene congelata al primo layout e non cambia piu' per tutta la vita del
+ * disegno. Se seguisse il viewport in continuo, ruotare il telefono a meta'
+ * disegno deformerebbe i tratti gia' tracciati — e "il tratto sopravvive alla
+ * rotazione" e' una proprieta' validata in Fase 1 che non si perde.
+ *
+ * Il 4:3 resta il valore di partenza: vale nei test e ovunque non ci sia un
+ * viewport da cui dedurre un rapporto.
+ */
+let boardH = 1200;
+let boardFrozen = false;
+
+export const boardHeight = () => boardH;
+
+/** Chiamata una volta sola, dal primo layout. Le successive non fanno nulla. */
+export function freezeBoardHeight(aspect) {
+  if (boardFrozen || !(aspect > 0)) return boardH;
+  boardFrozen = true;
+  boardH = Math.round(BOARD_W / aspect);
+  return boardH;
+}
 
 /** Oltre 2 il costo di fill rate non ripaga: un iPhone a DPR 3 perde frame. */
 export const DPR_CAP = 2;

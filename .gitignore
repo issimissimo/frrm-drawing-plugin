@@ -10,3 +10,6 @@ fase*-*.png
 Thumbs.db
 .DS_Store
 node_modules/
+
+# Canvas di design assemblato: 2,5 MB rigenerabili dai .dc.html accanto
+design-fase-4/lavagna-ui-fase-4.html
