@@ -37,16 +37,35 @@ const board = createBoard(baseCanvas, overlayCanvas, stage);
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
    il Drawing quel rapporto se lo porta dentro e non lo cambia piu'. */
-board.layout();
+const primoLayout = board.layout();
 
 const drawing = createDrawing();
 const history = createHistory(drawing);
 
 let ink = chalkById(DEFAULT_CHALK).hex;
 let tool = 'chalk';
-let strokeWidth = DEFAULT_WIDTH;
 let pen = null;
 let lastLayout = null;
+
+/**
+ * Su schermo stretto gli strumenti raddoppiano.
+ *
+ * La lavagna logica e' 1600 unita' su qualunque device, ma quelle 1600 unita'
+ * occupano 1440 px CSS su un desktop e 390 su un telefono: un tratto da 22
+ * unita' passa da 19,8 px a 5,4, ed e' troppo sottile per leggersi come gesso.
+ *
+ * Il fattore guarda la larghezza REALE della lavagna, non una media query:
+ * e' quella la causa, e cosi' vale anche per una finestra desktop stretta o
+ * per un telefono aperto in orizzontale.
+ *
+ * Raddoppia lo STRUMENTO, non il render. Il Drawing registra il tratto che il
+ * bambino ha davvero disegnato, quindi resta riproducibile identico a
+ * qualunque scala (D1): se raddoppiassimo al render, lo stesso Drawing darebbe
+ * immagini diverse su device diversi.
+ */
+const SCALA_STRUMENTI = primoLayout.cssW < 700 ? 2 : 1;
+
+let strokeWidth = DEFAULT_WIDTH * SCALA_STRUMENTI;
 
 /* Taratura dal vivo: la scelta e' soggettiva e va fatta col dito su un
    telefono, non sui numeri. Strumento di Fase 2, ora dietro ?debug=1. */
@@ -87,7 +106,7 @@ const input = createInput(overlayCanvas, board, {
     pen = createPen({
       tool,
       color: ink,
-      width: tool === 'eraser' ? ERASER_WIDTH : strokeWidth,
+      width: tool === 'eraser' ? ERASER_WIDTH * SCALA_STRUMENTI : strokeWidth,
       // La gomma non si semplifica: vedi consolida() in pen.js.
       eps: tool === 'eraser' ? 0 : SMOOTHING[smoothing].eps,
     });
@@ -167,9 +186,11 @@ for (const w of WIDTHS) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'wbtn';
-  b.dataset.w = String(w.w);
+  b.dataset.w = String(w.w * SCALA_STRUMENTI);
   b.setAttribute('aria-label', w.id);
   const i = document.createElement('i');
+  // Il segno sul pulsante mostra la PROPORZIONE fra i tre spessori, non il
+  // valore: se raddoppiasse anche lui non ci starebbe nella mensola.
   i.style.height = `calc(var(--wscale) * ${w.w})`;
   b.appendChild(i);
   widthsEl.appendChild(b);
