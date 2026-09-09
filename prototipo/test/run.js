@@ -9,7 +9,7 @@
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
-import { mulberry32, passoTimbri } from '../src/chalk.js';
+import { mulberry32, passoTimbri, puntaBase, affiancate } from '../src/chalk.js';
 
 let passed = 0, failed = 0;
 const results = [];
@@ -333,25 +333,48 @@ test('gessetto: il PRNG resta dentro [0, 1)', () => {
   }
 });
 
-test('gessetto: il passo dei timbri cresce con la larghezza', () => {
-  assert(passoTimbri(44) > passoTimbri(22), 'un tratto grosso vuole timbri piu radi');
-  assert(passoTimbri(22) > passoTimbri(10), 'monotono');
-  // Sotto un terzo della larghezza le impronte si sovrappongono a sufficienza.
-  assert(passoTimbri(22) < 22 * 0.5, 'passo troppo largo: si vedrebbero i buchi');
+test('gessetto: la punta NON scala con la larghezza del tratto', () => {
+  // E' l'invariante dell'effetto: se la punta seguisse la larghezza, la grana
+  // e i lobi del bordo la seguirebbero con lei e il tratto grosso tornerebbe
+  // a essere l'ingrandimento fotografico di quello sottile.
+  assert(puntaBase(44) < puntaBase(10) * 1.6, `punta ${puntaBase(44)}: torna a scalare`);
+  assert(passoTimbri(44) < passoTimbri(10) * 1.6, 'anche il passo deve restare fermo');
+});
+
+test('gessetto: il tratto sottile resta quello tarato il 31/08', () => {
+  // Sotto la punta di riferimento non si affianca nulla: una impronta sola,
+  // larga quanto il tratto. E' il caso su cui l'effetto e' stato tarato e non
+  // deve cambiare di un pixel.
+  assert(affiancate(10) === 1, `${affiancate(10)} impronte invece di una`);
+  assert(puntaBase(10) === 10, `punta ${puntaBase(10)} invece di 10`);
+  assert(passoTimbri(10) === 10 * 0.34, 'il passo del sottile e cambiato');
+});
+
+test('gessetto: le impronte affiancate coprono la banda senza buchi', () => {
+  for (const w of [22, 44, 90]) {
+    const k = affiancate(w);
+    assert(k > 1, `larghezza ${w}: una impronta sola non copre la banda`);
+    const lato = puntaBase(w);
+    const passo = (w - lato) / (k - 1);
+    assert(passo <= lato * 0.61, `larghezza ${w}: strisce distanti ${passo.toFixed(1)} su lato ${lato.toFixed(1)}`);
+  }
 });
 
 test('gessetto: il passo non degenera sui tratti sottilissimi', () => {
   assert(passoTimbri(0.1) >= 2, 'un passo microscopico moltiplicherebbe i timbri');
 });
 
-test('gessetto: un tratto tipico non genera troppi timbri', () => {
-  // Un tratto che attraversa la lavagna, spessore medio.
+test('gessetto: un tratto tipico non genera troppe impronte', () => {
+  // Un tratto che attraversa la lavagna. Il costo e' il PRODOTTO fra punti
+  // lungo la curva e impronte affiancate: e' quello che va tenuto a bada.
   const pts = [];
   for (let i = 0; i <= 6; i++) pts.push(100 + i * 230, 600, 1);
-  const timbri = count(resample(pts, passoTimbri(22)));
-  // Col passo fisso di 2,5 unita usato per la polilinea sarebbero ~550.
-  assert(timbri < 250, `${timbri} timbri, troppi per un tratto solo`);
-  assert(timbri > 100, `${timbri} timbri, troppo pochi: comparirebbero buchi`);
+  for (const [w, tetto] of [[10, 500], [22, 700], [44, 1700], [90, 900]]) {
+    const punti = count(resample(pts, passoTimbri(w)));
+    const impronte = punti * affiancate(w);
+    assert(impronte < tetto, `larghezza ${w}: ${impronte} impronte, oltre il tetto di ${tetto}`);
+    assert(punti > 80, `larghezza ${w}: ${punti} punti, troppo pochi: comparirebbero buchi`);
+  }
 });
 
 /* ---------------- pipeline ---------------- */

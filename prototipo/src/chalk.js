@@ -160,15 +160,59 @@ function colorate(hex) {
   return set;
 }
 
+/* --- La punta di gesso ------------------------------------------------------
+
+   Fino alla Fase 4 l'impronta veniva ingrandita fino alla larghezza del
+   tratto. Ma dentro la maschera CELLE e ONDE sono costanti, quindi la grana e
+   i lobi del bordo erano una frazione FISSA della larghezza: un tratto da 44
+   era l'ingrandimento fotografico 4,4x di uno da 10, e si vedeva.
+
+   Il gesso vero non fa cosi'. La dimensione della grana la danno i granelli e
+   la ruvidita' della lavagna, non quanto e' largo il segno: un tratto grosso
+   ha PIU' grana, non grana piu' grande.
+
+   Quindi l'impronta resta grande piu' o meno sempre uguale, e un tratto largo
+   si ottiene affiancandone k lungo la normale alla curva — come una punta di
+   gesso larga che appoggia su piu' punti. Ne viene gratis anche la striatura
+   longitudinale, che il gesso largo su lavagna ha sempre. */
+
+/** Larghezza di riferimento della punta, in unita' di lavagna. */
+const PUNTA = 14;
+
 /**
- * Distanza fra un timbro e il successivo.
- *
- * Legata alla larghezza, non fissa: le impronte sono larghe quanto il tratto,
- * quindi a un terzo della larghezza si sovrappongono a sufficienza. Con il
- * passo di 2,5 unita' usato per la polilinea servirebbero ottocento timbri
- * per tratto invece di novanta.
+ * Quanta parte della propria larghezza le impronte affiancate si sovrappongono.
+ * A 0,6 i dischi si compenetrano del 40%: sopra 0,7 restano buchi fra una
+ * striscia e l'altra, sotto 0,5 si paga in disegni senza guadagno visibile.
  */
-export const passoTimbri = (larghezza) => Math.max(2, larghezza * 0.34);
+const SOVRAPP = 0.6;
+
+/**
+ * Tetto alle impronte affiancate. Il costo cresce col prodotto (impronte per
+ * punto x punti per unita' di lunghezza), quindi va limitato: senza tetto il
+ * cancellino, largo 90, ne vorrebbe undici.
+ */
+const K_MAX = 5;
+
+/** Quante impronte affiancate servono per una banda larga `w`. */
+export function affiancate(w) {
+  if (!(w > PUNTA)) return 1;
+  return Math.min(K_MAX, Math.ceil(1 + (w / PUNTA - 1) / SOVRAPP));
+}
+
+/**
+ * Larghezza della singola impronta per un tratto di larghezza `w`. Sotto la
+ * PUNTA coincide con la larghezza — il tratto sottile resta esattamente quello
+ * tarato il 31/08 — sopra, resta vicina alla PUNTA finche' il tetto lo permette.
+ */
+export const puntaBase = (w) => w / (1 + SOVRAPP * (affiancate(w) - 1));
+
+/**
+ * Distanza fra un timbro e il successivo lungo la curva.
+ *
+ * Legata alla PUNTA, non alla larghezza del tratto: e' la stessa ragione di
+ * sopra, la densita' della grana non dipende da quanto e' largo il segno.
+ */
+export const passoTimbri = (larghezza) => Math.max(2, puntaBase(larghezza) * 0.34);
 
 /**
  * Timbra un tratto gia' ricampionato.
@@ -193,26 +237,82 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
   const set = colorate(color);
   const rnd = mulberry32(seed);
 
-  // Il jitter e' in unita' di lavagna, quindi il tratto e' identico a ogni
-  // scala: spostare di "un pixel" lo renderebbe dipendente dalla risoluzione.
-  const jitter = Math.max(0.8, width * 0.09);
+  const kMax = affiancate(width);
+  const punta = puntaBase(width);
+
+  /**
+   * Peso di ciascuna striscia, costante per tutto il tratto.
+   *
+   * Senza, le impronte affiancate si mediano fra loro, i vuoti della maschera
+   * si riempiono a vicenda e il tratto grosso viene fuori uniforme come un
+   * aerografo. Un gesso largo non appoggia mai uniformemente: alcune strisce
+   * lasciano meno, ed e' la striatura longitudinale la firma del gesso largo.
+   *
+   * Normalizzati sulla media, cosi' cambiando l'intervallo non cambia quanto
+   * gesso si deposita in totale e la taratura di CHALK_ALPHA resta valida.
+   */
+  const pesi = new Float32Array(kMax);
+  if (kMax > 1) {
+    const r = mulberry32(seed ^ 0x9E3779B9);
+    let somma = 0;
+    for (let j = 0; j < kMax; j++) { pesi[j] = 0.45 + 0.55 * r(); somma += pesi[j]; }
+    const media = somma / kMax;
+    for (let j = 0; j < kMax; j++) pesi[j] /= media;
+  } else {
+    pesi[0] = 1;
+  }
+
+  // Il jitter segue la punta, non la banda: e' il tremolio della mano sul
+  // gesso, e non raddoppia perche' il tratto e' piu' largo. In unita' di
+  // lavagna, quindi il tratto e' identico a ogni scala: spostare di "un pixel"
+  // lo renderebbe dipendente dalla risoluzione.
+  const jitter = Math.max(0.8, punta * 0.09);
 
   for (let i = 0; i < n; i++) {
-    // I timbri saltati consumano comunque la loro parte di sequenza: il
-    // disegno incrementale deve dare lo stesso risultato di quello intero.
-    if (i < da) { rnd(); rnd(); rnd(); rnd(); continue; }
-
     const x = pts[i * 3], y = pts[i * 3 + 1], p = pts[i * 3 + 2];
-    const larghezza = width * (0.35 + 0.65 * p);
-    const lato = larghezza / NUCLEO;
 
-    const jx = (rnd() - 0.5) * 2 * jitter;
-    const jy = (rnd() - 0.5) * 2 * jitter;
+    // La pressione allarga la BANDA, non l'impronta: premere di piu' appoggia
+    // piu' gesso, non fa granelli piu' grossi.
+    const banda = width * (0.35 + 0.65 * p);
+    const lato = Math.min(punta, banda);
+    const spread = Math.max(0, banda - lato);
+    const k = spread === 0
+      ? 1
+      : Math.min(kMax, Math.ceil(1 + spread / (SOVRAPP * lato)));
 
-    // L'opacita' varia da timbro a timbro: e' l'irregolarita' che il gesso ha
-    // quando la mano preme in modo non uniforme.
-    ctx.globalAlpha = alpha * (0.7 + 0.3 * rnd()) * (0.55 + 0.45 * p);
-    ctx.drawImage(set[(rnd() * VARIANTI) | 0], x + jx - lato / 2, y + jy - lato / 2, lato, lato);
+    // Affiancando le impronte il gesso si deposita a piu' strati: senza
+    // dividere, un tratto grosso verrebbe fuori compatto come un pennarello.
+    const strati = k === 1 ? 1 : Math.min(k, lato / (spread / (k - 1)));
+
+    // Normale alla curva, per sapere dove affiancare. Serve solo se c'e'
+    // qualcosa da affiancare.
+    let nx = 0, ny = 0;
+    if (k > 1) {
+      const a = i === 0 ? i : i - 1;
+      const b = i === n - 1 ? i : i + 1;
+      const tx = pts[b * 3] - pts[a * 3];
+      const ty = pts[b * 3 + 1] - pts[a * 3 + 1];
+      const len = Math.hypot(tx, ty) || 1;
+      nx = -ty / len; ny = tx / len;
+    }
+
+    for (let j = 0; j < kMax; j++) {
+      // La sequenza si consuma SEMPRE per intero, anche per le impronte che
+      // non servono a questo punto e per i punti saltati: il disegno
+      // incrementale della gomma deve dare gli stessi pixel di quello completo.
+      const r1 = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd();
+      if (j >= k || i < da) continue;
+
+      const off = k === 1 ? 0 : -spread / 2 + (j * spread) / (k - 1);
+      const cx = x + nx * off + (r1 - 0.5) * 2 * jitter;
+      const cy = y + ny * off + (r2 - 0.5) * 2 * jitter;
+      const disegno = lato / NUCLEO;
+
+      // L'opacita' varia da timbro a timbro: e' l'irregolarita' che il gesso ha
+      // quando la mano preme in modo non uniforme.
+      ctx.globalAlpha = (alpha / strati) * pesi[j] * (0.7 + 0.3 * r3) * (0.55 + 0.45 * p);
+      ctx.drawImage(set[(r4 * VARIANTI) | 0], cx - disegno / 2, cy - disegno / 2, disegno, disegno);
+    }
   }
   ctx.globalAlpha = 1;
 }

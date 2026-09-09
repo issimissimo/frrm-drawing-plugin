@@ -24,6 +24,7 @@ import { createPen } from './pen.js';
 import { createDrawing, createHistory } from './model.js';
 import { render, renderStroke, strokeGeometry } from './render.js';
 import { count } from './geom.js';
+import { affiancate, puntaBase } from './chalk.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -334,10 +335,15 @@ function tick(now = performance.now()) {
     const dubbio = TIMER_RES >= 4 ? ' ~' : '';
 
     // Quanto ha compresso la pipeline: campioni grezzi -> punti salvati.
-    let compress = '—', disegnati = '—';
+    // I timbri sono il PRODOTTO fra punti lungo la curva e impronte
+    // affiancate: e' quello il costo vero di un tratto grosso.
+    let compress = '—', disegnati = '—', punta = '—';
     if (lastStroke) {
       const salvati = count(lastStroke.pts);
-      disegnati = count(strokeGeometry(lastStroke));
+      const punti = count(strokeGeometry(lastStroke));
+      const k = affiancate(lastStroke.width);
+      disegnati = `${punti} x ${k} = ${punti * k}`;
+      punta = `${puntaBase(lastStroke.width).toFixed(1)} su ${lastStroke.width}`;
       compress = `${salvati} pt`;
     }
 
@@ -355,6 +361,7 @@ function tick(now = performance.now()) {
       `  grezzi     ${s.samples}`,
       `  salvati    ${compress}`,
       `  timbri     ${disegnati}`,
+      `  punta      ${punta}`,
       ``,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,
