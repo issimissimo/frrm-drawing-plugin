@@ -6,7 +6,7 @@ Versione corrente: prototipo fasi 0–3, nessun numero di versione
 
 Prototipo standalone completo e funzionante: si disegna a gessetti su lavagna nera, nove colori, gomma granulosa, annulla/rifai. Validato su iPhone 13 Pro (Safari) e Galaxy S10 (Chrome) a 60 fps pieni.
 
-Online su <https://issimissimo.com/temp/frrm-drawing-plugin/>, codice su <https://github.com/issimissimo/frrm-drawing-plugin>.
+Online su <https://issimissimo.com/temp/frmm-drawing-plugin/>, codice su <https://github.com/issimissimo/frrm-drawing-plugin>.
 
 ## Piano attivo
 
@@ -33,7 +33,7 @@ Le Fasi 4–10 del brief (UI definitiva, IndexedDB, export con logo, plugin Word
 - **Il livello dei tratti diverge dal modello.** Si riallinea su undo/redo/resize, e lì la grana cambia (~30% dei pixel), la forma no. È voluto: è il prezzo per non far saltare il tratto mentre si disegna.
 - **Vicolo cieco già percorso**: legare l'aspetto del timbro alla *posizione* anziché alla sequenza sembra la soluzione elegante al salto, e invece peggiora — ogni micro-movimento della curva ricalcola l'aspetto di tutte le impronte (16,5% di pixel cambiati invece di 2,8%).
 - **Alzare `minCutoff` o `beta` per avere più smoothing non funziona**: il tremore gonfia la stima di velocità (±4 unità a 55 Hz valgono ~440 unità/s apparenti) e il filtro lo scambia per un gesto veloce.
-- **Le credenziali FTP aprono l'intero account SiteGround**, dove convivono altri domini e lavori di clienti, compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frrm-drawing-plugin/`, e sempre con un listing prima di scrivere.
+- **Le credenziali FTP aprono l'intero account SiteGround**, dove convivono altri domini e lavori di clienti, compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frmm-drawing-plugin/`, e sempre con un listing prima di scrivere.
 - **Il token GitHub è in chiaro** in `~/.claude/.secrets/github-pat.txt` e nella configurazione MCP utente. È anche finito nel transcript della chat del 05/09/2026: **da revocare e rigenerare**.
 - Il `.md` del brief ha il markdown escapato (`\---`, `\*\*`). È voluto, non va ripulito.
 

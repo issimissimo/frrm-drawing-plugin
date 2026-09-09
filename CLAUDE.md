@@ -75,15 +75,23 @@ Fasi 4–10 (UI definitiva, IndexedDB, export, plugin WP, moderazione, gallery, 
 
 Se una sessione futura comincia a costruire persistenza, backend o integrazione WP, va nominato prima di scrivere il codice.
 
+## ⚠️ Due nomi diversi, ed è voluto
+
+Il nome corretto del progetto è **`frmm`**. La cartella su FTP è stata rinominata il 09/09/2026.
+
+**Restano scritti `frrm`**, che è un refuso: la cartella locale `frrm-drawing-plugin` e il repo GitHub. Non sono stati allineati perché rinominare la cartella locale scollega memoria e cronologia (vedi `Claude_Workspace/CLAUDE.md`) e va fatto a sessione chiusa.
+
+Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il percorso online giusto è quello con `frmm`.
+
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frrm-drawing-plugin/>
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin/>
 
 Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
 
 Credenziali FTP in `~/.claude/.secrets/ftp-siteground.env`, condivise fra i progetti del workspace; le regole d’uso stanno in `~/.claude/rules/credenziali.md`.
 
-**Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frrm-drawing-plugin/`.
+**Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frmm-drawing-plugin/`.
 
 ## Regole di lavoro
 
