@@ -193,20 +193,6 @@ const SOVRAPP = 0.6;
  */
 const K_MAX = 5;
 
-/**
- * Quanto si allarga la banda per compensare la frangia piu' corta.
- *
- * Con l'impronta grande quanto il tratto, la sfrangiatura si estendeva in
- * proporzione: un tratto da 22 sfumava fino a 36. Con l'impronta a dimensione
- * fissa la frangia resta quella della punta, e il tratto finisce di colpo —
- * a parita' di nucleo si vede piu' stretto. Si recupera allargando la banda
- * di una frazione di quanto l'impronta e' piu' piccola della banda stessa.
- *
- * Vale zero quando non c'e' affiancamento, quindi il tratto sottile — che era
- * tarato il 31/08 e va bene — resta identico per costruzione.
- */
-const COMPENSA_FRANGIA = 0.30;
-
 /** Quante impronte affiancate servono per una banda larga `w`. */
 export function affiancate(w) {
   if (!(w > PUNTA)) return 1;
@@ -229,15 +215,13 @@ export const puntaBase = (w) => w / (1 + SOVRAPP * (affiancate(w) - 1));
 export const passoTimbri = (larghezza) => Math.max(2, puntaBase(larghezza) * 0.34);
 
 /**
- * Larghezza della banda effettivamente depositata, compensazione inclusa.
- * Esportata perche' e' la grandezza che decide quanto il tratto si vede, ed
- * e' l'unico modo di tenerla sotto test senza un canvas.
+ * Larghezza della banda depositata. Coincide con la larghezza nominale
+ * modulata dalla pressione: la compensazione della frangia e' stata tolta
+ * insieme al resto, per riportare l'effetto gesso a com'era.
+ * Esportata perche' e' l'unico modo di tenere la larghezza sotto test
+ * senza un canvas.
  */
-export function bandaEffettiva(width, p = 1) {
-  const nominale = width * (0.35 + 0.65 * p);
-  const lato = Math.min(puntaBase(width), nominale);
-  return nominale + (nominale - lato) * COMPENSA_FRANGIA;
-}
+export const bandaEffettiva = (width, p = 1) => width * (0.35 + 0.65 * p);
 
 /**
  * Timbra un tratto gia' ricampionato.
@@ -298,23 +282,22 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
 
     // La pressione allarga la BANDA, non l'impronta: premere di piu' appoggia
     // piu' gesso, non fa granelli piu' grossi.
-    const nominale = width * (0.35 + 0.65 * p);
-    const lato = Math.min(punta, nominale);
-    const banda = nominale + (nominale - lato) * COMPENSA_FRANGIA;
+    const banda = width * (0.35 + 0.65 * p);
+    const lato = Math.min(punta, banda);
     const spread = Math.max(0, banda - lato);
     const k = spread === 0
       ? 1
       : Math.min(kMax, Math.ceil(1 + spread / (SOVRAPP * lato)));
 
-    // Affiancando le impronte il gesso si deposita a piu' strati: senza
-    // attenuare, un tratto grosso verrebbe fuori compatto come un pennarello.
-    //
-    // L'attenuazione e' la RADICE degli strati, non gli strati. Dividere per
-    // il numero pieno sconta anche i fianchi, dove le impronte NON si
-    // sovrappongono e quindi il beneficio non c'e': il bordo diventava cosi'
-    // trasparente da sparire sul nero, e il tratto sembrava largo la meta'.
+    /* Affiancando le impronte il gesso si deposita a piu' strati: senza
+       dividere, un tratto grosso verrebbe fuori compatto come un pennarello.
+
+       Si divide per il NUMERO PIENO degli strati, non per la sua radice.
+       La radice era stata provata il 15/09/2026 per rinforzare i fianchi, ma
+       alzava l'opacita' ovunque: il tratto arrivava a saturare (picco 1.00
+       contro 0.96) e perdeva il filo di lavagna in trasparenza che e' cio'
+       che lo fa leggere come gesso invece che come pittura. */
     const strati = k === 1 ? 1 : Math.min(k, lato / (spread / (k - 1)));
-    const attenua = Math.sqrt(strati);
 
     // Normale alla curva, per sapere dove affiancare. Serve solo se c'e'
     // qualcosa da affiancare.
@@ -342,7 +325,7 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
 
       // L'opacita' varia da timbro a timbro: e' l'irregolarita' che il gesso ha
       // quando la mano preme in modo non uniforme.
-      ctx.globalAlpha = (alpha / attenua) * pesi[j] * (0.7 + 0.3 * r3) * (0.55 + 0.45 * p);
+      ctx.globalAlpha = (alpha / strati) * pesi[j] * (0.7 + 0.3 * r3) * (0.55 + 0.45 * p);
       ctx.drawImage(set[(r4 * VARIANTI) | 0], cx - disegno / 2, cy - disegno / 2, disegno, disegno);
     }
   }

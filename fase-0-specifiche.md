@@ -103,15 +103,17 @@ Tre, in unità della lavagna logica.
 
 | | Unità | Banda resa | Uso |
 |---|---|---|---|
-| Sottile | **16** | 17,8 | dettagli, occhi, contorni |
-| Medio | **28** | 32,6 | il tratto normale, default all'avvio |
-| Grosso | **44** | 53,3 | campiture, sfondi |
+| Sottile | **16** | 21 | dettagli, occhi, contorni |
+| Medio | **28** | 32 | il tratto normale, default all'avvio |
+| Grosso | **44** | 47 | campiture, sfondi |
 
 I valori originali erano 10 / 22 / 44, con rapporto 2,2× fra un livello e il successivo. **Alzati a 16 / 28 il 15/09/2026**, guardando i tre tratti affiancati: sottile e medio risultavano troppo esili, il grosso era giusto.
 
-La "banda resa" è la larghezza effettivamente depositata, compensazione della frangia inclusa (vedi `chalk.js`): è quella che si vede, il valore nominale è il nucleo.
+La "banda resa" è la larghezza del tratto a pressione piena, misurata a soglia di opacità 0,25.
 
-**Il prezzo è che i tre spessori si sono avvicinati.** Con il grosso bloccato a 44 e gli altri due alzati, il passo scende da 2,2× a **1,83× e 1,64×**. Restano distinguibili, ma il margine è più stretto di quello che la Fase 0 si era data: se un bambino confondesse sottile e medio, l'unica via è alzare il grosso, non riabbassare gli altri.
+**La compensazione della frangia è stata tolta il 15/09/2026**, insieme all'attenuazione a radice degli strati: alzavano l'opacità ovunque e il tratto smetteva di sembrare gesso. L'effetto è tornato esattamente quello di `70f3ddf`, verificato pixel per pixel.
+
+**Il prezzo è che i tre spessori si sono avvicinati.** Con il grosso bloccato a 44 e gli altri due alzati, il passo scende da 2,2× a **1,75× e 1,57×**. Restano distinguibili, ma il margine è più stretto di quello che la Fase 0 si era data: se un bambino confondesse sottile e medio, l'unica via è alzare il grosso, non riabbassare gli altri.
 
 **Debito noto**: `puntaBase()` non è monotona. A 14 unità la punta vale 14, a 16 scende a 10, perché appena si supera `PUNTA` il numero di impronte affiancate salta da 1 a 2. Il sottile ha quindi una grana più fine del 21% rispetto agli altri due. Non è visibile a occhio nei test fatti, ma è il punto da guardare se la texture del sottile sembrasse diversa.
 

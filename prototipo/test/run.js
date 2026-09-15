@@ -7,7 +7,7 @@
  */
 
 import { createOneEuro2D } from '../src/filter.js';
-import { ONE_EURO, SMOOTHING } from '../src/palette.js';
+import { ONE_EURO, SMOOTHING, WIDTHS } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 
@@ -378,39 +378,33 @@ test('gessetto: un tratto tipico non genera troppe impronte', () => {
 });
 
 /*
- * Nati da un difetto trovato provando: passando alla punta di dimensione
- * fissa i tratti si vedevano larghi circa la meta'. La geometria era giusta —
- * era l'opacita' dei fianchi a crollare, e la frangia ad accorciarsi.
+ * La compensazione della frangia e l'attenuazione a radice degli strati sono
+ * state tolte il 15/09/2026: alzavano l'opacita' ovunque e il tratto smetteva
+ * di sembrare gesso. Resta sotto test cio' che deve valere comunque.
  */
 
-test('larghezza: il tratto sottile non e toccato dalla compensazione', () => {
-  // Sotto la punta non c'e' affiancamento: il problema non esiste, e la
-  // taratura del 31/08 va lasciata stare.
-  close(bandaEffettiva(10), 10, 1e-9, 'sottile a piena pressione');
-  assert(affiancate(10) === 1, 'il sottile non deve affiancare impronte');
-});
-
-test('larghezza: i tratti affiancati recuperano la frangia perduta', () => {
-  for (const w of [22, 44]) {
-    const banda = bandaEffettiva(w);
-    assert(banda > w, `${w}: la banda ${banda.toFixed(1)} non compensa nulla`);
-    assert(banda < w * 1.35, `${w}: la banda ${banda.toFixed(1)} e cresciuta troppo`);
+test('larghezza: la banda segue la larghezza nominale', () => {
+  for (const { w } of WIDTHS) {
+    close(bandaEffettiva(w), w, 1e-9, `spessore ${w} a pressione piena`);
   }
 });
 
-test('larghezza: la compensazione cresce con lo scarto fra punta e banda', () => {
-  const s22 = bandaEffettiva(22) / 22;
-  const s44 = bandaEffettiva(44) / 44;
-  assert(s44 > s22,
-    `il tratto grosso ha la punta piu piccola in proporzione, quindi va compensato di piu: ${s22.toFixed(2)} vs ${s44.toFixed(2)}`);
-});
-
 test('larghezza: a pressione bassa il tratto si assottiglia davvero', () => {
-  // La pseudo-pressione deve restare visibile: se la compensazione la
-  // annullasse, il gesto veloce non sarebbe piu' piu' sottile di quello lento.
-  for (const w of [22, 44]) {
+  // La pseudo-pressione deve restare visibile: se non si assottigliasse, il
+  // gesto veloce non sarebbe piu' distinguibile da quello lento.
+  for (const { w } of WIDTHS) {
     assert(bandaEffettiva(w, 0.2) < bandaEffettiva(w, 1) * 0.65,
       `${w}: a pressione 0.2 la banda non si assottiglia abbastanza`);
+  }
+});
+
+test('larghezza: i tre spessori restano distinguibili', () => {
+  // La Fase 0 si era data un rapporto 2,2x; alzando sottile e medio a 16 e 28
+  // e' sceso. Sotto 1,4x due pulsanti diversi darebbero lo stesso tratto.
+  const b = WIDTHS.map(({ w }) => bandaEffettiva(w));
+  for (let i = 1; i < b.length; i++) {
+    assert(b[i] / b[i - 1] > 1.4,
+      `passo ${(b[i] / b[i - 1]).toFixed(2)}x fra ${WIDTHS[i - 1].id} e ${WIDTHS[i].id}: troppo vicini`);
   }
 });
 
