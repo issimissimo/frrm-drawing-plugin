@@ -120,29 +120,28 @@ export const ONE_EURO = { minCutoff: 1.0, beta: 0.2, dCutoff: 1.0 };
  * bordo meno opaco scende sotto la soglia di visibilita' e il tratto sembra
  * piu' stretto anche se geometricamente non lo e'.
  *
- * Era 0.55, e da sola faceva il grosso del restringimento lamentato dal
- * cliente il 15/09/2026.
+ * Va tarata INSIEME a PRESSURE_MIN: muovere una sola delle due non produce
+ * il risultato atteso. Vedi la nota sotto.
  */
-export const PRESSURE_ALPHA_MIN = 0.90;
+export const PRESSURE_ALPHA_MIN = 0.85;
 
 /**
  * Larghezza del tratto piu' veloce, come frazione di quella nominale.
  *
- * Il tetto chiesto dal cliente il 15/09/2026 e' il 20% di variazione su cio'
- * che si VEDE. Non coincide con questa frazione: la larghezza nominale scende
- * del 8%, ma quella resa scende del 13%, perche' a banda piu' stretta cambia
- * anche il numero di impronte affiancate. Tarato misurando, non calcolando:
+ * Insieme a PRESSURE_ALPHA_MIN determina quanto il tratto cambia fra gesto
+ * lento e gesto rapido. Il cliente ha chiesto il 15/09/2026 una variazione
+ * **del 20%** su cio' che si vede: non un tetto da cui stare lontani — a
+ * 13% il tratto sembra uniforme e la pressione non si legge piu'.
  *
- *   0.80 -> riduzione resa 33 / 38 / 24%   (troppo)
- *   0.90 -> 21 / 15 / 12%                  (il sottile sfora ancora)
- *   0.92 -> 13 / 12 /  9%                  scelto
+ * Tarato misurando la banda resa, non calcolando. Le due leve si sommano in
+ * modo non ovvio, ed e' il motivo per cui vanno mosse insieme:
  *
- * Prima era 0.35, e il tratto veloce si riduceva a un terzo.
- *
- * La pseudo-pressione serve a dare vita al tratto, non a fare da secondo
- * selettore di spessore: quello sono i tre pulsanti.
+ *   geo 0.92  alfa 0.90  ->  13 / 12 /  9%   il tratto sembra sempre uguale
+ *   geo 0.92  alfa 0.65  ->  21 / 18 / 10%   il grosso resta piatto
+ *   geo 0.88  alfa 0.75  ->  25 / 18 / 14%   il sottile sfora
+ *   geo 0.84  alfa 0.85  ->  21 / 21 / 16%   scelto: uniforme sui tre
  */
-export const PRESSURE_MIN = 0.92;
+export const PRESSURE_MIN = 0.84;
 
 /** Velocita' oltre la quale il tratto e' al minimo spessore, in unita'/s. */
 export const SPEED_MAX = 2200;

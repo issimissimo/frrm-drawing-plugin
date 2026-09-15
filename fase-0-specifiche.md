@@ -109,20 +109,29 @@ Le bande **24 / 35 / 58 sono state approvate dal cliente il 15/09/2026**; i valo
 
 La "banda resa" è la larghezza del tratto a pressione piena, a soglia di opacità 0,25 sul fondo lavagna. **È il valore da modificare se il cliente chiede tratti diversi**: il nominale è solo il numero che lo produce.
 
-### 4.1 La pseudo-pressione non deve variare più del 20%
+### 4.1 La pseudo-pressione varia del 20%
 
-Tetto fissato dal cliente il 15/09/2026: il tratto veloce era largo un terzo di quello lento, troppo. Ora varia del **13 / 12 / 9%**.
+Fissato dal cliente il 15/09/2026. **È un valore da centrare, non un tetto da cui stare lontani**: a una variazione del 13% il tratto sembra uniforme e la pressione non si legge più — provato e scartato.
+
+Misurato sulla banda resa: **21 / 21 / 16%** fra gesto lento e gesto rapido.
 
 La pressione agisce su **due grandezze**, e la seconda pesa più della prima:
 
 | | costante | valore |
 |---|---|---|
-| quanto è largo il segno | `PRESSURE_MIN` | 0,92 |
-| quanto gesso deposita | `PRESSURE_ALPHA_MIN` | 0,90 |
+| quanto è largo il segno | `PRESSURE_MIN` | 0,84 |
+| quanto gesso deposita | `PRESSURE_ALPHA_MIN` | 0,85 |
 
-Un bordo meno opaco scende sotto la soglia di visibilità, e il tratto **sembra più stretto anche se geometricamente non lo è**: con la sola geometria a 0,92 ma l'opacità ancora a 0,55 la riduzione restava del 29%. Chi in futuro volesse ritoccare la variazione deve muovere entrambe, o non otterrà quello che si aspetta.
+Un bordo meno opaco scende sotto la soglia di visibilità, e il tratto **sembra più stretto anche se geometricamente non lo è**. Le due leve vanno quindi mosse **insieme**: muoverne una sola non dà il risultato atteso. Le combinazioni misurate:
 
-Sopra `PRESSURE_ALPHA_MIN` 0,85 il contributo dell'opacità satura: resta solo quello geometrico, e la riduzione non scende più sotto il 13%.
+| geometria | opacità | variazione resa | |
+|---|---|---|---|
+| 0,92 | 0,90 | 13 / 12 / 9% | sembra sempre uguale |
+| 0,92 | 0,65 | 21 / 18 / 10% | il grosso resta piatto |
+| 0,88 | 0,75 | 25 / 18 / 14% | il sottile sfora |
+| **0,84** | **0,85** | **21 / 21 / 16%** | **scelto: uniforme sui tre** |
+
+Il grosso varia sempre un po' meno degli altri due: ha più impronte affiancate, quindi la geometria pesa di più e l'opacità di meno.
 
 ### 4.2 Sottile e medio sono vicini
 

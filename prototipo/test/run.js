@@ -391,13 +391,14 @@ test('larghezza: la banda segue la larghezza nominale', () => {
 });
 
 test('larghezza: la pressione modula il tratto senza stravolgerlo', () => {
-  // Tetto del 20% sulla larghezza VISTA, fissato dal cliente il 15/09/2026.
-  // Le leve sono due: la geometria e l'opacita. Agire su una sola non basta —
-  // con la geometria a 0.92 e l'opacita ancora a 0.55 la riduzione resa era
-  // del 29%. Qui si tiene sotto controllo che nessuna delle due scappi.
-  assert(PRESSURE_MIN >= 0.88 && PRESSURE_MIN <= 0.97,
+  // Il cliente ha chiesto una variazione DEL 20% sulla larghezza vista, non
+  // un tetto: a 13% il tratto sembra uniforme e la pressione non si legge.
+  // Le leve sono due, geometria e opacita, e si sommano in modo non ovvio:
+  // vanno mosse insieme. Qui si controlla solo che restino nella finestra
+  // tarata misurando — il valore reso si verifica nel browser.
+  assert(PRESSURE_MIN >= 0.80 && PRESSURE_MIN <= 0.90,
     `PRESSURE_MIN ${PRESSURE_MIN} fuori dalla finestra tarata`);
-  assert(PRESSURE_ALPHA_MIN >= 0.85 && PRESSURE_ALPHA_MIN <= 0.98,
+  assert(PRESSURE_ALPHA_MIN >= 0.78 && PRESSURE_ALPHA_MIN <= 0.92,
     `PRESSURE_ALPHA_MIN ${PRESSURE_ALPHA_MIN} fuori dalla finestra tarata`);
 
   for (const { w, id } of WIDTHS) {
