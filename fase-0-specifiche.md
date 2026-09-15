@@ -39,20 +39,20 @@ Il verde ardesia è stato scartato: più riconoscibile come "lavagna di scuola",
 
 ## 3. Palette gessetti
 
-Generata in **OKLCH a luminanza e croma costanti** (`L = 0.780`, `C = 0.120`), variando solo la tonalità. Il croma è il massimo che tiene tutte e otto le tonalità dentro il gamut sRGB a questa luminanza: oltre, i canali si saturano, il colore risultante non è più quello richiesto e l'isoluminanza si perde.
+Generata in **OKLCH a luminanza e croma costanti** (`L = 0.780`, `C = 0.120`), variando solo la tonalità. **Tre gessetti stanno fuori serie** — bianco, rosso e marrone: vedi §3.2. Il croma è il massimo che tiene tutte e otto le tonalità dentro il gamut sRGB a questa luminanza: oltre, i canali si saturano, il colore risultante non è più quello richiesto e l'isoluminanza si perde.
 
-Risultato: spread di contrasto **0,82 punti** fra il gessetto più forte e il più debole, su un range 7,6–8,4. Nessun colore sparisce, nessuno domina.
+Fra i **sette in serie** lo spread di contrasto è di **0,82 punti** su un range 7,6–8,4: nessuno di loro sparisce, nessuno domina. I tre fuori serie stanno più in basso, e §3.2 dice di quanto.
 
 | Gessetto | Hex | L | C | H |
 |---|---|---|---|---|
 | bianco | `#FAF8F3` | 0.980 | 0.008 | 95° |
 | giallo | `#C9B957` | 0.780 | 0.120 | 100° |
 | arancio | `#F1A366` | 0.780 | 0.120 | 58° |
-| corallo | `#FB9795` | 0.780 | 0.120 | 22° |
+| **rosso** | `#FE4335` | **0.660** | **0.225** | 29° |
 | rosa | `#F197C2` | 0.780 | 0.120 | 350° |
 | lilla | `#C9A3F5` | 0.780 | 0.120 | 305° |
 | azzurro | `#71BFFF` | 0.780 | 0.120 | 245° |
-| acqua | `#3BCFCF` | 0.780 | 0.120 | 195° |
+| **marrone** | `#AD794B` | **0.620** | **0.090** | 62° |
 | verde | `#85CC87` | 0.780 | 0.120 | 145° |
 
 ### 3.1 Perché questa luminanza e non un'altra
@@ -70,9 +70,30 @@ L'ultimo gradino è stato scartato: guadagna **0,6% di croma** costando 0,04 di 
 
 Note:
 
-- Il **bianco è fuori serie** (`L = 0.980`, quasi acromatico) perché è il gessetto di default e deve leggersi come "il gesso", non come la nona tinta. A luminanza 0.78 delle altre, lo stacco è netto.
-- I valori OKLCH vanno conservati nel codice accanto agli hex: se in Fase 3 la texture del gesso altera troppo la resa, si sposta `L` per tutti e nove in un colpo solo e la palette resta coerente. **È probabile che serva**: grana e opacità irregolare abbassano la saturazione percepita, che è esattamente il motivo per cui si parte carichi.
+- I valori OKLCH vanno conservati nel codice accanto agli hex: se la texture del gesso altera troppo la resa, si sposta `L` per i sette in serie in un colpo solo e la palette resta coerente. **È probabile che serva**: grana e opacità irregolare abbassano la saturazione percepita, che è esattamente il motivo per cui si parte carichi.
 - La **selezione del gessetto attivo** non si segnala con un bordo colorato attorno al pulsante: il colore è già nel gessetto. Si segnala con la posizione (gessetto sollevato) — dettaglio di Fase 4, annotato qui perché discende dalla palette.
+
+### 3.2 I tre fuori serie
+
+| | perché sta fuori |
+|---|---|
+| **bianco** `L 0.980` | è il gessetto di default e deve leggersi come *il gesso*, non come la nona tinta |
+| **rosso** `L 0.660` | a `L 0.780` il rosso è un rosa salmone — era esattamente il vecchio `corallo`. Per essere rosso deve scendere |
+| **marrone** `L 0.620` | il marrone **è** un arancione scuro: a `L 0.780` non esiste, viene beige |
+
+Rosso e marrone sono stati **richiesti dal cliente il 15/09/2026**, in sostituzione di `corallo` e `acqua`.
+
+Costano contrasto sul fondo nero, ed è bene sapere quanto:
+
+| | contrasto tratto pieno |
+|---|---|
+| gli altri sette | 7,6 – 8,4 |
+| rosso `#FE4335` | **4,63** |
+| marrone `#AD794B` | **4,29** |
+
+Sono i valori più scuri che restano attorno alla soglia WCAG di 4,5 pur essendo inequivocabilmente rossi e marroni. Un rosso più pieno (`#F90F0D`) scende a 3,89 e un marrone più scuro (`#9E6F43`) a 3,65: lì un tratto sottile comincia a sparire sul nero, ed è il caso peggiore perché la pseudo-pressione assottiglia proprio i gesti rapidi dei bambini.
+
+**Da tenere d'occhio**: il marrone è a `H 62`, l'arancio a `H 58`. Sono parenti stretti di tonalità e si distinguono solo per luminosità e croma — se nella mensola risultassero confondibili, il marrone va spostato verso `H 70`.
 
 ---
 

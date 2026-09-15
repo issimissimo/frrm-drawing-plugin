@@ -42,18 +42,31 @@ export const DPR_CAP = 2;
 export const BOARD_BG = '#1F2225';
 
 /**
- * Nove gessetti a luminanza e croma costanti (L 0.780 / C 0.120), tranne il
- * bianco che sta fuori serie: e' il default e deve leggersi come "il gesso".
+ * Sette gessetti a luminanza e croma costanti (L 0.780 / C 0.120), cosi' che
+ * nessuno pesi piu' degli altri. Tre stanno fuori serie, e ognuno per un
+ * motivo suo:
+ *
+ *   bianco    piu' chiaro: e' il default, deve leggersi come "il gesso".
+ *   rosso     piu' scuro:  a L 0.780 il rosso e' un rosa salmone, che era
+ *             esattamente il vecchio "corallo". Per essere rosso deve scendere.
+ *   marrone   piu' scuro:  il marrone E' un arancione scuro. A L 0.780 non
+ *             esiste, viene beige.
+ *
+ * Richiesti dal cliente il 15/09/2026. Costano contrasto sul fondo nero —
+ * 4,6 e 4,3 contro i 7,6-8,4 degli altri — ed e' il minimo che si possa
+ * pagare tenendoli riconoscibili: un rosso piu' pieno (#F90F0D) scende a
+ * 3,9 e un marrone piu' scuro (#9E6F43) a 3,7, dove un tratto sottile
+ * comincia a sparire.
  */
 export const CHALKS = [
   { id: 'bianco',  hex: '#FAF8F3', L: 0.980, C: 0.008, H: 95  },
   { id: 'giallo',  hex: '#C9B957', L: 0.780, C: 0.120, H: 100 },
   { id: 'arancio', hex: '#F1A366', L: 0.780, C: 0.120, H: 58  },
-  { id: 'corallo', hex: '#FB9795', L: 0.780, C: 0.120, H: 22  },
+  { id: 'rosso',   hex: '#FE4335', L: 0.660, C: 0.225, H: 29  },
   { id: 'rosa',    hex: '#F197C2', L: 0.780, C: 0.120, H: 350 },
   { id: 'lilla',   hex: '#C9A3F5', L: 0.780, C: 0.120, H: 305 },
   { id: 'azzurro', hex: '#71BFFF', L: 0.780, C: 0.120, H: 245 },
-  { id: 'acqua',   hex: '#3BCFCF', L: 0.780, C: 0.120, H: 195 },
+  { id: 'marrone', hex: '#AD794B', L: 0.620, C: 0.090, H: 62  },
   { id: 'verde',   hex: '#85CC87', L: 0.780, C: 0.120, H: 145 },
 ];
 

@@ -211,18 +211,32 @@
     border-radius: 7px 7px 3px 3px;
     background: var(--grad);
   }
+  /* Il cancellino da lavagna, visto di fronte: blocco di legno sopra, feltro
+     sotto. Il segno che lo rende riconoscibile non e' la forma — a questa
+     dimensione un rettangolo bicolore non dice nulla — ma il feltro SPORCO DI
+     GESSO: e' quello a dire che l'oggetto ha gia' cancellato qualcosa. */
   .felt {
     width: calc(var(--slot) * 1.55);
-    height: calc(var(--stick-h) * 0.56);
-    border-radius: 6px;
+    height: calc(var(--stick-h) * 0.62);
+    border-radius: 5px 5px 3px 3px;
     overflow: hidden;
-    background: linear-gradient(96deg, #3A4046 0%, #646C73 42%, #4A5158 100%);
+    background: linear-gradient(96deg, #464D54 0%, #6E767D 45%, #4E555C 100%);
   }
-  .felt::before {
+  .felt::before {                         /* il dorso di legno: si impugna questo */
     content: '';
     display: block;
-    height: 26%;
-    background: #4A4038;                  /* il dorso di legno: e' un blocco, non un gesso */
+    height: 36%;
+    background: linear-gradient(177deg, #7D6139 0%, #58431F 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+  }
+  .felt::after {                          /* residui di gesso sul feltro */
+    content: '';
+    display: block;
+    height: 64%;
+    background: repeating-linear-gradient(95deg,
+      transparent 0 3px,
+      rgba(250, 248, 243, 0.42) 3px 5px,
+      transparent 5px 10px);
   }
 
   [aria-pressed="true"] .stick,
