@@ -101,13 +101,19 @@ Sono i valori più scuri che restano attorno alla soglia WCAG di 4,5 pur essendo
 
 Tre, in unità della lavagna logica.
 
-| | Unità | Uso |
-|---|---|---|
-| Sottile | **10** | dettagli, occhi, contorni |
-| Medio | **22** | il tratto normale, default all'avvio |
-| Grosso | **44** | campiture, sfondi |
+| | Unità | Banda resa | Uso |
+|---|---|---|---|
+| Sottile | **16** | 17,8 | dettagli, occhi, contorni |
+| Medio | **28** | 32,6 | il tratto normale, default all'avvio |
+| Grosso | **44** | 53,3 | campiture, sfondi |
 
-Rapporto 2,2× fra un livello e il successivo: abbastanza distanti perché un bambino li distingua a colpo d'occhio, e perché la differenza si veda anche su uno schermo da 5 pollici.
+I valori originali erano 10 / 22 / 44, con rapporto 2,2× fra un livello e il successivo. **Alzati a 16 / 28 il 15/09/2026**, guardando i tre tratti affiancati: sottile e medio risultavano troppo esili, il grosso era giusto.
+
+La "banda resa" è la larghezza effettivamente depositata, compensazione della frangia inclusa (vedi `chalk.js`): è quella che si vede, il valore nominale è il nucleo.
+
+**Il prezzo è che i tre spessori si sono avvicinati.** Con il grosso bloccato a 44 e gli altri due alzati, il passo scende da 2,2× a **1,83× e 1,64×**. Restano distinguibili, ma il margine è più stretto di quello che la Fase 0 si era data: se un bambino confondesse sottile e medio, l'unica via è alzare il grosso, non riabbassare gli altri.
+
+**Debito noto**: `puntaBase()` non è monotona. A 14 unità la punta vale 14, a 16 scende a 10, perché appena si supera `PUNTA` il numero di impronte affiancate salta da 1 a 2. Il sottile ha quindi una grana più fine del 21% rispetto agli altri due. Non è visibile a occhio nei test fatti, ma è il punto da guardare se la texture del sottile sembrasse diversa.
 
 **Cancellino: 90 unità**, non selezionabile fra gli spessori. È uno strumento a sé, e va largo — un cancellino di precisione sarebbe frustrante e, soprattutto, non è ciò che fa un cancellino vero.
 

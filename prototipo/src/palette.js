@@ -74,12 +74,12 @@ export const DEFAULT_CHALK = 'bianco';
 
 /** Spessori in unita' di lavagna. Rapporto 2.2x: distinguibili a colpo d'occhio. */
 export const WIDTHS = [
-  { id: 'sottile', w: 10 },
-  { id: 'medio',   w: 22 },
+  { id: 'sottile', w: 16 },
+  { id: 'medio',   w: 28 },
   { id: 'grosso',  w: 44 },
 ];
 
-export const DEFAULT_WIDTH = 22;
+export const DEFAULT_WIDTH = 28;
 
 /** Il cancellino e' uno strumento a se': va largo, non di precisione. */
 export const ERASER_WIDTH = 90;

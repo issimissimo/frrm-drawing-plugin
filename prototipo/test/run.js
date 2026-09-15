@@ -369,7 +369,7 @@ test('gessetto: un tratto tipico non genera troppe impronte', () => {
   // lungo la curva e impronte affiancate: e' quello che va tenuto a bada.
   const pts = [];
   for (let i = 0; i <= 6; i++) pts.push(100 + i * 230, 600, 1);
-  for (const [w, tetto] of [[10, 500], [22, 700], [44, 1700], [90, 900]]) {
+  for (const [w, tetto] of [[16, 900], [28, 1300], [44, 1700], [90, 900]]) {
     const punti = count(resample(pts, passoTimbri(w)));
     const impronte = punti * affiancate(w);
     assert(impronte < tetto, `larghezza ${w}: ${impronte} impronte, oltre il tetto di ${tetto}`);
