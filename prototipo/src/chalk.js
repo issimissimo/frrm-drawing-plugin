@@ -18,7 +18,7 @@
  *    volta. La varieta' viene da otto impronte diverse scelte a rotazione.
  */
 
-import { BOARD_W } from './palette.js';
+import { PRESSURE_MIN, PRESSURE_ALPHA_MIN } from './palette.js';
 
 /** Quante impronte diverse. Poche si notano ripetute, molte non aggiungono. */
 const VARIANTI = 8;
@@ -221,7 +221,8 @@ export const passoTimbri = (larghezza) => Math.max(2, puntaBase(larghezza) * 0.3
  * Esportata perche' e' l'unico modo di tenere la larghezza sotto test
  * senza un canvas.
  */
-export const bandaEffettiva = (width, p = 1) => width * (0.35 + 0.65 * p);
+export const bandaEffettiva = (width, p = 1) =>
+  width * (PRESSURE_MIN + (1 - PRESSURE_MIN) * p);
 
 /**
  * Timbra un tratto gia' ricampionato.
@@ -282,7 +283,7 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
 
     // La pressione allarga la BANDA, non l'impronta: premere di piu' appoggia
     // piu' gesso, non fa granelli piu' grossi.
-    const banda = width * (0.35 + 0.65 * p);
+    const banda = width * (PRESSURE_MIN + (1 - PRESSURE_MIN) * p);
     const lato = Math.min(punta, banda);
     const spread = Math.max(0, banda - lato);
     const k = spread === 0
@@ -325,7 +326,8 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
 
       // L'opacita' varia da timbro a timbro: e' l'irregolarita' che il gesso ha
       // quando la mano preme in modo non uniforme.
-      ctx.globalAlpha = (alpha / strati) * pesi[j] * (0.7 + 0.3 * r3) * (0.55 + 0.45 * p);
+      ctx.globalAlpha = (alpha / strati) * pesi[j] * (0.7 + 0.3 * r3)
+        * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
       ctx.drawImage(set[(r4 * VARIANTI) | 0], cx - disegno / 2, cy - disegno / 2, disegno, disegno);
     }
   }

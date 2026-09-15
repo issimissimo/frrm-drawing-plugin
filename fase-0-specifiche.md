@@ -99,23 +99,38 @@ Sono i valori più scuri che restano attorno alla soglia WCAG di 4,5 pur essendo
 
 ## 4. Spessori
 
-Tre, in unità della lavagna logica.
-
-| | Unità | Banda resa | Uso |
+| | Nominale | Banda resa | Uso |
 |---|---|---|---|
-| Sottile | **16** | 21 | dettagli, occhi, contorni |
-| Medio | **28** | 32 | il tratto normale, default all'avvio |
-| Grosso | **44** | 47 | campiture, sfondi |
+| Sottile | **21** | **24** | dettagli, occhi, contorni |
+| Medio | **27** | **34** | il tratto normale, default all'avvio |
+| Grosso | **50** | **58** | campiture, sfondi |
 
-I valori originali erano 10 / 22 / 44, con rapporto 2,2× fra un livello e il successivo. **Alzati a 16 / 28 il 15/09/2026**, guardando i tre tratti affiancati: sottile e medio risultavano troppo esili, il grosso era giusto.
+Le bande **24 / 35 / 58 sono state approvate dal cliente il 15/09/2026**; i valori nominali sono quelli che le producono, trovati misurando. Non si ricavano con una formula: la frangia aggiunge una quota quasi fissa, e `puntaBase()` non è monotona.
 
-La "banda resa" è la larghezza del tratto a pressione piena, misurata a soglia di opacità 0,25.
+La "banda resa" è la larghezza del tratto a pressione piena, a soglia di opacità 0,25 sul fondo lavagna. **È il valore da modificare se il cliente chiede tratti diversi**: il nominale è solo il numero che lo produce.
 
-**La compensazione della frangia è stata tolta il 15/09/2026**, insieme all'attenuazione a radice degli strati: alzavano l'opacità ovunque e il tratto smetteva di sembrare gesso. L'effetto è tornato esattamente quello di `70f3ddf`, verificato pixel per pixel.
+### 4.1 La pseudo-pressione non deve variare più del 20%
 
-**Il prezzo è che i tre spessori si sono avvicinati.** Con il grosso bloccato a 44 e gli altri due alzati, il passo scende da 2,2× a **1,75× e 1,57×**. Restano distinguibili, ma il margine è più stretto di quello che la Fase 0 si era data: se un bambino confondesse sottile e medio, l'unica via è alzare il grosso, non riabbassare gli altri.
+Tetto fissato dal cliente il 15/09/2026: il tratto veloce era largo un terzo di quello lento, troppo. Ora varia del **13 / 12 / 9%**.
 
-**Debito noto**: `puntaBase()` non è monotona. A 14 unità la punta vale 14, a 16 scende a 10, perché appena si supera `PUNTA` il numero di impronte affiancate salta da 1 a 2. Il sottile ha quindi una grana più fine del 21% rispetto agli altri due. Non è visibile a occhio nei test fatti, ma è il punto da guardare se la texture del sottile sembrasse diversa.
+La pressione agisce su **due grandezze**, e la seconda pesa più della prima:
+
+| | costante | valore |
+|---|---|---|
+| quanto è largo il segno | `PRESSURE_MIN` | 0,92 |
+| quanto gesso deposita | `PRESSURE_ALPHA_MIN` | 0,90 |
+
+Un bordo meno opaco scende sotto la soglia di visibilità, e il tratto **sembra più stretto anche se geometricamente non lo è**: con la sola geometria a 0,92 ma l'opacità ancora a 0,55 la riduzione restava del 29%. Chi in futuro volesse ritoccare la variazione deve muovere entrambe, o non otterrà quello che si aspetta.
+
+Sopra `PRESSURE_ALPHA_MIN` 0,85 il contributo dell'opacità satura: resta solo quello geometrico, e la riduzione non scende più sotto il 13%.
+
+### 4.2 Sottile e medio sono vicini
+
+Nominali 21 e 27: rapporto **1,29×**, bande rese 24 e 34, rapporto **1,42×**. La Fase 0 si era data 2,2×.
+
+È una conseguenza diretta delle bande richieste, non una scelta. Restano distinguibili, ma se un bambino li confondesse l'unica via è allargare il grosso o stringere il sottile — non c'è spazio in mezzo.
+
+**Debito noto**: `puntaBase()` non è monotona. Appena si supera `PUNTA` le impronte affiancate saltano da 1 a 2 e la punta quasi si dimezza. È il motivo per cui gli spessori si tarano misurando e non calcolando.
 
 **Cancellino: 90 unità**, non selezionabile fra gli spessori. È uno strumento a sé, e va largo — un cancellino di precisione sarebbe frustrante e, soprattutto, non è ciò che fa un cancellino vero.
 

@@ -7,7 +7,8 @@
  */
 
 import { createOneEuro2D } from '../src/filter.js';
-import { ONE_EURO, SMOOTHING, WIDTHS } from '../src/palette.js';
+import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
+         PRESSURE_ALPHA_MIN } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 
@@ -389,22 +390,32 @@ test('larghezza: la banda segue la larghezza nominale', () => {
   }
 });
 
-test('larghezza: a pressione bassa il tratto si assottiglia davvero', () => {
-  // La pseudo-pressione deve restare visibile: se non si assottigliasse, il
-  // gesto veloce non sarebbe piu' distinguibile da quello lento.
-  for (const { w } of WIDTHS) {
-    assert(bandaEffettiva(w, 0.2) < bandaEffettiva(w, 1) * 0.65,
-      `${w}: a pressione 0.2 la banda non si assottiglia abbastanza`);
+test('larghezza: la pressione modula il tratto senza stravolgerlo', () => {
+  // Tetto del 20% sulla larghezza VISTA, fissato dal cliente il 15/09/2026.
+  // Le leve sono due: la geometria e l'opacita. Agire su una sola non basta —
+  // con la geometria a 0.92 e l'opacita ancora a 0.55 la riduzione resa era
+  // del 29%. Qui si tiene sotto controllo che nessuna delle due scappi.
+  assert(PRESSURE_MIN >= 0.88 && PRESSURE_MIN <= 0.97,
+    `PRESSURE_MIN ${PRESSURE_MIN} fuori dalla finestra tarata`);
+  assert(PRESSURE_ALPHA_MIN >= 0.85 && PRESSURE_ALPHA_MIN <= 0.98,
+    `PRESSURE_ALPHA_MIN ${PRESSURE_ALPHA_MIN} fuori dalla finestra tarata`);
+
+  for (const { w, id } of WIDTHS) {
+    const rapporto = bandaEffettiva(w, 0) / bandaEffettiva(w, 1);
+    assert(rapporto <= 0.97, `${id}: la pressione non si vede piu'`);
   }
 });
 
 test('larghezza: i tre spessori restano distinguibili', () => {
-  // La Fase 0 si era data un rapporto 2,2x; alzando sottile e medio a 16 e 28
-  // e' sceso. Sotto 1,4x due pulsanti diversi darebbero lo stesso tratto.
+  // Le bande RESE misurate sono 24 / 34 / 58, con rapporti 1,42x e 1,71x:
+  // la frangia aggiunge una quota quasi fissa, quindi i nominali stanno piu'
+  // vicini fra loro di quanto appaiano. Sotto 1,25x due pulsanti diversi
+  // darebbero pero' lo stesso tratto.
   const b = WIDTHS.map(({ w }) => bandaEffettiva(w));
   for (let i = 1; i < b.length; i++) {
-    assert(b[i] / b[i - 1] > 1.4,
-      `passo ${(b[i] / b[i - 1]).toFixed(2)}x fra ${WIDTHS[i - 1].id} e ${WIDTHS[i].id}: troppo vicini`);
+    const passo = b[i] / b[i - 1];
+    assert(passo > 1.25,
+      `passo ${passo.toFixed(2)}x fra ${WIDTHS[i - 1].id} e ${WIDTHS[i].id}: troppo vicini`);
   }
 });
 

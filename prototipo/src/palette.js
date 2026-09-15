@@ -74,12 +74,12 @@ export const DEFAULT_CHALK = 'bianco';
 
 /** Spessori in unita' di lavagna. Rapporto 2.2x: distinguibili a colpo d'occhio. */
 export const WIDTHS = [
-  { id: 'sottile', w: 16 },
-  { id: 'medio',   w: 28 },
-  { id: 'grosso',  w: 44 },
+  { id: 'sottile', w: 21 },
+  { id: 'medio',   w: 27 },
+  { id: 'grosso',  w: 50 },
 ];
 
-export const DEFAULT_WIDTH = 28;
+export const DEFAULT_WIDTH = 27;
 
 /** Il cancellino e' uno strumento a se': va largo, non di precisione. */
 export const ERASER_WIDTH = 90;
@@ -112,8 +112,37 @@ export const RDP_EPSILON = 10;
  */
 export const ONE_EURO = { minCutoff: 1.0, beta: 0.2, dCutoff: 1.0 };
 
-/** Larghezza minima come frazione di quella nominale (tratto veloce). */
-export const PRESSURE_MIN = 0.35;
+/**
+ * Opacita' del tratto piu' veloce, come frazione di quella piena.
+ *
+ * La pseudo-pressione agisce su DUE cose: quanto e' largo il segno e quanto
+ * gesso deposita. La seconda pesa di piu' sulla larghezza percepita — un
+ * bordo meno opaco scende sotto la soglia di visibilita' e il tratto sembra
+ * piu' stretto anche se geometricamente non lo e'.
+ *
+ * Era 0.55, e da sola faceva il grosso del restringimento lamentato dal
+ * cliente il 15/09/2026.
+ */
+export const PRESSURE_ALPHA_MIN = 0.90;
+
+/**
+ * Larghezza del tratto piu' veloce, come frazione di quella nominale.
+ *
+ * Il tetto chiesto dal cliente il 15/09/2026 e' il 20% di variazione su cio'
+ * che si VEDE. Non coincide con questa frazione: la larghezza nominale scende
+ * del 8%, ma quella resa scende del 13%, perche' a banda piu' stretta cambia
+ * anche il numero di impronte affiancate. Tarato misurando, non calcolando:
+ *
+ *   0.80 -> riduzione resa 33 / 38 / 24%   (troppo)
+ *   0.90 -> 21 / 15 / 12%                  (il sottile sfora ancora)
+ *   0.92 -> 13 / 12 /  9%                  scelto
+ *
+ * Prima era 0.35, e il tratto veloce si riduceva a un terzo.
+ *
+ * La pseudo-pressione serve a dare vita al tratto, non a fare da secondo
+ * selettore di spessore: quello sono i tre pulsanti.
+ */
+export const PRESSURE_MIN = 0.92;
 
 /** Velocita' oltre la quale il tratto e' al minimo spessore, in unita'/s. */
 export const SPEED_MAX = 2200;
