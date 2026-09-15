@@ -10,6 +10,13 @@ Il markdown di quel file è escapato (`\---`, `\*\*`). È voluto: non ripulirlo.
 
 ## Stato
 
+> **⏸ In attesa del feedback del cliente** (dal 15/09/2026) su effetto gesso, spessori, UI e app nel complesso.
+>
+> Finché non arriva: **non si aprono fasi nuove e non si rifinisce di iniziativa.** Il prototipo è in uno stato consegnabile. Se il feedback porta correzioni, si parte da quelle; se è positivo, si riaprono le fasi 5+ **esplicitamente**.
+>
+> Dettaglio in `.lavoro/stato.md`.
+
+
 **Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche.
 
 **Fase 1 chiusa.** Codice in `prototipo/` (avvio: vedi `prototipo/README.md`).
@@ -31,7 +38,9 @@ Due scostamenti dal brief, entrambi documentati in `prototipo/README.md`:
 
 **Fase 3 chiusa.** Effetto gessetto in `prototipo/src/chalk.js`: il tratto è timbrato, non disegnato. 29 test. Validata sul device il 04/09/2026: sembra gesso, 60 fps, il tratto non salta al rilascio e la gomma cancella sotto il dito.
 
-**Con la Fase 3 si chiude il perimetro concordato (Fasi 1–3).** Il prototipo standalone è completo.
+**Con la Fase 3 si chiudeva il perimetro concordato (Fasi 1–3).**
+
+**Fase 4 fatta** (UI a mensola, lavagna adattiva, punta di gesso a dimensione fissa) e, il 15/09/2026, due richieste del cliente: **rosso e marrone** al posto di corallo e acqua, **cancellino** più leggibile. Nella stessa sessione **spessori alzati a 16 / 28 / 44** perché sottile e medio risultavano troppo esili. 35 test.
 
 **Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 
@@ -60,7 +69,7 @@ Due note di metodo, per non rifare il lavoro:
 - `performance.now()` è quantizzato a 1 ms su Safari iOS: le misure di singolo frame restano indicative, va letto `FPS TRATTO` che è immune.
 - Il rilevamento di `getCoalescedEvents` dice "assente" anche su Chrome Android, che invece dovrebbe implementarlo. Anomalia non spiegata, non inseguita perché non cambia alcuna decisione: a 60 Hz di rAF il coalescing non aggiungerebbe fluidità.
 
-## Decisioni prese (30–31/08/2026)
+## Decisioni prese (30/08 – 15/09/2026)
 
 1. **Si parte dalla Fase 0.**
 2. **Nessun nickname, nessuna attribuzione.** Il nodo §4 del brief è chiuso: i disegni sono anonimi, non si raccoglie alcun dato personale. Niente consenso genitoriale, niente moderazione del nickname, form di invio senza campi di testo.
@@ -71,7 +80,7 @@ Due note di metodo, per non rifare il lavoro:
 
 ### Cosa resta fuori, e va detto se ci si avvicina
 
-Fasi 4–10 (UI definitiva, IndexedDB, export, plugin WP, moderazione, gallery, go-live) sono **fuori perimetro**. Anche la DoD della Fase 0 è stata ridotta di conseguenza: testo del form di invio e decisione legale servono alle Fasi 6–9 e non sono stati scritti.
+Le **Fasi 5–10** (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) sono **fuori perimetro**. La Fase 4 è stata fatta, riaprendo il perimetro esplicitamente. Anche la DoD della Fase 0 è stata ridotta di conseguenza: testo del form di invio e decisione legale servono alle Fasi 6–9 e non sono stati scritti.
 
 Se una sessione futura comincia a costruire persistenza, backend o integrazione WP, va nominato prima di scrivere il codice.
 
