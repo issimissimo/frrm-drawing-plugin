@@ -9,7 +9,7 @@
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
-import { mulberry32, passoTimbri, puntaBase, affiancate } from '../src/chalk.js';
+import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 
 let passed = 0, failed = 0;
 const results = [];
@@ -374,6 +374,43 @@ test('gessetto: un tratto tipico non genera troppe impronte', () => {
     const impronte = punti * affiancate(w);
     assert(impronte < tetto, `larghezza ${w}: ${impronte} impronte, oltre il tetto di ${tetto}`);
     assert(punti > 80, `larghezza ${w}: ${punti} punti, troppo pochi: comparirebbero buchi`);
+  }
+});
+
+/*
+ * Nati da un difetto trovato provando: passando alla punta di dimensione
+ * fissa i tratti si vedevano larghi circa la meta'. La geometria era giusta —
+ * era l'opacita' dei fianchi a crollare, e la frangia ad accorciarsi.
+ */
+
+test('larghezza: il tratto sottile non e toccato dalla compensazione', () => {
+  // Sotto la punta non c'e' affiancamento: il problema non esiste, e la
+  // taratura del 31/08 va lasciata stare.
+  close(bandaEffettiva(10), 10, 1e-9, 'sottile a piena pressione');
+  assert(affiancate(10) === 1, 'il sottile non deve affiancare impronte');
+});
+
+test('larghezza: i tratti affiancati recuperano la frangia perduta', () => {
+  for (const w of [22, 44]) {
+    const banda = bandaEffettiva(w);
+    assert(banda > w, `${w}: la banda ${banda.toFixed(1)} non compensa nulla`);
+    assert(banda < w * 1.35, `${w}: la banda ${banda.toFixed(1)} e cresciuta troppo`);
+  }
+});
+
+test('larghezza: la compensazione cresce con lo scarto fra punta e banda', () => {
+  const s22 = bandaEffettiva(22) / 22;
+  const s44 = bandaEffettiva(44) / 44;
+  assert(s44 > s22,
+    `il tratto grosso ha la punta piu piccola in proporzione, quindi va compensato di piu: ${s22.toFixed(2)} vs ${s44.toFixed(2)}`);
+});
+
+test('larghezza: a pressione bassa il tratto si assottiglia davvero', () => {
+  // La pseudo-pressione deve restare visibile: se la compensazione la
+  // annullasse, il gesto veloce non sarebbe piu' piu' sottile di quello lento.
+  for (const w of [22, 44]) {
+    assert(bandaEffettiva(w, 0.2) < bandaEffettiva(w, 1) * 0.65,
+      `${w}: a pressione 0.2 la banda non si assottiglia abbastanza`);
   }
 });
 
