@@ -8,6 +8,16 @@ Web app di disegno a gessetti su lavagna, per il sito WordPress + Elementor Pro 
 
 Il markdown di quel file è escapato (`\---`, `\*\*`). È voluto: non ripulirlo.
 
+## 🔴 TODO prioritario — spessore del tratto in base alla velocità
+
+**Non risolto. Prima cosa da fare alla prossima sessione.**
+
+Il tratto non varia come deve fra gesto lento e gesto rapido. Segnalato due volte dal cliente il 15/09/2026, e **due tentativi di taratura non hanno risolto**.
+
+Il punto di partenza non è ritarare ancora: è capire **perché la misura non corrisponde a quello che si vede**. I numeri dicono 21% di variazione, l'occhio dice che il problema resta — quindi è la metrica a essere sbagliata, o il fenomeno sta altrove.
+
+Dettaglio, ipotesi e vicoli ciechi già percorsi in `.lavoro/stato.md`.
+
 ## Stato
 
 > **⏸ In attesa del feedback del cliente** (dal 15/09/2026) su effetto gesso, spessori, UI e app nel complesso.

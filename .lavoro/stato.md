@@ -8,6 +8,40 @@ Prototipo completo con UI a mensola: nove gessetti fisici, tre spessori, cancell
 
 Online su <https://issimissimo.com/temp/frmm-drawing-plugin/>, codice su <https://github.com/issimissimo/frrm-drawing-plugin>. 35 test (`node test/run.js`).
 
+## 🔴 TODO prioritario — spessore del tratto in base alla velocità
+
+**Aperto, non risolto.** Due tentativi falliti il 15/09/2026.
+
+### Cosa è stato provato, e non ha funzionato
+
+| | `PRESSURE_MIN` | `PRESSURE_ALPHA_MIN` | variazione misurata | esito |
+|---|---|---|---|---|
+| originale | 0,35 | 0,55 | ~65% | "si restringe troppo" |
+| 1° tentativo | 0,92 | 0,90 | 13 / 12 / 9% | "identico, non c'è distinzione" |
+| 2° tentativo | **0,84** | **0,85** | 21 / 21 / 16% | **"non hai risolto"** ← stato attuale |
+
+### Il vero problema: la misura non descrive il fenomeno
+
+La metrica usata è la **banda resa a soglia di opacità 0,25**, misurata renderizzando uno stroke con pressione **imposta** a `p=0` oppure `p=1`. Dice 21% di variazione, ma l'occhio vede altro. Quindi si sta misurando la cosa sbagliata.
+
+### Ipotesi da verificare, in ordine
+
+1. **La `p` reale durante un gesto non arriva mai agli estremi.** Non è mai stata misurata: tutte le tarature sono state fatte imponendo `p`, mai osservando quale `p` produca davvero un gesto di un dito. Da strumentare: registrare `speed` e `smoothed` durante un tratto vero e guardarne l'istogramma.
+
+2. **`SPEED_MAX = 2200` unità/s potrebbe essere fuori scala.** Se i gesti reali stanno molto sotto, `p` resta sempre alto e il tratto non si assottiglia mai; se stanno molto sopra, satura subito a 0 e il tratto è sempre al minimo. In entrambi i casi la variazione non si vede, **qualunque siano `PRESSURE_MIN` e `PRESSURE_ALPHA_MIN`**.
+
+3. **Il filtro sulla pressione è lento**: `smoothed += (target - smoothed) * 0.25` in `pen.js`. Con ~55 campioni/s servono diversi campioni per rispondere, e un cambio di velocità breve potrebbe non arrivare mai a destinazione.
+
+4. La variazione potrebbe doversi leggere sulla **densità** più che sulla larghezza: il gesso mosso veloce deposita meno materiale, e forse è quello il segnale che manca.
+
+L'ipotesi 2 è la più probabile e la meno costosa da verificare.
+
+### Cosa NON rifare
+
+Ritarare `PRESSURE_MIN` e `PRESSURE_ALPHA_MIN` alla cieca: è già stato fatto due volte, con misure che tornavano e risultato percepito sbagliato. La tabella delle combinazioni misurate è in `fase-0-specifiche.md` §4.1.
+
+Attenzione alla **cache dei moduli del browser** durante le misure: ha già falsato una taratura. Il sintomo è che le costanti riportate dalla pagina non corrispondono a quelle nel file. Si aggira servendo la cartella da un percorso nuovo.
+
 ## Piano attivo
 
 **In attesa del feedback del cliente**, richiesto il 15/09/2026. Deve dire se effetto gesso, spessori, UI e app nel complesso vanno bene.
@@ -46,4 +80,4 @@ Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato
 
 ## Prossimo passo
 
-Aspettare il feedback del cliente. Non aprire fasi nuove né rifinire di iniziativa: se arriva una correzione, si parte da quella.
+Il TODO qui sopra: capire **perché la misura della variazione non corrisponde a quello che si vede**, partendo dall'ipotesi 2 (`SPEED_MAX` fuori scala). Non ritarare prima di aver misurato la `p` reale di un gesto.
