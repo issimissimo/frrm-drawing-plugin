@@ -239,13 +239,20 @@ eraserBtn.addEventListener('click', () => {
 const btnUndo = document.getElementById('btn-undo');
 const btnRedo = document.getElementById('btn-redo');
 const btnClear = document.getElementById('btn-clear');
+/**
+ * Puo' essere null, e non e' teoria: il proxy di SiteGround tiene in cache
+ * l'HTML della cartella per ore, mentre i .js li serve subito. Per un po',
+ * dopo ogni pubblicazione, un index.html vecchio incontra un main.js nuovo.
+ * Senza questa guardia l'intero modulo muore all'avvio e la lavagna non si
+ * apre nemmeno: si perde il pulsante, non l'applicazione.
+ */
 const btnSave = document.getElementById('btn-save');
 
 function syncButtons() {
   btnUndo.disabled = !history.canUndo;
   btnRedo.disabled = !history.canRedo;
   // Una lavagna di sole gommate non e' un disegno: vedi haDisegno().
-  btnSave.disabled = !haDisegno(drawing);
+  if (btnSave) btnSave.disabled = !haDisegno(drawing);
 }
 
 btnUndo.addEventListener('click', () => { if (history.undo()) { repaint(); syncButtons(); } });
@@ -271,7 +278,7 @@ btnClear.addEventListener('click', () => {
  * codifica JPEG blocca il thread per qualche decina di millisecondi, e due
  * tocchi rapidi genererebbero due file.
  */
-btnSave.addEventListener('click', () => {
+btnSave?.addEventListener('click', () => {
   if (btnSave.disabled) return;
   btnSave.disabled = true;
   scarica(drawing)

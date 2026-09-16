@@ -42,7 +42,7 @@ L'ipotesi 2 è la più probabile e la meno costosa da verificare.
 
 Ritarare `PRESSURE_MIN` e `PRESSURE_ALPHA_MIN` alla cieca: è già stato fatto due volte, con misure che tornavano e risultato percepito sbagliato. La tabella delle combinazioni misurate è in `fase-0-specifiche.md` §4.1.
 
-Attenzione alla **cache dei moduli del browser** durante le misure: ha già falsato una taratura. Il sintomo è che le costanti riportate dalla pagina non corrispondono a quelle nel file. Si aggira servendo la cartella da un percorso nuovo.
+Attenzione alla **cache** durante le misure: ha già falsato una taratura. Il sintomo è che le costanti riportate dalla pagina non corrispondono a quelle nel file. La causa è ora nota — vedi le trappole in fondo — e si aggira con una query (`?v=...`) o servendo la cartella da un percorso nuovo.
 
 ## Piano attivo
 
@@ -82,6 +82,13 @@ Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato
 - **Il token GitHub è in chiaro** in `~/.claude/.secrets/github-pat.txt`, nella configurazione MCP utente e nel transcript della chat del 05/09/2026: **da revocare e rigenerare**.
 - **`navigator.share()` va chiamato senza `await` davanti**: pretende che l'attivazione del tocco sia ancora valida, e su Safari iOS una callback asincrona la perde. È il motivo per cui `export.js` costruisce il Blob con `toDataURL` + `atob`, sincrono, invece di `canvas.toBlob`. Il sintomo del contrario è un pulsante che, solo su iPhone, non apre niente.
 - **Il ramo `navigator.share` non è ancora stato provato su un telefono vero**, solo con stub su Chrome desktop. Su iOS il file deve finire in Foto, non nei Download del browser.
+- **SiteGround serve il prototipo da due cache diverse, e dopo ogni pubblicazione le due versioni non coincidono** (misurato il 16/09/2026):
+  - l'URL della cartella (`.../frmm-drawing-plugin/`) arriva dal proxy (`x-proxy-cache: HIT`) e può restare **vecchio di giorni**;
+  - `.../index.html` e i `.js` arrivano freschi, ma con `Cache-Control: max-age` di **sei mesi / un anno**, quindi il browser di chi ha già visto la pagina se li tiene.
+
+  Conseguenze pratiche: **subito dopo una pubblicazione si linka `.../index.html?v=<qualcosa>`**, non l'URL della cartella. E `main.js` non deve dare per scontato che l'HTML sia aggiornato: gli elementi nuovi si cercano con la guardia (`btnSave?.`), o un index.html vecchio con un main.js nuovo uccide l'intero modulo e la lavagna non si apre affatto.
+
+  **Un `.htaccess` con `Header set Cache-Control` non serve a niente**: provato e rimosso il 16/09/2026, quelle intestazioni le mette NGINX davanti ad Apache. L'unica leva senza Site Tools è la query string.
 - Il `.md` del brief ha il markdown escapato (`\---`, `\*\*`). È voluto, non va ripulito.
 
 ## Prossimo passo
