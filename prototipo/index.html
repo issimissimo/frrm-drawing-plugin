@@ -131,8 +131,8 @@
     display: grid;
     align-items: end;
     background: var(--page);
-    grid-template-columns: auto auto 1fr auto auto;
-    grid-template-areas: "widths tools . cmds send";
+    grid-template-columns: auto auto 1fr auto auto auto;
+    grid-template-areas: "widths tools . cmds save send";
     column-gap: 26px;
     padding: 0 34px 22px;
   }
@@ -143,7 +143,7 @@
       grid-template-areas:
         "tools  tools"
         "widths cmds"
-        "send   send";
+        "save   send";
       column-gap: 8px;
       row-gap: 6px;
       padding: 6px 12px 16px;
@@ -174,6 +174,7 @@
   @media (min-width: 701px) {
     .tools .chalk { flex: 0 0 var(--slot); }
   }
+  #btn-save { grid-area: save; }
   #btn-send { grid-area: send; }
 
   /* ---------- gessetti ----------
@@ -311,13 +312,19 @@
   .cmd:disabled { color: #3C4247; cursor: default; }
   #btn-clear { color: var(--dim); margin-left: 16px; }
 
-  /* ---------- invia ----------
-     Disabilitato: l'invio e' Fase 6 e non esiste ancora un backend. */
+  /* ---------- scarica e invia ----------
+     Stessa geometria, due registri: l'invio e' l'azione dichiarata e porta la
+     pillola piena; il download e' la via laterale e sta in solo testo. Dargli
+     un fondo suo aggiungerebbe un contenitore e due azioni di pari peso.
 
-  #btn-send {
+     L'invio e' disabilitato — e' Fase 6 e non esiste ancora un backend —
+     mentre il download funziona: la gerarchia e' quella che vale a regime,
+     non quella di oggi. */
+
+  #btn-save, #btn-send {
     -webkit-appearance: none;
     appearance: none;
-    /* Si allinea al centro del gessetto come tutto il resto della mensola,
+    /* Si allineano al centro del gessetto come tutto il resto della mensola,
        non al centro della riga: la riga e' piu' alta per via del sollevamento. */
     align-self: end;
     margin-bottom: calc((var(--stick-h) - 50px) / 2);
@@ -325,24 +332,43 @@
     align-items: center;
     gap: 10px;
     height: 50px;
-    padding: 0 24px;
     border: 0;
-    border-radius: 25px;
-    background: #23272B;
-    color: var(--off);
     font: inherit;
     font-weight: 700;
     font-size: 15px;
     letter-spacing: 0.04em;
+  }
+
+  #btn-save {
+    padding: 0 10px;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color .14s;
+  }
+  #btn-save:hover:not(:disabled) { color: #FAF8F3; }
+  #btn-save:disabled { color: #3C4247; cursor: default; }
+  #btn-save:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  #btn-send {
+    padding: 0 24px;
+    border-radius: 25px;
+    background: #23272B;
+    color: var(--off);
     cursor: default;
   }
+
   @media (max-width: 700px) {
-    #btn-send {
-      height: 48px; padding: 0 16px; font-size: 14px; gap: 8px;
-      width: 100%;
-      justify-content: center;
+    #btn-save, #btn-send {
+      height: 48px; font-size: 14px; gap: 8px;
       margin: 4px 0 0;
     }
+    /* Ultima riga condivisa: il download a sinistra, l'invio all'estremita'
+       opposta. L'invio non e' piu' a tutta larghezza, ma la riga resta sua —
+       e' l'unico elemento con un fondo. */
+    #btn-save { padding: 0 2px; justify-self: start; }
+    #btn-send { padding: 0 18px; justify-self: end; }
   }
 
   /* ---------- taratura (solo con ?debug=1) ---------- */
@@ -437,6 +463,13 @@
         </svg>
       </button>
     </div>
+
+    <button type="button" id="btn-save" aria-label="Scarica il disegno" disabled>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/>
+      </svg>
+      <span>SCARICA</span>
+    </button>
 
     <button type="button" id="btn-send" disabled>
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

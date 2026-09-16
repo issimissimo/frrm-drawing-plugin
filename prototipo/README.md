@@ -161,6 +161,32 @@ Il rAF gira a 60 Hz su entrambi, ProMotion incluso: Safari limita le pagine web 
 
 **Ma i campioni sono radi**, ed è la ragione per cui il ricampionamento interpola su una curva invece di decimare: a ~55 campioni/s un gesto veloce li lascia distanti ~29 unità, mentre ne serve uno ogni 2,5.
 
+## Scarica il disegno
+
+Aggiunto il 16/09/2026 su richiesta: è una fetta anticipata della Fase 6 (requisiti in `fase-0-specifiche.md` §7). **Manca il logo della Fondazione**, che è una dipendenza esterna; quando arriva si compone in `disegnaSuCanvas()`, dopo i tratti.
+
+Tutto avviene sul device: nessun server, nessun dato in uscita.
+
+| | |
+|---|---|
+| Formato | JPEG, qualità 0,92 — ~40 KB su un disegno normale |
+| Risoluzione | 1600 px di larghezza, altezza dal rapporto della lavagna |
+| Nome | `lavagna-AAAAMMGG-hhmm.jpg` |
+| Su telefono | foglio di condivisione (`navigator.share`) |
+| Altrove | `<a download>` |
+
+Tre scelte che non si leggono dal codice:
+
+**L'immagine si ri-renderizza dal modello, non si copia dallo schermo.** Il canvas a schermo è grande quanto il viewport — su un telefono 780 px — e §7.4 chiede 1600. Il prezzo è quello già noto: la grana del gesso cambia, la forma no. Chi confronta il file con lo schermo trova lo stesso disegno, non gli stessi pixel.
+
+**Il fondo si dipinge dopo i tratti, in `destination-over`.** Dipingerlo prima sarebbe più naturale, ma il cancellino lavora in `destination-out` e lo bucherebbe: il JPEG non ha alpha, e le gommate tornerebbero fuori come macchie nere. È lo stesso motivo per cui a schermo il fondo sta nel CSS.
+
+**Il Blob si costruisce in modo sincrono**, con `toDataURL` + `atob` invece di `canvas.toBlob`. Non è pignoleria: `navigator.share()` pretende di essere chiamato mentre l'attivazione del tocco è ancora valida, e una callback asincrona la perde. Il sintomo, su iPhone, è un pulsante che non apre niente.
+
+Il pulsante resta spento finché non c'è un tratto di gesso: una lavagna di sole gommate non è un disegno.
+
+**Da provare su device vero**: il ramo `navigator.share` è verificato solo in simulazione (stub su Chrome desktop). Su iOS il file deve finire in Foto, non nei Download.
+
 ## File
 
 ```
@@ -174,6 +200,7 @@ src/geom.js     Catmull-Rom, ricampionamento, RDP
 src/model.js    Drawing / Stroke, undo, redo
 src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
+src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
 ```

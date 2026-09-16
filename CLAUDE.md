@@ -22,6 +22,8 @@ Dettaglio, ipotesi e vicoli ciechi già percorsi in `.lavoro/stato.md`.
 
 > **⏸ In attesa del feedback del cliente** (dal 15/09/2026) su effetto gesso, spessori, UI e app nel complesso.
 >
+> Eccezione del 16/09/2026, su richiesta esplicita: il **download del disegno** (fetta di Fase 6, senza backend). Non riapre le fasi 5+.
+>
 > Finché non arriva: **non si aprono fasi nuove e non si rifinisce di iniziativa.** Il prototipo è in uno stato consegnabile. Se il feedback porta correzioni, si parte da quelle; se è positivo, si riaprono le fasi 5+ **esplicitamente**.
 >
 > Dettaglio in `.lavoro/stato.md`.
@@ -51,6 +53,8 @@ Due scostamenti dal brief, entrambi documentati in `prototipo/README.md`:
 **Con la Fase 3 si chiudeva il perimetro concordato (Fasi 1–3).**
 
 **Fase 4 fatta** (UI a mensola, lavagna adattiva, punta di gesso a dimensione fissa) e, il 15/09/2026, due richieste del cliente: **rosso e marrone** al posto di corallo e acqua, **cancellino** più leggibile. Nella stessa sessione **spessori alzati a 16 / 28 / 44** perché sottile e medio risultavano troppo esili. 35 test.
+
+**Scarica il disegno — 16/09/2026.** Pulsante SCARICA a sinistra di INVIA, JPEG 1600 px sul device. È una **fetta anticipata della Fase 6**, chiesta esplicitamente: solo il download, nessun backend e nessun logo (la dipendenza esterna resta aperta). Codice in `prototipo/src/export.js`, note in `prototipo/README.md`. 37 test.
 
 **Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 

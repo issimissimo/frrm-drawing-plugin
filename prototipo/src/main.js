@@ -13,7 +13,9 @@
  * I comandi (annulla, rifai, cestino, invia) stanno nel registro opposto:
  * icone di linea, monocrome, all'estremita' lontana.
  *
- * Deliberatamente assenti: persistenza, invio, cursore custom. Fase 5 e oltre.
+ * Il download del disegno (export.js) e' una fetta anticipata della Fase 6:
+ * resta tutto sul device, nessun backend. Deliberatamente assenti:
+ * persistenza, invio, cursore custom. Fase 5 e oltre.
  */
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
@@ -25,6 +27,7 @@ import { createDrawing, createHistory } from './model.js';
 import { render, renderStroke, strokeGeometry } from './render.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
+import { scarica, haDisegno } from './export.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -236,10 +239,13 @@ eraserBtn.addEventListener('click', () => {
 const btnUndo = document.getElementById('btn-undo');
 const btnRedo = document.getElementById('btn-redo');
 const btnClear = document.getElementById('btn-clear');
+const btnSave = document.getElementById('btn-save');
 
 function syncButtons() {
   btnUndo.disabled = !history.canUndo;
   btnRedo.disabled = !history.canRedo;
+  // Una lavagna di sole gommate non e' un disegno: vedi haDisegno().
+  btnSave.disabled = !haDisegno(drawing);
 }
 
 btnUndo.addEventListener('click', () => { if (history.undo()) { repaint(); syncButtons(); } });
@@ -254,6 +260,28 @@ btnClear.addEventListener('click', () => {
   lastStroke = null;
   repaint();
   syncButtons();
+});
+
+/**
+ * Il download.
+ *
+ * scarica() va chiamata senza nulla davanti: il foglio di condivisione, su
+ * telefono, si apre solo finche' l'attivazione del tocco e' valida (export.js).
+ * Il pulsante si spegne durante l'operazione perche' su un disegno pieno la
+ * codifica JPEG blocca il thread per qualche decina di millisecondi, e due
+ * tocchi rapidi genererebbero due file.
+ */
+btnSave.addEventListener('click', () => {
+  if (btnSave.disabled) return;
+  btnSave.disabled = true;
+  scarica(drawing)
+    .catch((e) => {
+      // Provvisorio come la conferma del cestino: va rifatto come pannello
+      // dentro la lavagna.
+      console.error(e);
+      window.alert('Non e riuscito a salvare il disegno.');
+    })
+    .finally(syncButtons);
 });
 
 /* La pagina di Elementor che ospitera' la lavagna non ha header: senza questo

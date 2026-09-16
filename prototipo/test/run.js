@@ -11,6 +11,7 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
+import { nomeFile, haDisegno, dimensioni, EXPORT_W } from '../src/export.js';
 
 let passed = 0, failed = 0;
 const results = [];
@@ -432,6 +433,34 @@ test('pipeline: dopo filtro, RDP e resample il tratto resta fedele', () => {
   }
   const finale = resample(simplify(grezzo, 1.2), 2.5);
   close(length(finale), length(grezzo), length(grezzo) * 0.05, 'lunghezza dopo la pipeline');
+});
+
+/* ---------------- export ---------------- */
+
+test('export: il nome del file porta data e ora, e finisce in .jpg', () => {
+  const n = nomeFile(new Date(2026, 8, 16, 7, 5));
+  assert(n === 'lavagna-20260916-0705.jpg', `nome inatteso: ${n}`);
+});
+
+test('export: una lavagna di sole gommate non e un disegno', () => {
+  const gomma = { tool: 'eraser' };
+  assert(haDisegno({ strokes: [] }) === false, 'vuota');
+  assert(haDisegno({ strokes: [gomma, gomma] }) === false, 'solo gommate');
+  assert(haDisegno({ strokes: [gomma, { tool: 'chalk' }] }) === true, 'un gessetto basta');
+});
+
+test('export: l immagine e larga 1600 e tiene il rapporto della lavagna', () => {
+  // 4:3 e il caso nominale, ma la lavagna prende il rapporto dello schermo
+  // (Fase 4): l'export deve seguirlo, non imporre il 4:3.
+  const quattroTerzi = dimensioni({ board: { w: 1600, h: 1200 } });
+  assert(quattroTerzi.w === EXPORT_W && quattroTerzi.h === 1200, `4:3 -> ${quattroTerzi.w}x${quattroTerzi.h}`);
+
+  const telefono = dimensioni({ board: { w: 1600, h: 3462 } });
+  assert(telefono.w === EXPORT_W && telefono.h === 3462, `telefono -> ${telefono.w}x${telefono.h}`);
+
+  // E qualunque larghezza si chieda, il rapporto non cambia.
+  const meta = dimensioni({ board: { w: 1600, h: 1200 } }, 800);
+  close(meta.w / meta.h, 4 / 3, 0.002, 'rapporto a meta risoluzione');
 });
 
 /* ---------------- esito ---------------- */

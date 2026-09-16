@@ -1,12 +1,14 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 15/09/2026
+Ultimo aggiornamento: 16/09/2026
 Versione corrente: prototipo fasi 0–4, nessun numero di versione
 
 ## Dove siamo
 
 Prototipo completo con UI a mensola: nove gessetti fisici, tre spessori, cancellino, annulla/rifai. Si disegna a gesso su lavagna nera, validato su iPhone 13 Pro e Galaxy S10 a 60 fps.
 
-Online su <https://issimissimo.com/temp/frmm-drawing-plugin/>, codice su <https://github.com/issimissimo/frrm-drawing-plugin>. 35 test (`node test/run.js`).
+Dal 16/09/2026 c'è anche il **download del disegno** in JPEG (`src/export.js`), anticipato dalla Fase 6 su richiesta: solo il salvataggio sul device, nessun backend, **senza logo**.
+
+Online su <https://issimissimo.com/temp/frmm-drawing-plugin/>, codice su <https://github.com/issimissimo/frrm-drawing-plugin>. 37 test (`node test/run.js`).
 
 ## 🔴 TODO prioritario — spessore del tratto in base alla velocità
 
@@ -49,7 +51,7 @@ Attenzione alla **cache dei moduli del browser** durante le misure: ha già fals
 - **se va bene** → si aprono le fasi successive (5 in poi: persistenza IndexedDB, export con logo, plugin WordPress, moderazione, gallery, go-live). Vanno riaperte **esplicitamente**, non per scivolamento.
 - **se non va** → si rimette mano a ciò che indica, prima di procedere.
 
-Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato consegnabile e va lasciato così.
+Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato consegnabile e va lasciato così. Unica deroga finora: il download del disegno, chiesto esplicitamente il 16/09/2026. Non ha riaperto le fasi 5+.
 
 ## Decisioni prese e perché
 
@@ -63,6 +65,8 @@ Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato
 - **Rosso e marrone escono dalla serie isoluminante** — richiesta del cliente 15/09/2026. A L 0.780 il rosso è un rosa salmone e il marrone non esiste. Costano contrasto: 4,6 e 4,3 contro 7,6–8,4 degli altri.
 - **Spessori alzati a 16 / 28 / 44** il 15/09/2026, guardando i tre tratti affiancati. Il passo scende da 2,2× a 1,83× e 1,64×: meno margine di quello che la Fase 0 si era data.
 - **MCP playwright pinnato a 0.0.81**, non più `@latest`: aggiornamenti manuali, in cambio di avvii che non vanno in timeout.
+- **Il download ri-renderizza dal modello**, non copia il canvas a schermo: a schermo la lavagna è larga quanto il viewport (780 px su un telefono) e l'export deve stare a 1600. Si paga la solita divergenza di grana, la forma no.
+- **Nell'export il fondo si dipinge dopo i tratti**, in `destination-over`: dipinto prima, il cancellino lo bucherebbe e il JPEG — che non ha alpha — restituirebbe le gommate come macchie nere.
 - **Commit automatico su GitHub a feature completata e verificata.**
 
 ## Trappole
@@ -76,6 +80,8 @@ Fino ad allora **non si comincia niente di nuovo**: il prototipo è in uno stato
 - **Due nomi diversi, voluto**: online è `frmm`, la cartella locale e il repo sono `frrm` (refuso). Non "correggere" l'FTP riportandolo a `frrm`.
 - **Le credenziali FTP aprono l'intero account SiteGround**, dove convivono altri domini e lavori di clienti. Operare solo dentro `/issimissimo.com/public_html/temp/frmm-drawing-plugin/`, sempre con un listing prima di scrivere.
 - **Il token GitHub è in chiaro** in `~/.claude/.secrets/github-pat.txt`, nella configurazione MCP utente e nel transcript della chat del 05/09/2026: **da revocare e rigenerare**.
+- **`navigator.share()` va chiamato senza `await` davanti**: pretende che l'attivazione del tocco sia ancora valida, e su Safari iOS una callback asincrona la perde. È il motivo per cui `export.js` costruisce il Blob con `toDataURL` + `atob`, sincrono, invece di `canvas.toBlob`. Il sintomo del contrario è un pulsante che, solo su iPhone, non apre niente.
+- **Il ramo `navigator.share` non è ancora stato provato su un telefono vero**, solo con stub su Chrome desktop. Su iOS il file deve finire in Foto, non nei Download del browser.
 - Il `.md` del brief ha il markdown escapato (`\---`, `\*\*`). È voluto, non va ripulito.
 
 ## Prossimo passo
