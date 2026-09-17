@@ -346,7 +346,11 @@
   }
   /* L'icona segue il corpo del testo, non una misura sua: 1em. */
   .btn svg { width: 1em; height: 1em; flex: 0 0 auto; }
-  .btn.secondario { color: var(--dim); }
+  /* Il secondario non porta bordo: era l'unica differenza col primario, e
+     due tasti identici accanto a "HO CAPITO" si toccano per sbaglio. Il
+     bordo resta trasparente, non rimosso, cosi' i due tasti hanno la stessa
+     altezza e lo stesso testo sulla stessa linea di base. */
+  .btn.secondario { color: var(--dim); border-color: transparent; }
   .btn.secondario:hover { color: var(--ink); }
 
   /* Tre modi di dare peso all'azione. I primi due rispettano la regola dei
@@ -636,8 +640,8 @@ const STEPS = [
     adulto: 'Scegli il colore del gessetto con cui disegnare sullo schermo.',
     bimbo:  'Scegli il colore del gessetto.' },
   { sel: '#widths',
-    adulto: 'Scegli lo spessore del gessetto.',
-    bimbo:  'Un segno sottile, o grosso?' },
+    adulto: 'Un gessetto sottile, medio o grosso?',
+    bimbo:  'Un gessetto sottile, medio o grosso?' },
   { sel: '#tool-eraser',
     adulto: 'Usa il cancellino per cancellare alcune parti del tuo disegno.',
     bimbo:  'Il cancellino toglie un pezzo di disegno.' },
@@ -648,8 +652,8 @@ const STEPS = [
     adulto: 'Cancella tutto il tuo disegno per farne uno nuovo.',
     bimbo:  'Butta via tutto e ricomincia da zero.' },
   { sel: '#btn-save',
-    adulto: 'Scarica o condividi il tuo disegno, e mandacelo: i migliori verranno pubblicati nel sito!',
-    bimbo:  'Salva il disegno e mandacelo: i più belli finiscono sul sito!' },
+    adulto: 'Salva e condividi il disegno. Inoltre i più belli li faremo vedere a tutti!',
+    bimbo:  'Salva e condividi il disegno. Inoltre i più belli li faremo vedere a tutti!' },
 ];
 
 const tut = document.getElementById('tut');

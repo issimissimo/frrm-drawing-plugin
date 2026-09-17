@@ -33,7 +33,7 @@ Passi:
 1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
 2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`. Riproduce la mensola vera e ci mette sopra il tutorial, con gli assi confrontabili a schermo. Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
 
-   **v3 online su <https://issimissimo.com/temp/frmm-tutorial-design-03/>** (`-01` e `-02` si tengono per confronto).
+   **v4 online su <https://issimissimo.com/temp/frmm-tutorial-design-04/>** (le precedenti si tengono per confronto).
 
 3. [x] **Design approvato il 17/09/2026**, con le correzioni chieste, tutte applicate in v2:
    - evidenziazione **buio+gesso**, testi **da bambino**, SALVA **largo**;
@@ -90,7 +90,7 @@ Rischi aperti:
 - **Nessuno degli step chiesti dal cliente spiegava di disegnare col dito.** Aggiunto come step 0 il 17/09/2026; è l'ipotesi su *cosa* non capiscono davvero, e va verificata su una persona vera, non su di noi.
 - **Un tasto solo al posto di due** toglie la possibilità di scaricare senza inviare. Oggi non si vede, perché l'invio non esiste; quando arriverà, va deciso se un solo tocco fa entrambe le cose senza chiedere. Decisione rinviata, non risolta.
 - **Senza CHIUDI negli step 1–6 non c'è via d'uscita** fino alla fine: chi riapre il tutorial col `?` per sbaglio deve fare sette tocchi. È voluto (chiesto il 17/09/2026 per non farlo chiudere involontariamente), ma se dà fastidio la correzione è una `×` discreta nell'angolo della finestra, lontana da PROSSIMO.
-- **Con un fondo e un bordo uguali per tutti i tasti, RIPETI e HO CAPITO si somigliano troppo.** La differenza è il solo colore del testo, e allo step 7 un bambino può toccare RIPETI credendo di chiudere. Se dà problemi, la correzione sta nel testo e non nel contenitore: RIPETI più piccolo, o senza fondo — che però è una deroga alla regola dei tasti.
+- **RIPETI ha perso il bordo** (17/09/2026) perché con fondo e bordo uguali a HO CAPITO i due tasti si somigliavano troppo e allo step 7 si rischiava il tocco sbagliato. Il bordo è `transparent`, non rimosso, così i due tasti restano della stessa altezza e con il testo sulla stessa linea di base. **Il fondo `#FFFFFF1A` ce l'ha ancora**: se la distinzione non basta, il passo successivo è togliere anche quello.
 - **Due punti dove la regola «tutti i tasti» non è stata applicata alla lettera**, in attesa di conferma: «Torna al sito» tiene la freccia **a sinistra** (è una freccia che indica indietro: a destra del testo direbbe «avanti»), e non ha né fondo né bordo, come il `?`, i gessetti, il cancellino, gli spessori e annulla/rifai/cestino. Dare fondo e bordo anche a quelli trasformerebbe la mensola in una griglia di scatole.
 - **Domanda di Fase 7 da porre prima di scrivere il plugin: la lavagna andrà in un iframe o inline nella pagina Elementor?** Cambia due cose già oggi: inline i font arrivano gratis ma il CSS del tema può interferire con la mensola; in iframe l'app è isolata ma i font vanno ricaricati. Non va deciso ora, va deciso **prima** di costruire l'integrazione.
 - **Una lavagna nera dentro una pagina a fondo `#FF6000`.** L'accostamento è brutale e nessuno l'ha ancora visto: la prova sta su fondo scuro, da sola. Va guardato in una pagina arancione vera prima del go-live, e probabilmente serve una cornice o un margine.
