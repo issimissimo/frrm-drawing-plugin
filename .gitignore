@@ -13,3 +13,8 @@ node_modules/
 
 # Canvas di design assemblato: 2,5 MB rigenerabili dai .dc.html accanto
 design-fase-4/lavagna-ui-fase-4.html
+
+# Font della Fondazione (SebinoSoft): font commerciale di terzi, e questo
+# repo e' PUBBLICO. Si scaricano dal sito quando servono — l'URL sta nel
+# blocco @font-face di design-tutorial/prova.html.
+design-tutorial/font/

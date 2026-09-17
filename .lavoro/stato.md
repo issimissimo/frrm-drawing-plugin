@@ -31,12 +31,40 @@ Fuori perimetro, e va detto se ci si avvicina:
 Passi:
 
 1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
-2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`, online su <https://issimissimo.com/temp/frmm-tutorial-design-01/>. Riproduce la mensola vera e ci mette sopra il tutorial, con tre assi confrontabili a schermo: evidenziazione (buio+gesso / buio / rosso / gesso), testi (registro adulto come da richiesta / registro bambino), SALVA su mobile (largo / a destra). Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
-3. [ ] **Approvazione del design.** Punto di fermata: si scrive codice di produzione solo dopo.
+2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`. Riproduce la mensola vera e ci mette sopra il tutorial, con gli assi confrontabili a schermo. Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
+
+   **v2 online su <https://issimissimo.com/temp/frmm-tutorial-design-02/>** (la `-01` è la prima stesura, si tiene per confronto).
+
+3. [x] **Design approvato il 17/09/2026**, con le correzioni chieste, tutte applicate in v2:
+   - evidenziazione **buio+gesso**, testi **da bambino**, SALVA **largo**;
+   - «TUTORIAL: PASSO n DI 7» al posto di «PASSO n DI 7»;
+   - **nessun CHIUDI negli step 1–6** e «PROCEDI» rinominato **PROSSIMO**, per non far chiudere il tutorial per sbaglio;
+   - allo step 7 **RIPETI** (testo nudo, riavvia) accanto a **HO CAPITO** (pieno, chiude).
+
+   Resta da scegliere **l'accento**: gesso (come oggi) / arancio sobrio (bordo e testo `#FF6000`) / arancio pieno. Tre varianti nel pannello della prova.
 4. [ ] **Il motore**, in `prototipo/src/tutorial.js`: velo, riquadro calcolato da `getBoundingClientRect` sull'elemento vero, finestra, avanzamento, chiusura. Il riquadro si ricalcola su `resize` e `orientationchange`, come già fa `relayout()`.
 5. [ ] **I 7 step**, come dati e non come codice: una lista di `{ selettore, testo }`, così cambiare una frase non è una modifica al motore.
 6. [ ] **Prima apertura e riapertura**: flag in localStorage con try/catch (in Safari privato lancia), icona `?` nella mensola.
 7. [ ] **Prova sui due device reali** e aggiornamento di `README.md` e `CLAUDE.md`.
+
+### Lo stile del sito della Fondazione — misurato, non dedotto (17/09/2026)
+
+Rilevato aprendo <https://fondazione-riccardo-marina-mantovani.org/> e leggendo le variabili del tema, non a occhio:
+
+| | valore |
+|---|---|
+| fondo del sito | `#FF6000` — l'arancione **è il fondo**, non un accento |
+| pulsante primario (DONA) | `#FF0505`, squadrato, maiuscolo, `letter-spacing .3px`, padding 12/24 |
+| raggi | `0px` su tutto |
+| bordi e testi su arancione | bianco a opacità variabile: `#FFFFFF63`, `#FFFFFF54`, `#FFFFFFA6`, `#FFFFFFE3` — è il «quasi bianco» |
+| font | `SebinoSoft-Regular` / `-Medium` / `-Bold` (non «Sebino-Soft-…»), woff2 da 16–24 KB |
+
+Applicato in v2 della prova: raggio 0, bordo quasi bianco al posto dell'ombra, font SebinoSoft.
+
+- **I font si possono usare subito, ma non dal loro URL.** I file sono pubblici su `wp-content/uploads/2026/{05,06}/`, e **non hanno l'header CORS**: cross-origin il browser li rifiuta. Vanno copiati same-origin. Dentro WordPress il problema non esiste — li carica Elementor.
+- **I font NON sono nel repo**, che è pubblico: `SebinoSoft` è un font commerciale di terzi. Stanno in `design-tutorial/font/`, in `.gitignore`, e si riscaricano dal sito (URL nel blocco `@font-face` della prova). Da verificare che la licenza webfont copra `issimissimo.com`, dove la prova è pubblicata: è un dominio diverso da quello della Fondazione.
+- **SebinoSoft è il 15% più larga** di Atkinson Hyperlegible a pari corpo (272 px contro 236 su una stringa di prova). Nessuno dei testi sfora, verificato a 390 px, ma i margini si sono assottigliati.
+- **L'arancione istituzionale è il problema di design vero, non un dettaglio.** La mensola è acromatica per necessità: nove gessetti portano informazione col colore, e c'è già un arancio `#F1A366` in palette. Un SALVA `#FF6000` pieno a tutta larghezza diventa l'elemento più colorato dello schermo e non dice nulla — è lo stesso difetto del riquadro rosso. Da qui la terza variante, `arancio sobrio`: bordo e testo arancione su fondo scuro, che richiama il brand restando nel registro a linee dell'app.
 
 Trovato montando la prova di design (17/09/2026):
 
@@ -51,6 +79,9 @@ Rischi aperti:
 - **Sei-sette finestre di testo per un bambino di 5 anni si saltano.** È il rischio di fondo: se non funziona, non è colpa dell'implementazione ma della forma scelta, e va detto al cliente prima di irrobustirla.
 - **Nessuno degli step chiesti dal cliente spiegava di disegnare col dito.** Aggiunto come step 0 il 17/09/2026; è l'ipotesi su *cosa* non capiscono davvero, e va verificata su una persona vera, non su di noi.
 - **Un tasto solo al posto di due** toglie la possibilità di scaricare senza inviare. Oggi non si vede, perché l'invio non esiste; quando arriverà, va deciso se un solo tocco fa entrambe le cose senza chiedere. Decisione rinviata, non risolta.
+- **Senza CHIUDI negli step 1–6 non c'è via d'uscita** fino alla fine: chi riapre il tutorial col `?` per sbaglio deve fare sette tocchi. È voluto (chiesto il 17/09/2026 per non farlo chiudere involontariamente), ma se dà fastidio la correzione è una `×` discreta nell'angolo della finestra, lontana da PROSSIMO.
+- **Domanda di Fase 7 da porre prima di scrivere il plugin: la lavagna andrà in un iframe o inline nella pagina Elementor?** Cambia due cose già oggi: inline i font arrivano gratis ma il CSS del tema può interferire con la mensola; in iframe l'app è isolata ma i font vanno ricaricati. Non va deciso ora, va deciso **prima** di costruire l'integrazione.
+- **Una lavagna nera dentro una pagina a fondo `#FF6000`.** L'accostamento è brutale e nessuno l'ha ancora visto: la prova sta su fondo scuro, da sola. Va guardato in una pagina arancione vera prima del go-live, e probabilmente serve una cornice o un margine.
 - **L'icona `?` occupa spazio in una mensola già piena.** A 360 px i gessetti sono il primo elemento che si stringe.
 
 Costo stimato: 7 passi, di cui uno (il passo 1) si chiude in mezz'ora e uno (il passo 3) è un'attesa. Il grosso è il motore del tutorial. Ordine di grandezza: due sessioni, la prima delle quali finisce sulla prova di design.
