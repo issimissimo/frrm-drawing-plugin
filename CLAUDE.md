@@ -68,7 +68,7 @@ I valori in vigore sono **21 / 27 / 50** (`WIDTHS` in `palette.js`), raddoppiati
 
 Dettaglio in `prototipo/README.md`; le decisioni e quel che resta da provare su device in `.lavoro/stato.md`.
 
-Tre cose da non disfare per sbaglio:
+Cose da non disfare per sbaglio:
 
 - **Il riquadro del tutorial si prende dall'elemento** (`getBoundingClientRect`), mai da coordinate: sotto i 700 px la mensola cambia griglia.
 - **La finestra non sta al centro**, ma nella metà opposta all'area in luce — al primo passo l'area *è* il centro e la finestra coprirebbe quel che spiega.
@@ -133,9 +133,9 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-05/> — con `?tutorial` in coda il tutorial parte comunque.
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-06/> — con `?tutorial` in coda il tutorial parte comunque.
 
-⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente.
+⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente. La `-05` non ha difetti — è solo priva delle correzioni del 18/09/2026 (AVANTI, riquadro degli spessori, tratteggio animato in arancione, corpi più grandi) e serve da confronto.
 
 ⚠️ **La cartella numerata batte la cache HTTP, non il `localStorage`**, che è per origine: tutte le versioni sotto `temp/` condividono lo stesso archivio. Qualunque stato che il prototipo ricorda va messo in una chiave che porta dentro `location.pathname`, altrimenti una versione nuova eredita quel che sapeva la precedente — ed è già costato un "il tutorial non parte più" il 17/09/2026. Vedi `chiaveVisto()` in `prototipo/src/tutorial.js`.
 
