@@ -18,11 +18,11 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Stato
 
-> **⏸ In attesa del feedback del cliente** (dal 15/09/2026) su effetto gesso, spessori, UI e app nel complesso.
+> **Fase 4b (tutorial) chiusa il 17/09/2026.** Il prototipo è consegnabile e online.
 >
-> Eccezione del 16/09/2026, su richiesta esplicita: il **download del disegno** (fetta di Fase 6, senza backend). Non riapre le fasi 5+.
+> **Resta da provare su device reale**: il tutorial è verificato in Chrome, non su iPhone né su Android, e il ramo `navigator.share` del download non è mai stato provato su un telefono vero. Sono la prima cosa da fare, e si fanno insieme su un solo URL.
 >
-> Finché non arriva: **non si aprono fasi nuove e non si rifinisce di iniziativa.** Il prototipo è in uno stato consegnabile. Se il feedback porta correzioni, si parte da quelle; se è positivo, si riaprono le fasi 5+ **esplicitamente**.
+> **Non si aprono fasi nuove e non si rifinisce di iniziativa.** Le fasi 5–10 (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) si riaprono **esplicitamente**, mai per scivolamento. Prima di costruire l'integrazione WP va deciso **se l'app va in un iframe o inline** nella pagina Elementor: cambia i font e l'interferenza del CSS del tema.
 >
 > Dettaglio in `.lavoro/stato.md`.
 
@@ -54,7 +54,19 @@ Due scostamenti dal brief, entrambi documentati in `prototipo/README.md`:
 
 I valori in vigore sono **21 / 27 / 50** (`WIDTHS` in `palette.js`), raddoppiati sotto i 700 px di lavagna da `SCALA_STRUMENTI`. Qui era rimasto scritto 16 / 28 / 44, che il codice non ha mai avuto: corretto il 17/09/2026 leggendo il file. Il codice è la fonte, non questa riga.
 
-**Scarica il disegno — 16/09/2026.** Pulsante SCARICA a sinistra di INVIA, JPEG 1600 px sul device. È una **fetta anticipata della Fase 6**, chiesta esplicitamente: solo il download, nessun backend e nessun logo (la dipendenza esterna resta aperta). Codice in `prototipo/src/export.js`, note in `prototipo/README.md`. 37 test.
+**Scarica il disegno — 16/09/2026.** JPEG 1600 px sul device. È una **fetta anticipata della Fase 6**, chiesta esplicitamente: solo il download, nessun backend e nessun logo (la dipendenza esterna resta aperta). Codice in `prototipo/src/export.js`, note in `prototipo/README.md`.
+
+**Fase 4b chiusa — 17/09/2026. Il tutorial**, chiesto dal cliente: sette passi con una finestra al centro e l'area spiegata in luce dentro un velo, cerchiata di gesso. Parte alla prima apertura, poi il `?` lo riapre. Codice in `prototipo/src/tutorial.js`, progettato prima in `design-tutorial/prova.html` (cinque giri di revisione). Nella stessa tornata **SCARICA e INVIA sono diventati un solo SALVA** e i tasti hanno preso lo stile del sito della Fondazione. 43 test.
+
+Dettaglio in `prototipo/README.md`; le decisioni e quel che resta da provare su device in `.lavoro/stato.md`.
+
+Tre cose da non disfare per sbaglio:
+
+- **Il riquadro del tutorial si prende dall'elemento** (`getBoundingClientRect`), mai da coordinate: sotto i 700 px la mensola cambia griglia.
+- **La finestra non sta al centro**, ma nella metà opposta all'area in luce — al primo passo l'area *è* il centro e la finestra coprirebbe quel che spiega.
+- **`.btn[hidden] { display: none }` non è ridondante**: `.btn` è `inline-flex` e vince sull'attributo `hidden`. Senza, RIPETI compare a tutti i passi. Già succeduto.
+
+**I font della Fondazione non sono nel repo.** `index.html` dichiara `SebinoSoft` e si aspetta i `.woff2` in `prototipo/font/`: sono font commerciali di terzi e il repo è pubblico. Si riscaricano col comando in `prototipo/README.md`; `.lavoro/pubblica.sh` li carica se li trova e avvisa se non ci sono. **Da verificare**: che la licenza webfont copra `issimissimo.com`, che non è il dominio della Fondazione.
 
 **Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 
@@ -108,11 +120,13 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-01/>
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-03/>
+
+⚠️ La **`-02` ha un difetto noto** (RIPETI visibile a ogni passo del tutorial) e non va data a nessuno.
 
 Cartella **numerata**, dal 17/09/2026: il link da dare al cliente è quello, senza query string. La numerazione è la difesa dalla cache di SiteGround — un URL nuovo non è in nessuna cache, né del proxy né del browser di chi ha già visto il prototipo. **Ogni consegna al cliente va in una cartella nuova** (`-02`, `-03`), non sopra la precedente. Le vecchie si lasciano dove sono: servono a confrontare, e cancellarle non fa guadagnare niente.
 
-Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
+Solo `prototipo/index.html`, `prototipo/src/` e `prototipo/font/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
 
 Lo script di caricamento sta in `.lavoro/pubblica.sh`: prende il numero di cartella come argomento, carica i 12 file e rilegge il listing per confronto.
 

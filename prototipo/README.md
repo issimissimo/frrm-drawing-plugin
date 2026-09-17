@@ -18,7 +18,23 @@ L'IP si trova con `ipconfig`. Se il telefono non raggiunge il PC, quasi sempre �
 node test/run.js
 ```
 
-29 test sulle funzioni pure, nessuna dipendenza. Coprono filtro, ricampionamento e semplificazione. Ciò che resta soggettivo — "un cerchio sembra un cerchio", quanto smoothing è giusto — si verifica a mano sul telefono.
+43 test sulle funzioni pure, nessuna dipendenza. Coprono filtro, ricampionamento, semplificazione, effetto gessetto, export e la geometria del tutorial. Ciò che resta soggettivo — "un cerchio sembra un cerchio", quanto smoothing è giusto, se un bambino capisce il tutorial — si verifica a mano sul telefono.
+
+### I font non sono nel repo
+
+`index.html` dichiara **SebinoSoft**, il font del sito della Fondazione, e si aspetta i tre `.woff2` in `prototipo/font/`. Non sono versionati: sono font commerciali di terzi e il repo è pubblico. Senza di loro la pagina non si rompe — ripiega su Atkinson Hyperlegible — ma i corpi risultano più stretti del 15%.
+
+Si riscaricano dal sito:
+
+```
+mkdir -p font && cd font
+B=https://fondazione-riccardo-marina-mantovani.org/wp-content/uploads
+curl -O $B/2026/05/SebinoSoft-Regular.woff2
+curl -O $B/2026/05/SebinoSoft-Medium.woff2
+curl -O $B/2026/06/SebinoSoft-Bold.woff2
+```
+
+Non si possono linkare direttamente da lì: su quegli URL **manca l'header CORS**, e un font cross-origin senza CORS viene rifiutato dal browser. Dentro WordPress il problema non esiste, li carica Elementor.
 
 ## Stato: Fase 3
 
@@ -161,9 +177,37 @@ Il rAF gira a 60 Hz su entrambi, ProMotion incluso: Safari limita le pagine web 
 
 **Ma i campioni sono radi**, ed è la ragione per cui il ricampionamento interpola su una curva invece di decimare: a ~55 campioni/s un gesto veloce li lascia distanti ~29 unità, mentre ne serve uno ogni 2,5.
 
-## Scarica il disegno
+## Il tutorial (Fase 4b)
 
-Aggiunto il 16/09/2026 su richiesta: è una fetta anticipata della Fase 6 (requisiti in `fase-0-specifiche.md` §7). **Manca il logo della Fondazione**, che è una dipendenza esterna; quando arriva si compone in `disegnaSuCanvas()`, dopo i tratti.
+Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non sanno cosa fare. Parte **da solo alla prima apertura**, poi mai più; il `?` nella mensola lo riapre. Codice in `src/tutorial.js`, progettato prima in `design-tutorial/prova.html` (cinque giri di revisione, l'ultimo online su `temp/frmm-tutorial-design-05/`).
+
+| | |
+|---|---|
+| Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato a gesso |
+| Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
+| Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
+| Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
+| «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1` |
+
+Quattro cose che non si leggono dal codice:
+
+**Il riquadro si prende dall'elemento, mai da coordinate.** Sotto i 700 px la mensola cambia griglia e quel che sta a destra finisce in mezzo: `areaUnione()` lavora sui `getBoundingClientRect` reali, e con più selettori unisce i rettangoli — serve ad annulla/rifai, due pulsanti ma un concetto.
+
+**La finestra "al centro" non può stare al centro.** Al primo passo l'area in luce *è* il centro dello schermo, e una finestra centrata coprirebbe proprio quello che sta spiegando. `posizionaFinestra()` la mette nella metà opposta a quella dove cade l'area, e con poco spazio preferisce tenerla dentro lo schermo piuttosto che centrata. Misurato: copre lo 0% dell'area in luce in tutti e sette i passi, a 1440×900 e a 390×844.
+
+**Il velo intercetta i tocchi, ed è voluto.** Mentre il tutorial è aperto non si disegna e non si toccano gli strumenti: verificato che `elementFromPoint` sul centro della lavagna restituisca `#tut` e che chiudendo il tutorial senza aver toccato nulla il disegno resti vuoto.
+
+**Non c'è un CHIUDI nei primi sei passi.** È una richiesta esplicita: un CHIUDI accanto a PROSSIMO si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo è che chi lo riapre col `?` deve fare sette tocchi per uscirne — `Esc` funziona, ma non sul dito. Se dà fastidio, la correzione è una `×` discreta nell'angolo, lontana da PROSSIMO.
+
+**Il velo su desktop mostra due grigi**, ed è normale: la lavagna è `#1F2225` e il fondo pagina `#15171A`, quindi sotto il velo la lavagna resta la zona più chiara. Non è un riquadro di troppo.
+
+## Salva e scarica il disegno
+
+**Dal 17/09/2026 SCARICA e INVIA sono un tasto solo, SALVA**, che prende il fondo pieno e la piena larghezza su mobile: è l'azione dichiarata della schermata. Oggi scarica e, sul dito, apre il foglio di condivisione. **L'invio al backend si innesterà qui dentro**, in Fase 6, senza toccare la mensola.
+
+Conseguenza da tenere presente: non esiste più il modo di scaricare *senza* inviare. Oggi non si vede, perché l'invio non c'è; quando arriverà va deciso se un solo tocco fa entrambe le cose senza chiedere.
+
+Il download è stato aggiunto il 16/09/2026 su richiesta: è una fetta anticipata della Fase 6 (requisiti in `fase-0-specifiche.md` §7). **Manca il logo della Fondazione**, che è una dipendenza esterna; quando arriva si compone in `disegnaSuCanvas()`, dopo i tratti.
 
 Tutto avviene sul device: nessun server, nessun dato in uscita.
 
@@ -201,8 +245,10 @@ src/model.js    Drawing / Stroke, undo, redo
 src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
 src/export.js   il disegno in JPEG, download o foglio di condivisione
+src/tutorial.js i sette passi, il riquadro e il "gia visto"
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
+font/           i .woff2 della Fondazione, NON versionati (vedi sopra)
 ```
 
 I due canvas (`base` e `overlay`) servono perché a fine gesto lo stroke grezzo viene sostituito da quello semplificato: con un canvas solo, cancellare il tratto provvisorio costringerebbe a un ridisegno completo a ogni tratto.

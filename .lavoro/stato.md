@@ -1,10 +1,10 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 16/09/2026
-Versione corrente: prototipo fasi 0–4 + download del disegno. Nessun numero di versione.
+Ultimo aggiornamento: 17/09/2026
+Versione corrente: prototipo fasi 0–4 + 4b (tutorial) + download del disegno. Nessun numero di versione.
 
 ## Dove siamo
 
-Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla/rifai: validato su iPhone 13 Pro e Galaxy S10 a 60 fps. Dal 16/09/2026 il disegno si **scarica in JPEG** sul proprio device (`src/export.js`), senza logo e senza backend.
+Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla/rifai: validato su iPhone 13 Pro e Galaxy S10 a 60 fps. Dal 16/09/2026 il disegno si **scarica in JPEG** sul proprio device (`src/export.js`), senza logo e senza backend. Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura (`src/tutorial.js`), SCARICA e INVIA sono diventati un solo **SALVA**, e i tasti hanno preso lo stile del sito della Fondazione.
 
 Online su <https://issimissimo.com/temp/frmm-drawing-plugin-01/> — cartella numerata, **niente query string** (17/09/2026, vedi le trappole). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, 37 test (`node test/run.js`).
 
@@ -30,7 +30,7 @@ Fuori perimetro, e va detto se ci si avvicina:
 
 Passi:
 
-1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
+1. [x] **Tasto unico SALVA** — fatto. `#btn-send` non esiste più; `#btn-save` prende il fondo pieno e, su mobile, l'ultima riga a piena larghezza.
 2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`. Riproduce la mensola vera e ci mette sopra il tutorial, con gli assi confrontabili a schermo. Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
 
    **Design chiuso il 17/09/2026. v5, l'ultima, online su <https://issimissimo.com/temp/frmm-tutorial-design-05/>** (le precedenti si tengono per confronto).
@@ -53,10 +53,27 @@ Passi:
    - **Lo step 1 dice «col dito» o «col mouse»** secondo `matchMedia('(pointer: coarse)')` — lo stesso criterio con cui `export.js` decide del foglio di condivisione: dice con che cosa si tocca lo schermo, non quanto è grande. Una finestra desktop stretta resta «mouse», un tablet grande resta «dito».
    - **Le icone sono path di Font Awesome 6 Solid messi inline** (`arrow-right` su PROSSIMO, `check` su HO CAPITO): l'icona è una, e tirarsi dietro la libreria vorrebbe dire una richiesta esterna e ~100 KB. Dentro WordPress Font Awesome c'è già e si potrà passare a `<i class="fa-solid fa-arrow-right">` senza toccare altro.
    - **Tasti a `font-weight: 300`, testo della finestra a `17px`** (ultimo giro). Attenzione: **300 non esiste in SebinoSoft**, che ha 400 / 500 / 700 — il browser lo mappa sul 400, verificato misurando (peso 300 e peso 400 danno la stessa larghezza al pixel). Quello che si vede è il Regular, non un Light: per un Light vero servirebbe un `SebinoSoft-Light.woff2`, che sul sito della Fondazione non c'è. Il `17px` del testo è fisso e non varia più col device: la media query che lo portava a 19px è stata rimossa.
-4. [ ] **Il motore**, in `prototipo/src/tutorial.js`: velo, riquadro calcolato da `getBoundingClientRect` sull'elemento vero, finestra, avanzamento, chiusura. Il riquadro si ricalcola su `resize` e `orientationchange`, come già fa `relayout()`.
-5. [ ] **I 7 step**, come dati e non come codice: una lista di `{ selettore, testo }`, così cambiare una frase non è una modifica al motore.
-6. [ ] **Prima apertura e riapertura**: flag in localStorage con try/catch (in Safari privato lancia), icona `?` nella mensola.
-7. [ ] **Prova sui due device reali** e aggiornamento di `README.md` e `CLAUDE.md`.
+4. [x] **Il motore** — `prototipo/src/tutorial.js`. Le parti calcolate (`areaUnione`, `posizionaFinestra`, `testoStep`, `giaVisto`/`segnaVisto`) sono pure e sotto test; il DOM lo tocca solo `createTutorial()`.
+5. [x] **I 7 step come dati**: `STEPS`, una lista di `{ sel, pad, testo }`. Cambiare una frase non tocca il motore.
+6. [x] **Prima apertura e riapertura**: flag `localStorage` con try/catch su lettura *e* scrittura, icona `?` in testa alla fila dei comandi.
+7. [x] **Verificato in Chrome e documentato.** `README.md` e `CLAUDE.md` aggiornati. **Resta da provare sui due device reali** (vedi sotto).
+
+**Online: <https://issimissimo.com/temp/frmm-drawing-plugin-03/>** — la `-02` ha un difetto noto (RIPETI visibile a ogni passo) e non va data a nessuno.
+
+Criterio di finito, verificato in Chrome a 1440×900 e 390×844:
+
+| | esito |
+|---|---|
+| parte da solo alla prima apertura | sì |
+| ricaricando non riparte | sì (`lavagna.tutorial.visto.v1` = `1`) |
+| il `?` lo riapre dal passo 1 | sì |
+| il riquadro cade sull'elemento giusto, 7 passi su 7 | sì, anche dopo un `resize` |
+| la finestra non copre l'area in luce | 0% su tutti e 7 |
+| durante il tutorial non si disegna | sì: `elementFromPoint` sul centro della lavagna dà `#tut`, e dopo la chiusura il canvas ha 0 pixel dipinti e SALVA è spento |
+| si disegna dopo la chiusura | sì, e SALVA si accende |
+| suite | 43 test, 0 falliti |
+
+**Il difetto che il controllo automatico non aveva visto.** RIPETI compariva a ogni passo: il CSS nascondeva `#tut-ripeti` mentre l'elemento si chiama `#btn-ripeti`, e `.btn` è `inline-flex`, che vince sul `display:none` implicito dell'attributo `hidden`. Lo controllavo leggendo **l'attributo** `hidden`, che era corretto — la misura giusta è `offsetParent !== null`, cioè la visibilità resa. Ora la regola è `.btn[hidden] { display: none }`, che copre qualunque tasto futuro.
 
 ### Lo stile del sito della Fondazione — misurato, non dedotto (17/09/2026)
 
@@ -126,9 +143,14 @@ Due cose aperte, nessuna delle due è "una fase":
 
 **Da non rifare:** ritarare le due costanti alla cieca. Combinazioni già misurate in `fase-0-specifiche.md` §4.1.
 
-### Download: manca la prova su telefono vero
+### Manca la prova su telefono vero — due cose, una sola sessione
 
-Il ramo `navigator.share` è verificato solo con stub su Chrome desktop. Su iOS il file deve finire in **Foto**, non nei Download di Safari — è tutta la ragione per cui quel ramo esiste.
+Entrambe si verificano aprendo <https://issimissimo.com/temp/frmm-drawing-plugin-03/> su iPhone 13 Pro e Galaxy S10:
+
+1. **Il tutorial.** Tutto il criterio di finito è stato verificato in Chrome, non su iOS. Da guardare: che il velo si legga su uno schermo vero con la luminosità di un telefono, che il passo 1 dica «col dito» (`pointer: coarse`), e che ruotando lo schermo a tutorial aperto il riquadro segua la mensola.
+2. **Il download.** Il ramo `navigator.share` è verificato solo con stub su Chrome desktop. Su iOS il file deve finire in **Foto**, non nei Download di Safari — è tutta la ragione per cui quel ramo esiste.
+
+Sospeso anche: **il tutorial funziona?** Nessun test lo dice. Lo dice una persona che non ha mai visto l'app — preferibilmente un bambino.
 
 ## Decisioni prese e perché
 

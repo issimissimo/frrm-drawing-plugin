@@ -11,6 +11,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
+  /* I font ufficiali del sito della Fondazione. I woff2 stanno accanto e NON
+     sono nel repo, che e' pubblico: sono font commerciali di terzi (vedi
+     .gitignore). Sull'originale manca l'header CORS, quindi non si possono
+     linkare dal sito: vanno copiati same-origin. Dentro WordPress questo
+     blocco non servira', li carica Elementor. */
+  @font-face {
+    font-family: 'SebinoSoft'; font-weight: 400; font-display: swap;
+    src: url('font/SebinoSoft-Regular.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'SebinoSoft'; font-weight: 500; font-display: swap;
+    src: url('font/SebinoSoft-Medium.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'SebinoSoft'; font-weight: 700; font-display: swap;
+    src: url('font/SebinoSoft-Bold.woff2') format('woff2');
+  }
+
   :root {
     --page:  #15171A;
     --board: #1F2225;
@@ -26,10 +44,27 @@
     --lift:    24px;
     --slot:    36px;
     --icon:    46px;
-    /* I tre segni valgono 16 / 28 / 44 unita' di lavagna: qui si convertono
+    /* I tre segni valgono 21 / 27 / 50 unita' di lavagna: qui si convertono
        in pixel una volta sola, cosi' il rapporto fra loro resta visibile. */
     --wscale:  0.43px;
+
+    /* --- grammatica dei tasti, presa dal sito della Fondazione ---
+       Un solo fondo e un solo bordo per tutti, raggio zero: sul sito non ci
+       sono angoli arrotondati da nessuna parte. La gerarchia fra un tasto e
+       l'altro non puo' quindi stare nel contenitore, e sta nel colore del
+       testo: pieno per l'azione dichiarata, spento per la via laterale. */
+    --btn-bg:     #FFFFFF1A;
+    --btn-border: #FFFFFF54;
+    --arancio:    #FF6000;      /* istituzionale; oggi non in uso, vedi README */
+
+    /* I tre corpi del sito. Le soglie sono quelle di Elementor (1024 / 767),
+       non i 700px con cui l'app cambia layout: i valori vengono da la'. A
+       1440px il clamp da' 12,96px, che e' il corpo del pulsante DONA. */
+    --btn-size: clamp(0.8rem, 0.9vw, 1rem);
   }
+
+  @media (max-width: 1024px) { :root { --btn-size: 16px; } }
+  @media (max-width: 767px)  { :root { --btn-size: 14px; } }
 
   @media (max-width: 700px) {
     :root {
@@ -58,7 +93,7 @@
 
   body {
     color: var(--ink);
-    font: 400 14px/1.4 'Atkinson Hyperlegible', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font: 400 14px/1.4 'SebinoSoft', 'Atkinson Hyperlegible', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;          /* niente menu da long press */
@@ -131,8 +166,8 @@
     display: grid;
     align-items: end;
     background: var(--page);
-    grid-template-columns: auto auto 1fr auto auto auto;
-    grid-template-areas: "widths tools . cmds save send";
+    grid-template-columns: auto auto 1fr auto auto;
+    grid-template-areas: "widths tools . cmds save";
     column-gap: 26px;
     padding: 0 34px 22px;
   }
@@ -143,7 +178,7 @@
       grid-template-areas:
         "tools  tools"
         "widths cmds"
-        "save   send";
+        "save   save";
       column-gap: 8px;
       row-gap: 6px;
       padding: 6px 12px 16px;
@@ -175,7 +210,6 @@
     .tools .chalk { flex: 0 0 var(--slot); }
   }
   #btn-save { grid-area: save; }
-  #btn-send { grid-area: send; }
 
   /* ---------- gessetti ----------
      La selezione e' il gessetto sollevato. Nessun bordo, nessun anello,
@@ -311,65 +345,138 @@
   .cmd:hover:not(:disabled) { color: #FAF8F3; }
   .cmd:disabled { color: #3C4247; cursor: default; }
   #btn-clear { color: var(--dim); margin-left: 16px; }
+  /* Il "?" e' un comando, non uno strumento: stesso registro di annulla e
+     cestino, ma la voce meno urgente della fila, e in testa per non finire
+     accanto a SALVA. Niente fondo e niente bordo: darli anche a lui e alla
+     fila accanto trasformerebbe la mensola in una griglia di scatole. */
+  #btn-help { color: var(--off); margin-right: 16px; font-weight: 700; font-size: 19px; }
+  #btn-help:hover { color: var(--ink); }
 
-  /* ---------- scarica e invia ----------
-     Stessa geometria, due registri: l'invio e' l'azione dichiarata e porta la
-     pillola piena; il download e' la via laterale e sta in solo testo. Dargli
-     un fondo suo aggiungerebbe un contenitore e due azioni di pari peso.
+  /* ---------- i tasti ----------
+     Un tasto e': fondo --btn-bg, bordo 2px --btn-border, raggio zero, icona
+     sempre a destra del testo e dimensionata 1em, cosi' segue il corpo invece
+     di avere una misura sua. Vale per SALVA e per i tasti del tutorial. */
 
-     L'invio e' disabilitato — e' Fase 6 e non esiste ancora un backend —
-     mentre il download funziona: la gerarchia e' quella che vale a regime,
-     non quella di oggi. */
-
-  #btn-save, #btn-send {
+  .btn {
     -webkit-appearance: none;
     appearance: none;
-    /* Si allineano al centro del gessetto come tutto il resto della mensola,
-       non al centro della riga: la riga e' piu' alta per via del sollevamento. */
-    align-self: end;
-    margin-bottom: calc((var(--stick-h) - 50px) / 2);
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    height: 50px;
-    border: 0;
+    justify-content: center;
+    gap: 0.6em;
+    height: 46px;
+    padding: 0 22px;
+    background: var(--btn-bg);
+    border: 2px solid var(--btn-border);
+    border-radius: 0;
     font: inherit;
-    font-weight: 700;
-    font-size: 15px;
+    /* 300 non esiste in SebinoSoft (400 / 500 / 700): il browser lo serve col
+       Regular. E' il Regular che si vede, non un Light. */
+    font-weight: 300;
+    font-size: var(--btn-size);
     letter-spacing: 0.04em;
-  }
-
-  #btn-save {
-    padding: 0 10px;
-    background: none;
     color: var(--ink);
     cursor: pointer;
     touch-action: manipulation;
-    transition: color .14s;
+    transition: color .14s, border-color .14s, opacity .14s;
   }
-  #btn-save:hover:not(:disabled) { color: #FAF8F3; }
-  #btn-save:disabled { color: #3C4247; cursor: default; }
-  #btn-save:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .btn svg { width: 1em; height: 1em; flex: 0 0 auto; }
+  .btn.primario { color: #FAF8F3; }
+  /* Il secondario non porta bordo: era l'unica differenza col primario, e due
+     tasti identici affiancati si toccano per sbaglio. Trasparente e non
+     rimosso, cosi' i due restano alti uguale e con il testo sulla stessa
+     linea di base. */
+  .btn.secondario { color: var(--dim); border-color: transparent; }
+  .btn.secondario:hover { color: var(--ink); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .btn:disabled { color: #3C4247; border-color: #FFFFFF14; cursor: default; }
 
-  #btn-send {
-    padding: 0 24px;
-    border-radius: 25px;
-    background: #23272B;
-    color: var(--off);
-    cursor: default;
+  /* ---------- salva ----------
+     Un tasto solo al posto di SCARICA + INVIA (17/09/2026): e' l'azione
+     dichiarata della schermata. Oggi scarica e condivide; l'invio al backend
+     si innestera' qui dentro, in Fase 6, senza cambiare la mensola.
+     Si allinea al centro del gessetto, non al centro della riga, che e' piu'
+     alta per via del sollevamento. */
+
+  #btn-save {
+    align-self: end;
+    margin-bottom: calc((var(--stick-h) - 50px) / 2);
+    height: 50px;
+    padding: 0 26px;
   }
 
   @media (max-width: 700px) {
-    #btn-save, #btn-send {
-      height: 48px; font-size: 14px; gap: 8px;
-      margin: 4px 0 0;
-    }
-    /* Ultima riga condivisa: il download a sinistra, l'invio all'estremita'
-       opposta. L'invio non e' piu' a tutta larghezza, ma la riga resta sua —
-       e' l'unico elemento con un fondo. */
-    #btn-save { padding: 0 2px; justify-self: start; }
-    #btn-send { padding: 0 18px; justify-self: end; }
+    /* Ultima riga tutta sua, a piena larghezza: l'azione e' dichiarata e non
+       si puo' mancare. */
+    #btn-save { height: 48px; margin: 4px 0 0; justify-self: stretch; }
   }
+
+  /* ---------- tutorial ----------
+     Il buco nel velo e' un solo elemento: il velo E' la sua ombra, estesa
+     oltre lo schermo. Quattro div attorno all'area farebbero lo stesso con
+     quattro volte il codice e una cucitura sugli angoli. */
+
+  #tut { position: fixed; inset: 0; z-index: 50; }
+  #tut[hidden] { display: none; }
+
+  #spot {
+    position: absolute;
+    /* Velo forte piu' il cerchio di gesso: il velo porta l'attenzione, il
+       tratteggio dice con che mano e' stato fatto e non introduce un
+       linguaggio estraneo all'app. Senza un bordo sul buco, su fondo scuro il
+       confine fra area in luce e velo non si vede. */
+    box-shadow: 0 0 0 9999px rgba(8, 9, 11, 0.78);
+    outline: 3px dashed rgba(250, 248, 243, 0.78);
+    outline-offset: 3px;
+    pointer-events: none;
+    transition: left .34s cubic-bezier(.4, 0, .2, 1), top .34s cubic-bezier(.4, 0, .2, 1),
+                width .34s cubic-bezier(.4, 0, .2, 1), height .34s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  /* Nessun bordo: si stacca dal velo con la sola ombra. */
+  #panel {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(430px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 22px 24px 18px;
+    background: #272C31;
+    box-shadow: 0 30px 70px -18px rgba(0, 0, 0, 0.92);
+    transition: top .34s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  /* L'importanza si dichiara con corpo e peso su fondo condiviso. "PASSO n DI
+     7" e' anche l'unico indicatore di avanzamento: sette pallini sarebbero
+     sette dispositivi grafici per quel che porta una riga di testo. */
+  #step-n {
+    margin: 0 0 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  #step-t {
+    margin: 0 0 20px;
+    font-size: 17px;
+    line-height: 1.34;
+    color: #EDEFF1;
+  }
+
+  /* Allineati a sinistra, primario per primo: "HO CAPITO" si legge prima di
+     "RIPETI". */
+  #tut .row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+  /* Serve davvero: .btn e' inline-flex, e un display esplicito vince sul
+     display:none implicito dell'attributo hidden. Senza questa riga RIPETI
+     si vede da tutti i passi. */
+  .btn[hidden] { display: none; }
+
+  /* Le due icone stanno entrambe nel markup e si alternano: cambiare il path
+     via JS vorrebbe dire tenere due stringhe di path dentro il modulo. */
+  #btn-avanti .ico-check,
+  #btn-avanti[data-ico="check"] .ico-avanti { display: none; }
+  #btn-avanti[data-ico="check"] .ico-check { display: block; }
 
   /* ---------- taratura (solo con ?debug=1) ---------- */
 
@@ -446,6 +553,7 @@
     </div>
 
     <div class="cmds">
+      <button type="button" class="cmd" id="btn-help" aria-label="Come funziona">?</button>
       <button type="button" class="cmd" id="btn-undo" aria-label="Annulla" disabled>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 8h11a5 5 0 0 1 0 10H8"/><path d="M7 4L3 8l4 4"/>
@@ -464,18 +572,11 @@
       </button>
     </div>
 
-    <button type="button" id="btn-save" aria-label="Scarica il disegno" disabled>
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/>
-      </svg>
-      <span>SCARICA</span>
-    </button>
-
-    <button type="button" id="btn-send" disabled>
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <button type="button" id="btn-save" class="btn primario" aria-label="Salva e condividi il disegno" disabled>
+      <span>SALVA</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>
       </svg>
-      <span>INVIA</span>
     </button>
 
   </div>
@@ -491,6 +592,31 @@
     <button type="button" id="btn-hud" aria-pressed="false" style="margin-left:auto">Info</button>
   </div>
 
+</div>
+
+<!-- Il tutorial. Sopra tutto, e intercetta i tocchi: mentre e' aperto non si
+     disegna e non si toccano gli strumenti. Le frecce sono i path di
+     "arrow-right" e "check" di Font Awesome 6 Solid, messi inline: l'icona e'
+     una, e tirarsi dietro la libreria vorrebbe dire una richiesta esterna e
+     ~100 KB. Dentro WordPress Font Awesome c'e' gia'. -->
+<div id="tut" hidden>
+  <div id="spot"></div>
+  <div id="panel" role="dialog" aria-modal="true" aria-labelledby="step-t">
+    <p id="step-n"></p>
+    <p id="step-t"></p>
+    <div class="row">
+      <button type="button" id="btn-avanti" class="btn primario" data-ico="avanti">
+        <span>PROSSIMO</span>
+        <svg class="ico-avanti" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true">
+          <path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/>
+        </svg>
+        <svg class="ico-check" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true">
+          <path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
+        </svg>
+      </button>
+      <button type="button" id="btn-ripeti" class="btn secondario" hidden>RIPETI</button>
+    </div>
+  </div>
 </div>
 
 <pre id="hud" hidden></pre>

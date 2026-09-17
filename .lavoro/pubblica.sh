@@ -38,9 +38,17 @@ up "$LOCAL/index.html" "$DEST/index.html"
 for f in "$LOCAL"/src/*.js; do
   up "$f" "$DEST/src/$(basename "$f")"
 done
+# I font non sono nel repo (di terzi, repo pubblico) ma servono online, e
+# dagli URL della Fondazione non si possono linkare: manca il CORS.
+if compgen -G "$LOCAL/font/*.woff2" >/dev/null; then
+  for f in "$LOCAL"/font/*.woff2; do up "$f" "$DEST/font/$(basename "$f")"; done
+else
+  echo "  !!  font/ vuota: online si vedra' il fallback. Vedi prototipo/README.md" >&2
+fi
 
 echo
-echo "--- $DEST ---";     ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/"
-echo "--- $DEST/src ---"; ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/src/"
+echo "--- $DEST ---";      ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/"
+echo "--- $DEST/src ---";  ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/src/"
+echo "--- $DEST/font ---"; ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/font/"
 echo
 echo "https://issimissimo.com/temp/frmm-drawing-plugin-$NN/"

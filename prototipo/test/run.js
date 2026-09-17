@@ -12,6 +12,8 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W } from '../src/export.js';
+import { STEPS, testoStep, areaUnione, posizionaFinestra,
+         giaVisto, segnaVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
 let passed = 0, failed = 0;
 const results = [];
@@ -461,6 +463,87 @@ test('export: l immagine e larga 1600 e tiene il rapporto della lavagna', () => 
   // E qualunque larghezza si chieda, il rapporto non cambia.
   const meta = dimensioni({ board: { w: 1600, h: 1200 } }, 800);
   close(meta.w / meta.h, 4 / 3, 0.002, 'rapporto a meta risoluzione');
+});
+
+/* ---------------- tutorial ---------------- */
+
+const rect = (left, top, w, h) => ({ left, top, right: left + w, bottom: top + h });
+
+test('tutorial: i sette passi puntano a elementi che esistono nella mensola', () => {
+  // Non c'e' DOM qui: si controlla che i selettori siano quelli scritti in
+  // index.html. Se qualcuno rinomina un id, il tutorial punterebbe al vuoto.
+  const attesi = ['#layers', '#chalks', '#widths', '#tool-eraser',
+                  '#btn-undo,#btn-redo', '#btn-clear', '#btn-save'];
+  assert(STEPS.length === 7, `${STEPS.length} passi invece di 7`);
+  STEPS.forEach((s, i) => assert(s.sel === attesi[i], `passo ${i + 1}: ${s.sel}`));
+  for (const s of STEPS) assert(s.testo.trim().length > 0, 'un passo senza testo');
+});
+
+test('tutorial: il primo passo dice "dito" sul dito e "mouse" col mouse', () => {
+  assert(testoStep(0, true).includes('con il dito'), testoStep(0, true));
+  assert(testoStep(0, false).includes('con il mouse'), testoStep(0, false));
+  // Nessun altro passo cambia col device: un {cosa} dimenticato resterebbe
+  // in chiaro nel testo mostrato al bambino.
+  for (let i = 1; i < STEPS.length; i++) {
+    assert(!testoStep(i, true).includes('{'), `passo ${i + 1}: segnaposto non sostituito`);
+  }
+});
+
+test('tutorial: il riquadro racchiude tutti gli elementi del passo', () => {
+  // Annulla e rifai sono due pulsanti ma un concetto: il riquadro e' uno.
+  const a = areaUnione([rect(100, 700, 40, 40), rect(160, 700, 40, 40)], 8);
+  assert(a.left === 92 && a.top === 692, `angolo ${a.left},${a.top}`);
+  assert(a.width === 116 && a.height === 56, `misure ${a.width}x${a.height}`);
+
+  // pad negativo stringe: serve alla lavagna, il cui bordo e' lo schermo.
+  const b = areaUnione([rect(0, 0, 390, 600)], -10);
+  assert(b.left === 10 && b.width === 370, `pad negativo: ${b.left}, ${b.width}`);
+
+  assert(areaUnione([]) === null, 'lista vuota deve dare null, non un crash');
+  assert(areaUnione(null) === null, 'null deve dare null');
+});
+
+test('tutorial: la finestra non copre mai l area in luce', () => {
+  const H = 844, ph = 180;
+  const sovrappone = (area, top) => !(top + ph <= area.top || top >= area.top + area.height);
+
+  // I sette casi veri, misurati sulla prova di design a 390x844.
+  const aree = [
+    { left: 10, top: 10, width: 370, height: 592 },   // lavagna
+    { left: 4, top: 610, width: 314, height: 98 },    // gessetti
+    { left: 4, top: 698, width: 166, height: 80 },    // spessori
+    { left: 312, top: 610, width: 73, height: 98 },   // cancellino
+    { left: 222, top: 708, width: 104, height: 60 },  // annulla/rifai
+    { left: 326, top: 708, width: 60, height: 60 },   // cestino
+    { left: 4, top: 772, width: 382, height: 64 },    // salva
+  ];
+  aree.forEach((area, i) => {
+    const top = posizionaFinestra(area, H, ph);
+    assert(!sovrappone(area, top), `passo ${i + 1}: la finestra copre l area (top ${top})`);
+    assert(top >= 0 && top + ph <= H, `passo ${i + 1}: finestra fuori schermo (top ${top})`);
+  });
+});
+
+test('tutorial: con poco spazio la finestra resta comunque a vista', () => {
+  // Telefono corto e area che occupa quasi tutto: la finestra non puo' stare
+  // fuori dall'area, ma deve almeno restare dentro lo schermo.
+  const top = posizionaFinestra({ left: 0, top: 20, width: 390, height: 500 }, 560, 200);
+  assert(top >= 0 && top + 200 <= 560, `top ${top} fuori da uno schermo di 560`);
+});
+
+test('tutorial: il "gia visto" sopravvive, e un localStorage rotto non lo ferma', () => {
+  const finto = new Map();
+  const store = { getItem: (k) => (finto.has(k) ? finto.get(k) : null), setItem: (k, v) => finto.set(k, v) };
+  assert(giaVisto(store) === false, 'al primo avvio non e visto');
+  assert(segnaVisto(store) === true, 'la scrittura deve riuscire');
+  assert(giaVisto(store) === true, 'dopo la scrittura e visto');
+  assert(finto.get(CHIAVE_VISTO) === '1', 'la chiave scritta non e quella attesa');
+
+  // In Safari privato il solo accesso lancia: senza la guardia il modulo
+  // morirebbe all'avvio e la lavagna non si aprirebbe affatto.
+  const rotto = { getItem() { throw new Error('SecurityError'); }, setItem() { throw new Error('SecurityError'); } };
+  assert(giaVisto(rotto) === false, 'con lo storage rotto deve dire "non visto"');
+  assert(segnaVisto(rotto) === false, 'e dire che non ha potuto scrivere');
 });
 
 /* ---------------- esito ---------------- */

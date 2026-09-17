@@ -28,6 +28,7 @@ import { render, renderStroke, strokeGeometry } from './render.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
 import { scarica, haDisegno } from './export.js';
+import { createTutorial, giaVisto } from './tutorial.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -270,7 +271,11 @@ btnClear.addEventListener('click', () => {
 });
 
 /**
- * Il download.
+ * SALVA.
+ *
+ * Un tasto solo al posto di SCARICA + INVIA (17/09/2026). Oggi scarica e, sul
+ * dito, apre il foglio di condivisione; l'invio al backend si innestera' qui,
+ * in Fase 6, senza toccare la mensola.
  *
  * scarica() va chiamata senza nulla davanti: il foglio di condivisione, su
  * telefono, si apre solo finche' l'attivazione del tocco e' valida (export.js).
@@ -434,8 +439,39 @@ function tick(now = performance.now()) {
   requestAnimationFrame(tick);
 }
 
+/* ---------- tutorial (Fase 4b) ---------- */
+
+/**
+ * Gli elementi si cercano con la stessa guardia del resto: un index.html
+ * vecchio in cache che incontra un main.js nuovo non deve uccidere il modulo
+ * — si perde il tutorial, non la lavagna. E' gia' successo in produzione.
+ */
+const tutorial = createTutorial({
+  root: document.getElementById('tut'),
+  spot: document.getElementById('spot'),
+  panel: document.getElementById('panel'),
+  etichetta: document.getElementById('step-n'),
+  testo: document.getElementById('step-t'),
+  btnAvanti: document.getElementById('btn-avanti'),
+  btnRipeti: document.getElementById('btn-ripeti'),
+});
+
+const btnHelp = document.getElementById('btn-help');
+btnHelp?.addEventListener('click', () => tutorial?.apri(0));
+// Senza tutorial il "?" non porta a nulla, e un tasto che non fa niente e'
+// peggio di un tasto che non c'e'.
+if (!tutorial && btnHelp) btnHelp.hidden = true;
+
 /* ---------- avvio ---------- */
 
 relayout();
 syncTools();
 syncButtons();
+
+/**
+ * Alla prima apertura il tutorial parte da solo, poi mai piu'.
+ *
+ * Dopo relayout(): il riquadro si prende dai rettangoli reali degli elementi,
+ * e prima del primo layout la mensola non ha ancora la sua geometria.
+ */
+if (tutorial && !giaVisto()) tutorial.apri(0);
