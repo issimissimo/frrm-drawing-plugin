@@ -183,7 +183,7 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 
 | | |
 |---|---|
-| Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato a gesso, che scorre |
+| Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato arancione, che scorre |
 | Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
 | Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
 | Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
@@ -214,6 +214,24 @@ Le cose che non si leggono dal codice:
 ⚠️ **A 360px la mensola è satura**: il suo min-content misura 326px, quindi oltre i 17px di padding il contenuto non si stringe, *sfora*, e il lato destro torna a filo — peggio di prima. Provato a 20px il 18/09/2026: `.tools` finiva a 346 invece di 340. Chi volesse più margine deve prima far scendere il min-content, non alzare il padding.
 
 **Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
+
+**L'arancione istituzionale vive qui dentro, e solo qui** (cliente, 18/09/2026: si parla di bambini). Porta il tratteggio animato, l'etichetta «PASSO n DI 7» a 11px, il testo e il bordo di AVANTI / HO CAPITO. Nella mensola non entra: lì nove gessetti portano già informazione col colore, e un tasto arancione pieno sarebbe l'elemento più colorato dello schermo senza dire nulla. Sotto il velo i gessetti sono spenti, quindi l'obiezione cade e l'arancione resta l'unica cosa accesa — che è esattamente il punto.
+
+⚠️ **Le regole portano l'id, non le classi.** `#btn-save` è anche lui `.btn.primario`: scrivere l'arancione su `.primario` lo fa colare sulla mensola. Vale anche per `#btn-ripeti` / `.secondario`.
+
+**I contrasti, misurati e non dedotti** (fondo pannello `#272C31`, fondo tasto composito `rgb(61,65,70)`):
+
+| | rapporto | soglia | |
+|---|---|---|---|
+| «PASSO n DI 7» arancione, 11px/700 | 4,64:1 | 4,5 | passa |
+| testo del passo, 19px | 12,22:1 | 4,5 | passa |
+| RIPETI bianco su trasparente | 13,27:1 | 4,5 | passa |
+| **testo di AVANTI, arancione su fondo tasto** | **3,39:1** | 4,5 | **sotto** |
+| **bordo di AVANTI, arancione al 50%** | **2,10:1** | 3 | **sotto** |
+
+I due valori bassi sono il prezzo dichiarato dell'arancione istituzionale su un fondo tasto chiaro (`#FFFFFF1A` su pannello). A schermo il tasto si legge, e il bordo non è l'unico segno che lo identifica — ci sono fondo e testo. Chi volesse rientrare nelle soglie senza toccare l'arancione ha una sola leva: **portare il corpo del tasto a ≥18,66px con peso 700**, perché sopra quella misura la soglia scende a 3:1 e 3,39 basta. Costa uno scostamento dalla grammatica dei tasti presa dal sito (corpo `clamp`, peso 300).
+
+**La gerarchia fra i due tasti ora sta nel contenitore, non nel contrasto.** Prima HO CAPITO era bianco e RIPETI grigio: il primario era anche il più leggibile. Oggi RIPETI è bianco a 13,27 e HO CAPITO arancione a 3,39, quindi in puro contrasto il secondario pesa di più. Regge lo stesso perché HO CAPITO ha il bordo e RIPETI no — si legge come un tasto contro un link. Se un giorno il bordo sparisse, la gerarchia si invertirebbe.
 
 **Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
 

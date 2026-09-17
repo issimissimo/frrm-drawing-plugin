@@ -55,7 +55,10 @@
        testo: pieno per l'azione dichiarata, spento per la via laterale. */
     --btn-bg:     #FFFFFF1A;
     --btn-border: #FFFFFF54;
-    --arancio:    #FF6000;      /* istituzionale; oggi non in uso, vedi README */
+    /* Istituzionale. Vive SOLO dentro il tutorial (cliente, 18/09/2026): la
+       mensola resta di gesso, vedi README. */
+    --arancio:    #FF6000;
+    --arancio-bordo: rgba(255, 96, 0, 0.5);
 
     /* I tre corpi del sito. Le soglie sono quelle di Elementor (1024 / 767),
        non i 700px con cui l'app cambia layout: i valori vengono da la'. A
@@ -467,7 +470,7 @@
   }
   #spot-line rect {
     fill: none;
-    stroke: rgba(250, 248, 243, 0.78);
+    stroke: var(--arancio);
     stroke-width: 3;
     stroke-dasharray: 13 9;
     animation: formiche 1.1s linear infinite;
@@ -498,15 +501,15 @@
      sette dispositivi grafici per quel che porta una riga di testo. */
   #step-n {
     margin: 0 0 10px;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--dim);
+    color: var(--arancio);
   }
   #step-t {
     margin: 0 0 20px;
-    font-size: 17px;
+    font-size: 19px;
     line-height: 1.34;
     color: #EDEFF1;
   }
@@ -518,6 +521,25 @@
      display:none implicito dell'attributo hidden. Senza questa riga RIPETI
      si vede da tutti i passi. */
   .btn[hidden] { display: none; }
+
+  /* ---------- i due tasti del tutorial, in arancione ----------
+     Le regole portano l'id e non .primario / .secondario: SALVA condivide
+     quelle classi, e l'arancione NON deve colare sulla mensola — dove nove
+     gessetti portano gia' informazione col colore. Qui invece il velo li
+     spegne tutti, e l'arancione resta l'unica cosa accesa dello schermo.
+
+     L'icona segue da sola: negli <svg> il fill e' currentColor. */
+  #btn-avanti {
+    color: var(--arancio);
+    border-color: var(--arancio-bordo);
+  }
+  /* Bianco su fondo trasparente: RIPETI e' la via laterale, e con AVANTI
+     arancione accanto la gerarchia si legge senza dargli un bordo. */
+  #btn-ripeti {
+    color: #FAF8F3;
+    background: transparent;
+  }
+  #btn-ripeti:hover { color: #FFFFFF; }
 
   /* Le due icone stanno entrambe nel markup e si alternano: cambiare il path
      via JS vorrebbe dire tenere due stringhe di path dentro il modulo. */
