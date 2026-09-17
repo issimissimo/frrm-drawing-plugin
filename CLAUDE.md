@@ -108,13 +108,17 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin/>
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-01/>
+
+Cartella **numerata**, dal 17/09/2026: il link da dare al cliente è quello, senza query string. La numerazione è la difesa dalla cache di SiteGround — un URL nuovo non è in nessuna cache, né del proxy né del browser di chi ha già visto il prototipo. **Ogni consegna al cliente va in una cartella nuova** (`-02`, `-03`), non sopra la precedente. Le vecchie si lasciano dove sono: servono a confrontare, e cancellarle non fa guadagnare niente.
 
 Solo `prototipo/index.html` e `prototipo/src/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
 
+Lo script di caricamento sta in `.lavoro/pubblica.sh`: prende il numero di cartella come argomento, carica i 12 file e rilegge il listing per confronto.
+
 Credenziali FTP in `~/.claude/.secrets/ftp-siteground.env`, condivise fra i progetti del workspace; le regole d’uso stanno in `~/.claude/rules/credenziali.md`.
 
-**Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frmm-drawing-plugin/`.
+**Attenzione**: quelle credenziali aprono l'intero account SiteGround, dove convivono altri domini e lavori di clienti — compreso il sito della Fondazione. Operare solo dentro `/issimissimo.com/public_html/temp/frmm-drawing-plugin*`.
 
 ## Regole di lavoro
 

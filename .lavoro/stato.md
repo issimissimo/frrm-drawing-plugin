@@ -6,7 +6,7 @@ Versione corrente: prototipo fasi 0–4 + download del disegno. Nessun numero di
 
 Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla/rifai: validato su iPhone 13 Pro e Galaxy S10 a 60 fps. Dal 16/09/2026 il disegno si **scarica in JPEG** sul proprio device (`src/export.js`), senza logo e senza backend.
 
-Online su <https://issimissimo.com/temp/frmm-drawing-plugin/index.html?v=2> — **con la query, vedi le trappole**. Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, 37 test (`node test/run.js`).
+Online su <https://issimissimo.com/temp/frmm-drawing-plugin-01/> — cartella numerata, **niente query string** (17/09/2026, vedi le trappole). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, 37 test (`node test/run.js`).
 
 ## Piano attivo
 
@@ -57,7 +57,11 @@ Il ramo `navigator.share` è verificato solo con stub su Chrome desktop. Su iOS 
 
 ## Trappole
 
-- **SiteGround serve il prototipo da due cache diverse, e dopo ogni pubblicazione le due versioni non coincidono** (misurato il 16/09/2026): l'URL della cartella arriva dal proxy (`x-proxy-cache: HIT`) e può restare vecchio di **giorni**, mentre `index.html` e i `.js` arrivano freschi ma con `max-age` di sei mesi / un anno, quindi il browser di chi ha già visto la pagina se li tiene. **Si linka `.../index.html?v=<qualcosa>`, mai l'URL della cartella.** Un `.htaccess` con `Header set Cache-Control` non serve a niente — provato e rimosso il 16/09/2026: quelle intestazioni le mette NGINX davanti ad Apache. Senza Site Tools l'unica leva è la query string. È anche la causa della taratura falsata da "moduli vecchi": non era un mistero del browser, era l'hosting.
+- **La cache di SiteGround si batte con una cartella nuova, non con la query string** (17/09/2026). Storia in due atti:
+
+  Il 16/09/2026 il proxy serviva l'URL della cartella da cache (`x-proxy-cache: HIT`, vecchio di giorni) e i file con `max-age` di sei mesi / un anno, quindi il browser di chi aveva già visto la pagina si teneva `index.html` e i `.js` — combinazione che uccideva il modulo. Il rimedio era `.../index.html?v=<n>`. Un `.htaccess` con `Header set Cache-Control` non serve a niente (provato e rimosso): quelle intestazioni le mette NGINX davanti ad Apache.
+
+  Il 17/09/2026 le risposte **non portano più né `cache-control` né `expires`**, e il proxy risponde `x-proxy-cache-info: DT:1` invece di `HIT` — misurato sulla cartella vecchia *e* sulla nuova, quindi è cambiato lato hosting, non per effetto della pubblicazione. Il rimedio adottato non dipende da questo: **ogni consegna va in una cartella numerata nuova** (`-01`, `-02`, …), che nessuna cache può avere visto. Vale qualunque cosa faccia l'hosting, e il link che arriva al cliente è pulito. Script: `.lavoro/pubblica.sh <NN>`, che si rifiuta di scrivere sopra una cartella esistente.
 - **Gli elementi nuovi della UI si cercano con la guardia** (`btnSave?.`): per la trappola qui sopra, un `index.html` vecchio incontra un `main.js` nuovo, e un `getElementById` che torna `null` non fa perdere un pulsante — uccide il modulo e la lavagna non si apre affatto. Già successo, in produzione, il 16/09/2026.
 - **`getCoalescedEvents` è assente su entrambi i device** di test, e il rAF gira a 60 Hz anche sull'iPhone ProMotion: ~55 campioni/s, radi. È il motivo per cui il ricampionamento **interpola su una curva** invece di decimare.
 - **`performance.now()` è quantizzato a 1 ms su Safari iOS.** Le misure di singolo frame non valgono lì: si legge `FPS TRATTO` nel pannello di diagnostica.
