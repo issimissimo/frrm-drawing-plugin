@@ -316,9 +316,8 @@
 
   #step-t {
     margin: 0 0 20px;
-    font-size: 21px; line-height: 1.34; font-weight: 400; color: #EDEFF1;
+    font-size: 17px; line-height: 1.34; font-weight: 400; color: #EDEFF1;
   }
-  @media (max-width: 700px) { #step-t { font-size: 19px; } }
 
   /* Stessa grammatica della mensola: fondo pieno per l'azione dichiarata,
      testo nudo per la via laterale. L'app lo dice gia' con SALVA.
@@ -338,7 +337,10 @@
     background: var(--btn-bg);
     border: 2px solid var(--btn-border);
     border-radius: var(--r);
-    font: inherit; font-weight: 700; letter-spacing: .04em;
+    /* 300 non esiste in SebinoSoft, che ha 400/500/700: il browser lo mappa
+       sul 400. Il risultato e' il Regular, non un Light — per averlo servirebbe
+       un SebinoSoft-Light, che sul sito della Fondazione non c'e'. */
+    font: inherit; font-weight: 300; letter-spacing: .04em;
     font-size: var(--btn-size);
     color: var(--ink);
     cursor: pointer; touch-action: manipulation;

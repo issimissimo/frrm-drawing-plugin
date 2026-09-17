@@ -33,7 +33,7 @@ Passi:
 1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
 2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`. Riproduce la mensola vera e ci mette sopra il tutorial, con gli assi confrontabili a schermo. Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
 
-   **v4 online su <https://issimissimo.com/temp/frmm-tutorial-design-04/>** (le precedenti si tengono per confronto).
+   **Design chiuso il 17/09/2026. v5, l'ultima, online su <https://issimissimo.com/temp/frmm-tutorial-design-05/>** (le precedenti si tengono per confronto).
 
 3. [x] **Design approvato il 17/09/2026**, con le correzioni chieste, tutte applicate in v2:
    - evidenziazione **buio+gesso**, testi **da bambino**, SALVA **largo**;
@@ -52,6 +52,7 @@ Passi:
    - **I tasti della finestra sono allineati a sinistra**, con il primario per primo nel DOM così «HO CAPITO» si legge prima di «RIPETI».
    - **Lo step 1 dice «col dito» o «col mouse»** secondo `matchMedia('(pointer: coarse)')` — lo stesso criterio con cui `export.js` decide del foglio di condivisione: dice con che cosa si tocca lo schermo, non quanto è grande. Una finestra desktop stretta resta «mouse», un tablet grande resta «dito».
    - **Le icone sono path di Font Awesome 6 Solid messi inline** (`arrow-right` su PROSSIMO, `check` su HO CAPITO): l'icona è una, e tirarsi dietro la libreria vorrebbe dire una richiesta esterna e ~100 KB. Dentro WordPress Font Awesome c'è già e si potrà passare a `<i class="fa-solid fa-arrow-right">` senza toccare altro.
+   - **Tasti a `font-weight: 300`, testo della finestra a `17px`** (ultimo giro). Attenzione: **300 non esiste in SebinoSoft**, che ha 400 / 500 / 700 — il browser lo mappa sul 400, verificato misurando (peso 300 e peso 400 danno la stessa larghezza al pixel). Quello che si vede è il Regular, non un Light: per un Light vero servirebbe un `SebinoSoft-Light.woff2`, che sul sito della Fondazione non c'è. Il `17px` del testo è fisso e non varia più col device: la media query che lo portava a 19px è stata rimossa.
 4. [ ] **Il motore**, in `prototipo/src/tutorial.js`: velo, riquadro calcolato da `getBoundingClientRect` sull'elemento vero, finestra, avanzamento, chiusura. Il riquadro si ricalcola su `resize` e `orientationchange`, come già fa `relayout()`.
 5. [ ] **I 7 step**, come dati e non come codice: una lista di `{ selettore, testo }`, così cambiare una frase non è una modifica al motore.
 6. [ ] **Prima apertura e riapertura**: flag in localStorage con try/catch (in Safari privato lancia), icona `?` nella mensola.
