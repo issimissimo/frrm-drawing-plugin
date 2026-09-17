@@ -215,9 +215,11 @@ Le cose che non si leggono dal codice:
 
 **Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
 
-**L'arancione istituzionale vive qui dentro, e solo qui** (cliente, 18/09/2026: si parla di bambini). Porta il tratteggio animato, l'etichetta «PASSO n DI 7» a 11px, il testo e il bordo di AVANTI / HO CAPITO. Nella mensola non entra: lì nove gessetti portano già informazione col colore, e un tasto arancione pieno sarebbe l'elemento più colorato dello schermo senza dire nulla. Sotto il velo i gessetti sono spenti, quindi l'obiezione cade e l'arancione resta l'unica cosa accesa — che è esattamente il punto.
+**L'arancione istituzionale vive qui dentro, e solo qui** (cliente, 18/09/2026: si parla di bambini). Porta **il tratteggio animato e l'etichetta «PASSO n DI 7»** a 11px. Nella mensola non entra: lì nove gessetti portano già informazione col colore, e un tasto arancione pieno sarebbe l'elemento più colorato dello schermo senza dire nulla. Sotto il velo i gessetti sono spenti, quindi l'obiezione cade e l'arancione resta l'unica cosa accesa — che è esattamente il punto.
 
-⚠️ **Le regole portano l'id, non le classi.** `#btn-save` è anche lui `.btn.primario`: scrivere l'arancione su `.primario` lo fa colare sulla mensola. Vale anche per `#btn-ripeti` / `.secondario`.
+**Sui tasti c'è passato per un giro, ed è stato tolto** (stesso giorno, richiesta del cliente). AVANTI / HO CAPITO sono tornati alla grammatica dei tasti presa dal sito: testo `#FAF8F3`, bordo `2px #FFFFFF54`, fondo `#FFFFFF1A`. Se qualcuno ci riprovasse, sappia che il contrasto del testo scendeva da 9,69:1 a **3,39:1** e quello del bordo a 2,10:1 — l'arancione istituzionale su un fondo tasto chiaro non ci arriva, e lo sfondo era da lasciare com'era.
+
+⚠️ **Se un giorno si colorano di nuovo, le regole vanno sull'id, non sulla classe.** `#btn-save` è anche lui `.btn.primario`: una regola su `.primario` cola sulla mensola.
 
 **I contrasti, misurati e non dedotti** (fondo pannello `#272C31`, fondo tasto composito `rgb(61,65,70)`):
 
@@ -225,13 +227,13 @@ Le cose che non si leggono dal codice:
 |---|---|---|---|
 | «PASSO n DI 7» arancione, 11px/700 | 4,64:1 | 4,5 | passa |
 | testo del passo, 19px | 12,22:1 | 4,5 | passa |
+| HO CAPITO / AVANTI | 9,69:1 | 4,5 | passa |
 | RIPETI bianco su trasparente | 13,27:1 | 4,5 | passa |
-| **testo di AVANTI, arancione su fondo tasto** | **3,39:1** | 4,5 | **sotto** |
-| **bordo di AVANTI, arancione al 50%** | **2,10:1** | 3 | **sotto** |
+| bordo del tasto, `#FFFFFF54` | 2,89:1 | 3 | appena sotto |
 
-I due valori bassi sono il prezzo dichiarato dell'arancione istituzionale su un fondo tasto chiaro (`#FFFFFF1A` su pannello). A schermo il tasto si legge, e il bordo non è l'unico segno che lo identifica — ci sono fondo e testo. Chi volesse rientrare nelle soglie senza toccare l'arancione ha una sola leva: **portare il corpo del tasto a ≥18,66px con peso 700**, perché sopra quella misura la soglia scende a 3:1 e 3,39 basta. Costa uno scostamento dalla grammatica dei tasti presa dal sito (corpo `clamp`, peso 300).
+Il bordo a 2,89 **non è una conseguenza del tutorial**: è la grammatica dei tasti presa dal sito della Fondazione, e vale anche per SALVA nella mensola. Non è l'unico segno che identifica il tasto — ci sono fondo e testo — ma se un giorno serve la conformità piena, si alza lì, una volta per tutti.
 
-**La gerarchia fra i due tasti ora sta nel contenitore, non nel contrasto.** Prima HO CAPITO era bianco e RIPETI grigio: il primario era anche il più leggibile. Oggi RIPETI è bianco a 13,27 e HO CAPITO arancione a 3,39, quindi in puro contrasto il secondario pesa di più. Regge lo stesso perché HO CAPITO ha il bordo e RIPETI no — si legge come un tasto contro un link. Se un giorno il bordo sparisse, la gerarchia si invertirebbe.
+**La gerarchia fra i due tasti sta tutta nel contenitore.** Da quando RIPETI è bianco, i due hanno **lo stesso colore di testo**: si distinguono perché HO CAPITO ha fondo e bordo e RIPETI no — un tasto contro un link. Prima RIPETI era a `--dim` e la differenza stava anche nel colore. Funziona, ma è una gerarchia che regge su un solo dispositivo invece che su due: togliere il bordo a HO CAPITO la azzererebbe.
 
 **Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
 

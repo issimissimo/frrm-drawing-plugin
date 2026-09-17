@@ -55,10 +55,11 @@
        testo: pieno per l'azione dichiarata, spento per la via laterale. */
     --btn-bg:     #FFFFFF1A;
     --btn-border: #FFFFFF54;
-    /* Istituzionale. Vive SOLO dentro il tutorial (cliente, 18/09/2026): la
-       mensola resta di gesso, vedi README. */
+    /* Istituzionale. Vive SOLO nel tutorial, e solo sul tratteggio animato e
+       sull'etichetta «PASSO n DI 7» (cliente, 18/09/2026). Sui tasti c'e'
+       passato per un giro ed e' stato tolto: la mensola resta di gesso e i
+       tasti restano quelli del sito. Vedi README. */
     --arancio:    #FF6000;
-    --arancio-bordo: rgba(255, 96, 0, 0.5);
 
     /* I tre corpi del sito. Le soglie sono quelle di Elementor (1024 / 767),
        non i 700px con cui l'app cambia layout: i valori vengono da la'. A
@@ -522,19 +523,15 @@
      si vede da tutti i passi. */
   .btn[hidden] { display: none; }
 
-  /* ---------- i due tasti del tutorial, in arancione ----------
-     Le regole portano l'id e non .primario / .secondario: SALVA condivide
-     quelle classi, e l'arancione NON deve colare sulla mensola — dove nove
-     gessetti portano gia' informazione col colore. Qui invece il velo li
-     spegne tutti, e l'arancione resta l'unica cosa accesa dello schermo.
+  /* ---------- RIPETI ----------
+     La regola porta l'id e non .secondario, perche' quella classe potrebbe
+     servire altrove: l'arancione del tutorial aveva lo stesso vincolo, ma in
+     senso piu' stretto — vedi la nota su .primario nel README.
 
-     L'icona segue da sola: negli <svg> il fill e' currentColor. */
-  #btn-avanti {
-    color: var(--arancio);
-    border-color: var(--arancio-bordo);
-  }
-  /* Bianco su fondo trasparente: RIPETI e' la via laterale, e con AVANTI
-     arancione accanto la gerarchia si legge senza dargli un bordo. */
+     AVANTI / HO CAPITO sono tornati alla grammatica dei tasti il 18/09/2026,
+     dopo un giro in arancione: restano .btn.primario e basta. */
+  /* Bianco su fondo trasparente: RIPETI e' la via laterale, e si distingue da
+     AVANTI per il contenitore — che lui ha e questo no. */
   #btn-ripeti {
     color: #FAF8F3;
     background: transparent;

@@ -18,7 +18,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Stato
 
-> **Fase 4b (tutorial) chiusa il 17/09/2026**, più due tornate di correzioni del cliente il 18/09/2026: prima AVANTI al posto di PROSSIMO, testo del passo 3, riquadro degli spessori sui segni e non sui pulsanti, tratteggio animato e margine della mensola a 16px su mobile; poi **l'arancione istituzionale dentro il tutorial** (tratteggio, etichetta del passo, tasti) e i testi più grandi, perché si parla di bambini. Il prototipo è consegnabile e online.
+> **Fase 4b (tutorial) chiusa il 17/09/2026**, più due tornate di correzioni del cliente il 18/09/2026: prima AVANTI al posto di PROSSIMO, testo del passo 3, riquadro degli spessori sui segni e non sui pulsanti, tratteggio animato e margine della mensola a 16px su mobile; poi **l'arancione istituzionale dentro il tutorial** e i testi più grandi, perché si parla di bambini. L'arancione era passato anche sui tasti AVANTI / HO CAPITO ed è stato tolto poche ore dopo, su richiesta: restano arancioni **solo il tratteggio e l'etichetta «PASSO n DI 7»**. Il prototipo è consegnabile e online.
 >
 > **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
@@ -77,7 +77,7 @@ Cose da non disfare per sbaglio:
 - **`#spot-line` ha `width`/`height` espliciti e non solo `inset`**: un `<svg>` è un elemento rimpiazzato e con le sole distanze dai bordi resta a 300×150. Il riquadro risulta giusto a misurarlo e sbagliato a guardarlo.
 - **Il passo degli spessori punta a `#widths .wbtn i`, non a `#widths`**: i pulsanti sono alti `--stick-h` per il dito, i segni dentro ne occupano 19. Puntare il pulsante invade i gessetti sopra e SALVA sotto.
 - **`pad` 6 + `inset` 4 + mezzo tratto = 11,5px, e il padding laterale della mensola su mobile è 16px**: i due numeri si cambiano insieme, o il tratteggio degli elementi a filo di schermo viene tagliato. E oltre i 17px la mensola a 360px non si stringe più, sfora.
-- **L'arancione del tutorial è scritto sugli id, non sulle classi**: `#btn-save` è anche lui `.btn.primario`, quindi una regola su `.primario` porta l'arancione nella mensola — dove è stato deciso che non entra.
+- **L'arancione del tutorial sta sul tratteggio e sull'etichetta del passo, non sui tasti**: c'è passato il 18/09/2026 ed è stato tolto lo stesso giorno. Chi lo rimettesse scriva le regole sull'**id** e non su `.primario`: `#btn-save` condivide quella classe e l'arancione finirebbe nella mensola, dove è stato deciso che non entra.
 
 **I font della Fondazione non sono nel repo.** `index.html` dichiara `SebinoSoft` e si aspetta i `.woff2` in `prototipo/font/`: sono font commerciali di terzi e il repo è pubblico. Si riscaricano col comando in `prototipo/README.md`; `.lavoro/pubblica.sh` li carica se li trova e avvisa se non ci sono. **Da verificare**: che la licenza webfont copra `issimissimo.com`, che non è il dominio della Fondazione.
 
