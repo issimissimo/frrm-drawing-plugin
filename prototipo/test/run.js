@@ -13,7 +13,7 @@ import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W } from '../src/export.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
-         giaVisto, segnaVisto, CHIAVE_VISTO } from '../src/tutorial.js';
+         giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
 let passed = 0, failed = 0;
 const results = [];
@@ -534,16 +534,35 @@ test('tutorial: con poco spazio la finestra resta comunque a vista', () => {
 test('tutorial: il "gia visto" sopravvive, e un localStorage rotto non lo ferma', () => {
   const finto = new Map();
   const store = { getItem: (k) => (finto.has(k) ? finto.get(k) : null), setItem: (k, v) => finto.set(k, v) };
-  assert(giaVisto(store) === false, 'al primo avvio non e visto');
-  assert(segnaVisto(store) === true, 'la scrittura deve riuscire');
-  assert(giaVisto(store) === true, 'dopo la scrittura e visto');
-  assert(finto.get(CHIAVE_VISTO) === '1', 'la chiave scritta non e quella attesa');
+  const p = '/temp/frmm-drawing-plugin-04/';
+  assert(giaVisto(store, p) === false, 'al primo avvio non e visto');
+  assert(segnaVisto(store, p) === true, 'la scrittura deve riuscire');
+  assert(giaVisto(store, p) === true, 'dopo la scrittura e visto');
+  assert(finto.get(chiaveVisto(p)) === '1', 'la chiave scritta non e quella attesa');
 
   // In Safari privato il solo accesso lancia: senza la guardia il modulo
   // morirebbe all'avvio e la lavagna non si aprirebbe affatto.
   const rotto = { getItem() { throw new Error('SecurityError'); }, setItem() { throw new Error('SecurityError'); } };
-  assert(giaVisto(rotto) === false, 'con lo storage rotto deve dire "non visto"');
-  assert(segnaVisto(rotto) === false, 'e dire che non ha potuto scrivere');
+  assert(giaVisto(rotto, p) === false, 'con lo storage rotto deve dire "non visto"');
+  assert(segnaVisto(rotto, p) === false, 'e dire che non ha potuto scrivere');
+});
+
+test('tutorial: due versioni pubblicate non si rubano il "gia visto"', () => {
+  // localStorage e' per ORIGINE, non per cartella: tutte le versioni sotto
+  // issimissimo.com/temp/ condividono l'archivio. Con una chiave fissa,
+  // chiudere il tutorial sulla -03 lo faceva sparire dalla -04, cioe' proprio
+  // dalla versione da provare. Succeduto il 17/09/2026.
+  const finto = new Map();
+  const store = { getItem: (k) => (finto.has(k) ? finto.get(k) : null), setItem: (k, v) => finto.set(k, v) };
+  const v3 = '/temp/frmm-drawing-plugin-03/';
+  const v4 = '/temp/frmm-drawing-plugin-04/';
+
+  segnaVisto(store, v3);
+  assert(giaVisto(store, v3) === true, 'la -03 deve restare "vista"');
+  assert(giaVisto(store, v4) === false, 'la -04 non deve ereditare il flag della -03');
+
+  assert(chiaveVisto(v3) !== chiaveVisto(v4), 'due percorsi, due chiavi');
+  assert(chiaveVisto(v3).startsWith(CHIAVE_VISTO), 'il prefisso deve restare riconoscibile');
 });
 
 /* ---------------- esito ---------------- */

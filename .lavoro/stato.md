@@ -58,7 +58,22 @@ Passi:
 6. [x] **Prima apertura e riapertura**: flag `localStorage` con try/catch su lettura *e* scrittura, icona `?` in testa alla fila dei comandi.
 7. [x] **Verificato in Chrome e documentato.** `README.md` e `CLAUDE.md` aggiornati. **Resta da provare sui due device reali** (vedi sotto).
 
-**Online: <https://issimissimo.com/temp/frmm-drawing-plugin-04/>.** Le precedenti hanno difetti noti e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano.
+**Online: <https://issimissimo.com/temp/frmm-drawing-plugin-05/>.** Le precedenti hanno difetti noti e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi aveva già visto una versione precedente.
+
+**`?tutorial` in coda all'URL lo fa partire comunque**, qualunque cosa dica lo storage. Serve a provarlo e a mostrarlo a qualcuno senza svuotare il browser — che è l'unica altra via e non è una cosa da chiedere a un cliente.
+
+### Il "già visto" e le cartelle numerate si pestavano i piedi
+
+**Trovato il 17/09/2026 provando la `-04`: il tutorial non partiva più.** Non era un caso limite, ed era una collisione fra due meccanismi introdotti nella stessa giornata:
+
+- si pubblica in **cartelle numerate** per battere la cache di SiteGround;
+- il "già visto" stava in `localStorage`, che è **per origine, non per cartella**.
+
+Quindi tutte le versioni sotto `issimissimo.com/temp/` condividevano lo stesso archivio: chiuso il tutorial sulla `-03`, la `-04` lo leggeva come già visto e non partiva. La pubblicazione in cartella nuova, che serve a *mostrare* la novità, faceva sparire proprio la cosa da provare. Riprodotto in laboratorio prima di correggere: chiuso sulla `-03`, aperta la `-04`, tutorial assente.
+
+Risolto legando la chiave al percorso — `lavagna.tutorial.visto.v1:/temp/frmm-drawing-plugin-05/` — così ogni versione pubblicata è nuova per il browser. In produzione la lavagna sta a un solo indirizzo e il comportamento è quello voluto; se quella pagina cambiasse percorso, il tutorial ripartirebbe una volta per tutti, che è il verso giusto in cui sbagliare.
+
+Verificato online sul browser che portava ancora il flag della `-03`: sulla `-05` il tutorial parte, chiuso non riparte al reload, e `?tutorial` lo riapre.
 
 **Riaperta il 17/09/2026: i tasti spenti erano illeggibili proprio nei passi che li spiegano.** Alla prima apertura non c'è ancora un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva nulla. Era un difetto vero, non un dettaglio, e l'unico modo di trovarlo era usare l'app — il controllo automatico guardava che il riquadro fosse nel posto giusto, non che dentro ci fosse qualcosa di visibile.
 

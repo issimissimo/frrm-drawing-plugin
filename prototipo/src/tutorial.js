@@ -23,8 +23,27 @@
  * tocca il DOM fuori dalle funzioni.
  */
 
-/** Chiave del "gia' visto". Cambiarla fa ripartire il tutorial per tutti. */
+/** Prefisso della chiave del "gia' visto". Cambiarlo fa ripartire il tutorial. */
 export const CHIAVE_VISTO = 'lavagna.tutorial.visto.v1';
+
+const percorsoCorrente = () => (typeof location === 'undefined' ? '/' : location.pathname);
+
+/**
+ * La chiave porta dentro il percorso della pagina, e non e' un vezzo.
+ *
+ * localStorage e' per ORIGINE, non per cartella: tutte le versioni pubblicate
+ * sotto issimissimo.com/temp/ condividono lo stesso archivio. Con una chiave
+ * fissa, chi aveva visto il tutorial su una cartella non lo vedeva piu' su
+ * quella pubblicata dopo — e la pubblicazione in cartelle numerate, che serve
+ * a battere la cache di SiteGround, faceva sparire proprio la cosa da
+ * provare. Succeduto il 17/09/2026 fra la -03 e la -04.
+ *
+ * In produzione la lavagna sta a un solo indirizzo, quindi il comportamento e'
+ * quello voluto. Se un giorno quella pagina cambiasse percorso il tutorial
+ * ripartirebbe una volta per tutti: prezzo accettabile, e preferibile al suo
+ * contrario.
+ */
+export const chiaveVisto = (percorso = percorsoCorrente()) => `${CHIAVE_VISTO}:${percorso}`;
 
 /**
  * I passi, come dati.
@@ -89,14 +108,14 @@ export function posizionaFinestra(area, viewportH, panelH, margine = 18) {
 }
 
 /** Se il tutorial e' gia' stato visto su questo device. */
-export function giaVisto(store = globalThis.localStorage) {
+export function giaVisto(store = globalThis.localStorage, percorso = percorsoCorrente()) {
   // In Safari privato il solo accesso a localStorage lancia: senza la guardia
   // il modulo muore all'avvio e la lavagna non si apre affatto.
-  try { return store.getItem(CHIAVE_VISTO) === '1'; } catch { return false; }
+  try { return store.getItem(chiaveVisto(percorso)) === '1'; } catch { return false; }
 }
 
-export function segnaVisto(store = globalThis.localStorage) {
-  try { store.setItem(CHIAVE_VISTO, '1'); return true; } catch { return false; }
+export function segnaVisto(store = globalThis.localStorage, percorso = percorsoCorrente()) {
+  try { store.setItem(chiaveVisto(percorso), '1'); return true; } catch { return false; }
 }
 
 /* ---------------- il pezzo che tocca il DOM ---------------- */

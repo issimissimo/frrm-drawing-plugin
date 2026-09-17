@@ -473,5 +473,10 @@ syncButtons();
  *
  * Dopo relayout(): il riquadro si prende dai rettangoli reali degli elementi,
  * e prima del primo layout la mensola non ha ancora la sua geometria.
+ *
+ * `?tutorial` lo fa partire comunque. Serve a provarlo e a mostrarlo a
+ * qualcuno senza dover svuotare lo storage del browser, che e' l'unica altra
+ * via e non e' una cosa da chiedere a un cliente.
  */
-if (tutorial && !giaVisto()) tutorial.apri(0);
+const forzaTutorial = new URLSearchParams(location.search).has('tutorial');
+if (tutorial && (forzaTutorial || !giaVisto())) tutorial.apri(0);

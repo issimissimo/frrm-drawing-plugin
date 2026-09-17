@@ -187,7 +187,8 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 | Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
 | Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
 | Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
-| «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1` |
+| «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1:<percorso>` |
+| Per rivederlo | il `?` nella mensola, o `?tutorial` in coda all'URL |
 
 Quattro cose che non si leggono dal codice:
 
@@ -200,6 +201,8 @@ Quattro cose che non si leggono dal codice:
 **Non c'è un CHIUDI nei primi sei passi.** È una richiesta esplicita: un CHIUDI accanto a PROSSIMO si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo è che chi lo riapre col `?` deve fare sette tocchi per uscirne — `Esc` funziona, ma non sul dito. Se dà fastidio, la correzione è una `×` discreta nell'angolo, lontana da PROSSIMO.
 
 **Il velo su desktop mostra due grigi**, ed è normale: la lavagna è `#1F2225` e il fondo pagina `#15171A`, quindi sotto il velo la lavagna resta la zona più chiara. Non è un riquadro di troppo.
+
+**La chiave del «già visto» porta dentro il percorso della pagina.** `localStorage` è per *origine*, non per cartella: tutte le versioni pubblicate sotto `temp/` condividono lo stesso archivio, quindi con una chiave fissa chi aveva visto il tutorial su una cartella non lo vedeva più su quella pubblicata dopo — e la pubblicazione in cartelle numerate, che serve a battere la cache, faceva sparire proprio la cosa da provare. In produzione la lavagna sta a un solo indirizzo e il comportamento è quello voluto.
 
 **Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
 

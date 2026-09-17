@@ -121,9 +121,11 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-04/>
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-05/> — con `?tutorial` in coda il tutorial parte comunque.
 
-⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano.
+⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente.
+
+⚠️ **La cartella numerata batte la cache HTTP, non il `localStorage`**, che è per origine: tutte le versioni sotto `temp/` condividono lo stesso archivio. Qualunque stato che il prototipo ricorda va messo in una chiave che porta dentro `location.pathname`, altrimenti una versione nuova eredita quel che sapeva la precedente — ed è già costato un "il tutorial non parte più" il 17/09/2026. Vedi `chiaveVisto()` in `prototipo/src/tutorial.js`.
 
 Cartella **numerata**, dal 17/09/2026: il link da dare al cliente è quello, senza query string. La numerazione è la difesa dalla cache di SiteGround — un URL nuovo non è in nessuna cache, né del proxy né del browser di chi ha già visto il prototipo. **Ogni consegna al cliente va in una cartella nuova** (`-02`, `-03`), non sopra la precedente. Le vecchie si lasciano dove sono: servono a confrontare, e cancellarle non fa guadagnare niente.
 
