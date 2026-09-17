@@ -22,7 +22,9 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 >
 > **Resta da provare su device reale**: il tutorial è verificato in Chrome, non su iPhone né su Android, e il ramo `navigator.share` del download non è mai stato provato su un telefono vero. Sono la prima cosa da fare, e si fanno insieme su un solo URL.
 >
-> **Non si aprono fasi nuove e non si rifinisce di iniziativa.** Le fasi 5–10 (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) si riaprono **esplicitamente**, mai per scivolamento. Prima di costruire l'integrazione WP va deciso **se l'app va in un iframe o inline** nella pagina Elementor: cambia i font e l'interferenza del CSS del tema.
+> **Prossima fase concordata: la Fase 7 — integrazione in una pagina Elementor tramite shortcode.** Il piano è in `.lavoro/stato.md` e **comincia con due decisioni, non col codice**: iframe o inline, e dove si prova (staging o WordPress locale). Le fasi 5, 6, 8, 9, 10 restano chiuse: SALVA continuerà a scaricare e non a inviare.
+>
+> ⚠️ **Inline non è una variante di stile.** L'app blocca lo scroll con `html, body { position: fixed }`, e in una pagina WordPress quelle regole non si possono applicare: inline vuol dire riscrivere la strategia anti-scroll, che è la Definition of Done della Fase 1 e l'unico vero rischio che il progetto aveva. La raccomandazione è **iframe**, con i prezzi noti elencati nello stato.
 >
 > Dettaglio in `.lavoro/stato.md`.
 
@@ -56,7 +58,7 @@ I valori in vigore sono **21 / 27 / 50** (`WIDTHS` in `palette.js`), raddoppiati
 
 **Scarica il disegno — 16/09/2026.** JPEG 1600 px sul device. È una **fetta anticipata della Fase 6**, chiesta esplicitamente: solo il download, nessun backend e nessun logo (la dipendenza esterna resta aperta). Codice in `prototipo/src/export.js`, note in `prototipo/README.md`.
 
-**Fase 4b chiusa — 17/09/2026. Il tutorial**, chiesto dal cliente: sette passi con una finestra al centro e l'area spiegata in luce dentro un velo, cerchiata di gesso. Parte alla prima apertura, poi il `?` lo riapre. Codice in `prototipo/src/tutorial.js`, progettato prima in `design-tutorial/prova.html` (cinque giri di revisione). Nella stessa tornata **SCARICA e INVIA sono diventati un solo SALVA** e i tasti hanno preso lo stile del sito della Fondazione. 43 test.
+**Fase 4b chiusa — 17/09/2026. Il tutorial**, chiesto dal cliente: sette passi con una finestra al centro e l'area spiegata in luce dentro un velo, cerchiata di gesso. Parte alla prima apertura, poi il `?` lo riapre. Codice in `prototipo/src/tutorial.js`, progettato prima in `design-tutorial/prova.html` (cinque giri di revisione). Nella stessa tornata **SCARICA e INVIA sono diventati un solo SALVA** e i tasti hanno preso lo stile del sito della Fondazione. 44 test.
 
 Dettaglio in `prototipo/README.md`; le decisioni e quel che resta da provare su device in `.lavoro/stato.md`.
 
