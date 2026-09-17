@@ -64,7 +64,22 @@
     --arancio: #FF6000;
     --hair:    rgba(255, 255, 255, .39);   /* == #FFFFFF63 del tema */
     --r:       0px;
+
+    /* I tasti, come da specifica del 17/09/2026: un solo fondo, un solo
+       bordo, per tutti. La gerarchia fra un tasto e l'altro non puo' piu'
+       stare nel contenitore — sta nel colore del testo. */
+    --btn-bg:     #FFFFFF1A;
+    --btn-border: #FFFFFF54;
+
+    /* Corpo di testi e icone dei tasti. I tre valori sono quelli del sito;
+       le soglie sono quelle di Elementor (1024 / 767), non i 700px con cui
+       l'app cambia layout: i valori vengono da la', e tenerli allineati
+       evita che un domani la mensola e il sito dicano corpi diversi. */
+    --btn-size: clamp(0.8rem, 0.9vw, 1rem);
   }
+
+  @media (max-width: 1024px) { :root { --btn-size: 16px; } }
+  @media (max-width: 767px)  { :root { --btn-size: 14px; } }
 
   @media (max-width: 700px) {
     :root {
@@ -205,23 +220,17 @@
   #btn-help { color: var(--off); margin-right: 16px; font-weight: 700; font-size: 19px; }
 
   /* ---------- SALVA ----------
-     Un tasto solo al posto di SCARICA + INVIA. Prende la pillola piena, che
-     era la gerarchia dell'invio: e' l'azione dichiarata della schermata. */
+     Un tasto solo al posto di SCARICA + INVIA, ed e' l'azione dichiarata
+     della schermata. Lo stile viene da .btn come per i tasti del tutorial:
+     qui resta solo il suo posto nella mensola. Si allinea al centro del
+     gessetto, non della riga, che e' piu' alta per il sollevamento. */
 
   #btn-save {
-    -webkit-appearance: none; appearance: none;
     align-self: end; margin-bottom: calc((var(--stick-h) - 50px) / 2);
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    height: 50px; padding: 0 26px; border-radius: var(--r);
-    border: 1px solid var(--hair);
-    font: inherit; font-weight: 700; font-size: 15px; letter-spacing: .04em;
-    cursor: pointer;
+    height: 50px; padding: 0 26px;
   }
-  body[data-accent="gesso"]   #btn-save { background: #2E3439; color: var(--ink); }
-  body[data-accent="arancio"] #btn-save { background: var(--arancio); color: #FFFFFF; border-color: var(--arancio); }
-  body[data-accent="bordo"]   #btn-save { background: none; color: var(--arancio); border-color: var(--arancio); border-width: 2px; }
   @media (max-width: 700px) {
-    #btn-save { height: 48px; font-size: 14px; gap: 8px; margin: 4px 0 0; }
+    #btn-save { height: 48px; margin: 4px 0 0; }
     /* Due modi di occupare l'ultima riga, da scegliere guardandoli. Largo:
        l'azione e' dichiarata e non si puo' mancare, ma e' un blocco pieno a
        tutta larghezza. A destra: piu' sobrio, e resta dov'era INVIA. */
@@ -282,6 +291,8 @@
      Un pannello, non una card dentro una card: dentro non c'e' nessun altro
      box. Il fondo e' piu' chiaro della lavagna perche' piu' scuro sembrerebbe
      un buco; l'ombra la stacca senza bisogno di un bordo. */
+  /* Nessun bordo: la finestra si stacca dal velo con l'ombra e basta. Il
+     bordo quasi bianco resta ai tasti, dove porta informazione. */
   #panel {
     position: absolute; left: 50%; transform: translateX(-50%);
     width: min(430px, calc(100vw - 32px));
@@ -289,10 +300,7 @@
     padding: 22px 24px 18px;
     border-radius: var(--r);
     background: #272C31;
-    /* Il bordo quasi bianco del sito fa il lavoro che faceva l'ombra: stacca
-       la finestra dal velo senza aggiungere un secondo dispositivo. */
-    border: 1px solid var(--hair);
-    box-shadow: 0 26px 60px -20px rgba(0,0,0,.85);
+    box-shadow: 0 30px 70px -18px rgba(0,0,0,.92);
     transition: top .34s cubic-bezier(.4,0,.2,1);
   }
 
@@ -315,35 +323,39 @@
   /* Stessa grammatica della mensola: fondo pieno per l'azione dichiarata,
      testo nudo per la via laterale. L'app lo dice gia' con SALVA.
      Squadrati e maiuscoli come DONA sul sito della Fondazione. */
-  /* Allineata a destra: con un solo pulsante resta dove la mensola mette
-     l'azione principale. Quando RIPETI compare, il suo margin-right:auto lo
-     spinge a sinistra e la coppia si legge come CHIUDI/SALVA. */
-  #panel .row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-  #panel button {
-    -webkit-appearance: none; appearance: none; border: 0; font: inherit;
-    font-weight: 700; font-size: 15px; letter-spacing: .04em;
-    height: 46px; cursor: pointer; border-radius: var(--r);
-  }
-  /* Secondario: visibile solo all'ultimo step, dove diventa RIPETI. Negli
-     step 1-6 non c'e' alcuna via d'uscita, per scelta: un CHIUDI accanto a
-     PROSSIMO si tocca per sbaglio e il tutorial sparisce. */
-  #tut-alt {
-    background: none; color: var(--dim); padding: 0 10px; margin-right: auto;
-    border: 1px solid transparent; transition: color .14s, border-color .14s;
-  }
-  #tut-alt:hover { color: var(--ink); border-color: var(--hair); }
+  /* Allineati a sinistra. L'ordine nel DOM e' primario-poi-secondario, cosi'
+     "HO CAPITO" resta il primo che si incontra leggendo e RIPETI lo segue. */
+  #panel .row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
   #tut-alt[hidden] { display: none; }
-  #tut-next { padding: 0 26px; }
 
-  /* Due modi di dare peso all'azione: il gesso (l'app come e' oggi) o
-     l'arancione istituzionale. Vedi la nota nel pannello di prova. */
-  body[data-accent="gesso"]   #tut-next { background: #FAF8F3; color: #1A1D20; }
-  body[data-accent="arancio"] #tut-next { background: var(--arancio); color: #FFFFFF; }
-  /* Terza via: l'arancione c'e' ma non urla. Su una lavagna dove nove
-     gessetti portano informazione col colore, un fondo saturo a tutta
-     larghezza e' l'elemento piu' colorato dello schermo — e non dice nulla. */
-  body[data-accent="bordo"] #tut-next {
-    background: none; color: var(--arancio); box-shadow: inset 0 0 0 2px var(--arancio);
+  /* --- la grammatica dei tasti ---
+     Un solo fondo e un solo bordo per tutti. Il testo porta la gerarchia:
+     pieno per l'azione dichiarata, spento per la via laterale. */
+  .btn {
+    -webkit-appearance: none; appearance: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: .6em;
+    height: 46px; padding: 0 22px;
+    background: var(--btn-bg);
+    border: 2px solid var(--btn-border);
+    border-radius: var(--r);
+    font: inherit; font-weight: 700; letter-spacing: .04em;
+    font-size: var(--btn-size);
+    color: var(--ink);
+    cursor: pointer; touch-action: manipulation;
+    transition: color .14s, border-color .14s, background .14s;
+  }
+  /* L'icona segue il corpo del testo, non una misura sua: 1em. */
+  .btn svg { width: 1em; height: 1em; flex: 0 0 auto; }
+  .btn.secondario { color: var(--dim); }
+  .btn.secondario:hover { color: var(--ink); }
+
+  /* Tre modi di dare peso all'azione. I primi due rispettano la regola dei
+     tasti e agiscono sul testo; l'arancio pieno deroga di proposito, per
+     poterlo confrontare con gli altri due. */
+  body[data-accent="gesso"]  .btn.primario { color: #FAF8F3; }
+  body[data-accent="bordo"]  .btn.primario { color: var(--arancio); border-color: var(--arancio); }
+  body[data-accent="arancio"] .btn.primario {
+    background: var(--arancio); border-color: var(--arancio); color: #FFFFFF;
   }
 
   /* ==================== pannello di prova ====================
@@ -417,11 +429,11 @@
       </button>
     </div>
 
-    <button type="button" id="btn-save">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <button type="button" id="btn-save" class="btn primario">
+      <span>SALVA</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>
       </svg>
-      <span>SALVA</span>
     </button>
 
   </div>
@@ -434,8 +446,18 @@
     <p id="step-n"></p>
     <p id="step-t"></p>
     <div class="row">
-      <button type="button" id="tut-alt" hidden>RIPETI</button>
-      <button type="button" id="tut-next">PROSSIMO</button>
+      <!-- La freccia e' il path di "arrow-right" di Font Awesome 6 Solid,
+           messo inline: l'icona e' una, e tirarsi dietro la libreria per un
+           path significherebbe una richiesta esterna e ~100 KB. Dentro
+           WordPress Font Awesome c'e' gia', e si potra' usare <i class="fa-
+           solid fa-arrow-right"> senza cambiare nient'altro. -->
+      <button type="button" id="tut-next" class="btn primario">
+        <span id="next-txt">PROSSIMO</span>
+        <svg id="next-ico" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true">
+          <path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/>
+        </svg>
+      </button>
+      <button type="button" id="tut-alt" class="btn secondario" hidden>RIPETI</button>
     </div>
   </div>
 </div>
@@ -595,10 +617,21 @@ function dipingi(g, pts, hex, raggio) {
    punta all'elemento vero, cosi' il riquadro segue la mensola quando la
    griglia cambia sotto i 700 px. */
 
+/**
+ * "col dito" o "col mouse" secondo il device.
+ *
+ * pointer: coarse, non la larghezza dello schermo: e' lo stesso criterio con
+ * cui export.js decide se aprire il foglio di condivisione, e dice quel che
+ * serve davvero — con che cosa si tocca lo schermo, non quanto e' grande.
+ * Una finestra desktop stretta resta "mouse", un tablet grande resta "dito".
+ */
+const DITO = matchMedia('(pointer: coarse)').matches;
+const conCosa = DITO ? 'con il dito' : 'con il mouse';
+
 const STEPS = [
   { sel: '#layers', pad: -10,
-    adulto: 'Trascina il dito sulla lavagna per disegnare.',
-    bimbo:  'Disegna qui con il dito!' },
+    adulto: `Disegna nell’area tratteggiata ${conCosa}.`,
+    bimbo:  `Disegna nell’area tratteggiata ${conCosa}.` },
   { sel: '#chalks',
     adulto: 'Scegli il colore del gessetto con cui disegnare sullo schermo.',
     bimbo:  'Scegli il colore del gessetto.' },
@@ -661,12 +694,22 @@ function posiziona(area) {
   panel.style.top = Math.max(margine, top) + 'px';
 }
 
+/* All'ultimo step il tasto non porta avanti, chiude: una freccia "avanti"
+   direbbe che c'e' un altro passo. Al suo posto il check, sempre a destra
+   del testo. Anche questo e' un path di Font Awesome 6 Solid. */
+const ICO_AVANTI = 'M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z';
+const ICO_CHECK  = 'M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z';
+
+const nextTxt = document.getElementById('next-txt');
+const nextIco = document.querySelector('#next-ico path');
+
 function mostra() {
   const s = STEPS[i];
   const ultimo = i === STEPS.length - 1;
   stepN.textContent = `TUTORIAL: PASSO ${i + 1} DI ${STEPS.length}`;
   stepT.textContent = s[copy];
-  btnNext.textContent = ultimo ? 'HO CAPITO' : 'PROSSIMO';
+  nextTxt.textContent = ultimo ? 'HO CAPITO' : 'PROSSIMO';
+  nextIco.setAttribute('d', ultimo ? ICO_CHECK : ICO_AVANTI);
   btnAlt.hidden = !ultimo;
 
   const area = areaDi(s.sel, s.pad === undefined ? 8 : s.pad);

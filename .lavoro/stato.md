@@ -33,7 +33,7 @@ Passi:
 1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
 2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`. Riproduce la mensola vera e ci mette sopra il tutorial, con gli assi confrontabili a schermo. Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
 
-   **v2 online su <https://issimissimo.com/temp/frmm-tutorial-design-02/>** (la `-01` è la prima stesura, si tiene per confronto).
+   **v3 online su <https://issimissimo.com/temp/frmm-tutorial-design-03/>** (`-01` e `-02` si tengono per confronto).
 
 3. [x] **Design approvato il 17/09/2026**, con le correzioni chieste, tutte applicate in v2:
    - evidenziazione **buio+gesso**, testi **da bambino**, SALVA **largo**;
@@ -42,6 +42,16 @@ Passi:
    - allo step 7 **RIPETI** (testo nudo, riavvia) accanto a **HO CAPITO** (pieno, chiude).
 
    Resta da scegliere **l'accento**: gesso (come oggi) / arancio sobrio (bordo e testo `#FF6000`) / arancio pieno. Tre varianti nel pannello della prova.
+
+   **Secondo giro di correzioni, 17/09/2026, tutte in v3.** Da qui esce la grammatica dei tasti, che vale per l'app intera e non solo per il tutorial:
+
+   - **Un tasto è: fondo `#FFFFFF1A`, bordo `2px #FFFFFF54`, raggio 0.** Uguale per tutti.
+   - **L'icona sta sempre a destra del testo**, dimensionata `1em` così segue il corpo invece di avere una misura sua.
+   - **Corpo del testo `--btn-size`**: `clamp(0.8rem, 0.9vw, 1rem)` da 1025 px, `16px` fino a 1024, `14px` fino a 767. Le soglie sono quelle di **Elementor**, non i 700 px con cui l'app cambia layout: i valori vengono dal sito, e tenerli allineati evita che mensola e sito dicano corpi diversi. Conferma che i numeri sono giusti: a 1440 px il clamp dà **12,96 px**, esattamente il corpo del pulsante DONA misurato sul sito.
+   - **La finestra del tutorial non ha bordo**: si stacca dal velo con la sola ombra.
+   - **I tasti della finestra sono allineati a sinistra**, con il primario per primo nel DOM così «HO CAPITO» si legge prima di «RIPETI».
+   - **Lo step 1 dice «col dito» o «col mouse»** secondo `matchMedia('(pointer: coarse)')` — lo stesso criterio con cui `export.js` decide del foglio di condivisione: dice con che cosa si tocca lo schermo, non quanto è grande. Una finestra desktop stretta resta «mouse», un tablet grande resta «dito».
+   - **Le icone sono path di Font Awesome 6 Solid messi inline** (`arrow-right` su PROSSIMO, `check` su HO CAPITO): l'icona è una, e tirarsi dietro la libreria vorrebbe dire una richiesta esterna e ~100 KB. Dentro WordPress Font Awesome c'è già e si potrà passare a `<i class="fa-solid fa-arrow-right">` senza toccare altro.
 4. [ ] **Il motore**, in `prototipo/src/tutorial.js`: velo, riquadro calcolato da `getBoundingClientRect` sull'elemento vero, finestra, avanzamento, chiusura. Il riquadro si ricalcola su `resize` e `orientationchange`, come già fa `relayout()`.
 5. [ ] **I 7 step**, come dati e non come codice: una lista di `{ selettore, testo }`, così cambiare una frase non è una modifica al motore.
 6. [ ] **Prima apertura e riapertura**: flag in localStorage con try/catch (in Safari privato lancia), icona `?` nella mensola.
@@ -80,6 +90,8 @@ Rischi aperti:
 - **Nessuno degli step chiesti dal cliente spiegava di disegnare col dito.** Aggiunto come step 0 il 17/09/2026; è l'ipotesi su *cosa* non capiscono davvero, e va verificata su una persona vera, non su di noi.
 - **Un tasto solo al posto di due** toglie la possibilità di scaricare senza inviare. Oggi non si vede, perché l'invio non esiste; quando arriverà, va deciso se un solo tocco fa entrambe le cose senza chiedere. Decisione rinviata, non risolta.
 - **Senza CHIUDI negli step 1–6 non c'è via d'uscita** fino alla fine: chi riapre il tutorial col `?` per sbaglio deve fare sette tocchi. È voluto (chiesto il 17/09/2026 per non farlo chiudere involontariamente), ma se dà fastidio la correzione è una `×` discreta nell'angolo della finestra, lontana da PROSSIMO.
+- **Con un fondo e un bordo uguali per tutti i tasti, RIPETI e HO CAPITO si somigliano troppo.** La differenza è il solo colore del testo, e allo step 7 un bambino può toccare RIPETI credendo di chiudere. Se dà problemi, la correzione sta nel testo e non nel contenitore: RIPETI più piccolo, o senza fondo — che però è una deroga alla regola dei tasti.
+- **Due punti dove la regola «tutti i tasti» non è stata applicata alla lettera**, in attesa di conferma: «Torna al sito» tiene la freccia **a sinistra** (è una freccia che indica indietro: a destra del testo direbbe «avanti»), e non ha né fondo né bordo, come il `?`, i gessetti, il cancellino, gli spessori e annulla/rifai/cestino. Dare fondo e bordo anche a quelli trasformerebbe la mensola in una griglia di scatole.
 - **Domanda di Fase 7 da porre prima di scrivere il plugin: la lavagna andrà in un iframe o inline nella pagina Elementor?** Cambia due cose già oggi: inline i font arrivano gratis ma il CSS del tema può interferire con la mensola; in iframe l'app è isolata ma i font vanno ricaricati. Non va deciso ora, va deciso **prima** di costruire l'integrazione.
 - **Una lavagna nera dentro una pagina a fondo `#FF6000`.** L'accostamento è brutale e nessuno l'ha ancora visto: la prova sta su fondo scuro, da sola. Va guardato in una pagina arancione vera prima del go-live, e probabilmente serve una cornice o un margine.
 - **L'icona `?` occupa spazio in una mensola già piena.** A 360 px i gessetti sono il primo elemento che si stringe.
