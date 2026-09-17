@@ -8,15 +8,13 @@ Web app di disegno a gessetti su lavagna, per il sito WordPress + Elementor Pro 
 
 Il markdown di quel file è escapato (`\---`, `\*\*`). È voluto: non ripulirlo.
 
-## 🔴 TODO prioritario — spessore del tratto in base alla velocità
+## Spessore del tratto in base alla velocità — chiuso così
 
-**Non risolto. Prima cosa da fare alla prossima sessione.**
+**Chiuso il 17/09/2026 per decisione di Daniele: non si tocca più.** Resta come è: `PRESSURE_MIN 0.84`, `PRESSURE_ALPHA_MIN 0.85`, variazione misurata 21 / 21 / 16%.
 
-Il tratto non varia come deve fra gesto lento e gesto rapido. Segnalato due volte dal cliente il 15/09/2026, e **due tentativi di taratura non hanno risolto**.
+Era stato segnalato due volte dal cliente il 15/09/2026 e due tarature non avevano risolto. L'analisi si era fermata a una conclusione che vale ancora, se qualcuno riaprisse: **il problema non è la taratura, è che la metrica non descrive il fenomeno** — i numeri dicono 21%, l'occhio dice di no. Ipotesi mai verificate e combinazioni già provate in `.lavoro/stato.md`.
 
-Il punto di partenza non è ritarare ancora: è capire **perché la misura non corrisponde a quello che si vede**. I numeri dicono 21% di variazione, l'occhio dice che il problema resta — quindi è la metrica a essere sbagliata, o il fenomeno sta altrove.
-
-Dettaglio, ipotesi e vicoli ciechi già percorsi in `.lavoro/stato.md`.
+Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già percorsa due volte senza risultato.
 
 ## Stato
 
@@ -52,7 +50,9 @@ Due scostamenti dal brief, entrambi documentati in `prototipo/README.md`:
 
 **Con la Fase 3 si chiudeva il perimetro concordato (Fasi 1–3).**
 
-**Fase 4 fatta** (UI a mensola, lavagna adattiva, punta di gesso a dimensione fissa) e, il 15/09/2026, due richieste del cliente: **rosso e marrone** al posto di corallo e acqua, **cancellino** più leggibile. Nella stessa sessione **spessori alzati a 16 / 28 / 44** perché sottile e medio risultavano troppo esili. 35 test.
+**Fase 4 fatta** (UI a mensola, lavagna adattiva, punta di gesso a dimensione fissa) e, il 15/09/2026, due richieste del cliente: **rosso e marrone** al posto di corallo e acqua, **cancellino** più leggibile. Nella stessa sessione **spessori alzati** perché sottile e medio risultavano troppo esili. 35 test.
+
+I valori in vigore sono **21 / 27 / 50** (`WIDTHS` in `palette.js`), raddoppiati sotto i 700 px di lavagna da `SCALA_STRUMENTI`. Qui era rimasto scritto 16 / 28 / 44, che il codice non ha mai avuto: corretto il 17/09/2026 leggendo il file. Il codice è la fonte, non questa riga.
 
 **Scarica il disegno — 16/09/2026.** Pulsante SCARICA a sinistra di INVIA, JPEG 1600 px sul device. È una **fetta anticipata della Fase 6**, chiesta esplicitamente: solo il download, nessun backend e nessun logo (la dipendenza esterna resta aperta). Codice in `prototipo/src/export.js`, note in `prototipo/README.md`. 37 test.
 

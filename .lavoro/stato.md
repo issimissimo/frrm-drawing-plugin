@@ -10,13 +10,62 @@ Online su <https://issimissimo.com/temp/frmm-drawing-plugin-01/> — cartella nu
 
 ## Piano attivo
 
-**In attesa del feedback del cliente**, richiesto il 15/09/2026 su effetto gesso, spessori, UI e app nel complesso. Fino ad allora non si comincia niente di nuovo: il prototipo è consegnabile e va lasciato così. Le fasi 5+ (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) si riaprono **esplicitamente**, mai per scivolamento.
+Obiettivo: un bambino che apre la lavagna e non sa cosa fare capisce da sé che si disegna col dito e a cosa servono gli strumenti — chiesto dal cliente il 17/09/2026, che riferisce persone bloccate davanti alla lavagna vuota. Nella stessa tornata, **SCARICA e INVIA diventano un tasto solo, SALVA**.
+
+Criterio di finito:
+
+- Su iPhone 13 Pro e Galaxy S10, alla **prima** apertura il tutorial parte da solo; chiuso e ricaricata la pagina, non riparte; l'icona `?` lo riapre. La prova vale su device reale, non su Chrome desktop.
+- Ognuno dei 7 step tiene il riquadro **sull'area giusta in entrambi i layout** (desktop a una riga, mobile a tre righe), verificato dopo una rotazione dello schermo.
+- La mensola non perde niente per far posto al `?`: i nove gessetti restano della larghezza di oggi a 360 px.
+- Il tutorial non disegna: aperto e chiuso senza toccare la lavagna, `history.count` resta 0 e SALVA resta spento.
+- La suite passa (oggi 37 test), con casi nuovi sulla geometria del riquadro e sulla macchina a stati degli step.
+
+Fuori perimetro, e va detto se ci si avvicina:
+
+- **L'invio al backend.** SALVA oggi scarica e basta. Nessuna chiamata di rete, nessun endpoint, nessuna conferma di invio: è Fase 6 e resta chiusa.
+- **Il TODO spessore/velocità**, che resta aperto qui sotto e non viene toccato da questo fronte.
+- Persistenza vera (IndexedDB, Fase 5). Il "già visto" del tutorial è **un flag in localStorage**, tre righe, e non diventa un archivio.
+- Animazioni, mascotte, voce narrante, mano che disegna da sola. Se il testo non basta, si decide dopo con una prova in mano.
+- Traduzioni. Solo italiano.
+
+Passi:
+
+1. [ ] **Tasto unico SALVA.** `#btn-send` e `#btn-save` diventano un pulsante, che prende la pillola piena (era la gerarchia dell'invio) e fa il download. Consegnabile da solo, indipendente dal tutorial.
+2. [x] **Prova di design del tutorial** — fatta il 17/09/2026, `design-tutorial/prova.html`, online su <https://issimissimo.com/temp/frmm-tutorial-design-01/>. Riproduce la mensola vera e ci mette sopra il tutorial, con tre assi confrontabili a schermo: evidenziazione (buio+gesso / buio / rosso / gesso), testi (registro adulto come da richiesta / registro bambino), SALVA su mobile (largo / a destra). Verificata a 1440×900 e 390×844: in tutti e 7 gli step il riquadro cade sull'elemento giusto e la finestra non copre l'area in luce (0%).
+3. [ ] **Approvazione del design.** Punto di fermata: si scrive codice di produzione solo dopo.
+4. [ ] **Il motore**, in `prototipo/src/tutorial.js`: velo, riquadro calcolato da `getBoundingClientRect` sull'elemento vero, finestra, avanzamento, chiusura. Il riquadro si ricalcola su `resize` e `orientationchange`, come già fa `relayout()`.
+5. [ ] **I 7 step**, come dati e non come codice: una lista di `{ selettore, testo }`, così cambiare una frase non è una modifica al motore.
+6. [ ] **Prima apertura e riapertura**: flag in localStorage con try/catch (in Safari privato lancia), icona `?` nella mensola.
+7. [ ] **Prova sui due device reali** e aggiornamento di `README.md` e `CLAUDE.md`.
+
+Trovato montando la prova di design (17/09/2026):
+
+- **Il velo scuro funziona**, e il rischio dichiarato non si è materializzato: su lavagna `#1F2225` con un disegno sopra, un velo a `rgba(8,9,11,.78)` legge come "guarda qui" e non come "app spenta". Serve però **un bordo sul buco**: senza, il confine fra area in luce e velo non si vede.
+- **La quarta combinazione è meglio delle tre pensate**: velo forte **più** il riquadro tratteggiato a gesso. Il velo porta l'attenzione, il tratteggio bianco dice con che mano è stato fatto, e non introduce un linguaggio estraneo all'app. È il default della prova (`buio+gesso`). Costo: una riga di CSS.
+- **Il riquadro rosso mette in evidenza il gessetto rosso.** Non era teoria: nello step dei colori il riquadro corre attorno alla palette e passa sul gessetto rosso, che a colpo d'occhio sembra selezionato. Verificato a schermo.
+- **"La finestra al centro" non può stare al centro sempre.** Allo step 0 l'area evidenziata *è* il centro e la finestra la coprirebbe. Risolto mettendola nella metà opposta a quella dove cade l'area: misurato, copre lo 0% dell'area in luce in tutti e 7 gli step, su desktop e su mobile.
+
+Rischi aperti:
+
+- **Il tutorial punta a elementi che su mobile stanno altrove.** La mensola cambia griglia sotto i 700 px: il riquadro va preso dall'elemento, mai da coordinate scritte a mano. Nella prova è già così (`getBoundingClientRect` su un selettore, con l'unione dei rettangoli per lo step annulla/rifai, che sono due pulsanti ma un concetto).
+- **Sei-sette finestre di testo per un bambino di 5 anni si saltano.** È il rischio di fondo: se non funziona, non è colpa dell'implementazione ma della forma scelta, e va detto al cliente prima di irrobustirla.
+- **Nessuno degli step chiesti dal cliente spiegava di disegnare col dito.** Aggiunto come step 0 il 17/09/2026; è l'ipotesi su *cosa* non capiscono davvero, e va verificata su una persona vera, non su di noi.
+- **Un tasto solo al posto di due** toglie la possibilità di scaricare senza inviare. Oggi non si vede, perché l'invio non esiste; quando arriverà, va deciso se un solo tocco fa entrambe le cose senza chiedere. Decisione rinviata, non risolta.
+- **L'icona `?` occupa spazio in una mensola già piena.** A 360 px i gessetti sono il primo elemento che si stringe.
+
+Costo stimato: 7 passi, di cui uno (il passo 1) si chiude in mezz'ora e uno (il passo 3) è un'attesa. Il grosso è il motore del tutorial. Ordine di grandezza: due sessioni, la prima delle quali finisce sulla prova di design.
+
+**Lo chiamo Fase 4b, non Fase 11**: è UI e si appoggia alla Fase 4, così la numerazione del brief non si tocca.
+
+---
+
+Il resto, aperto da prima e non toccato da questo fronte. **In attesa del feedback del cliente** su effetto gesso, spessori e UI, richiesto il 15/09/2026 — il tutorial è arrivato come richiesta a parte, non è la risposta a quella domanda. Le fasi 5+ (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) si riaprono **esplicitamente**, mai per scivolamento.
 
 Due cose aperte, nessuna delle due è "una fase":
 
-### 🔴 TODO prioritario — spessore del tratto in base alla velocità
+### Spessore del tratto in base alla velocità — chiuso, si resta così
 
-**Aperto.** Segnalato due volte dal cliente il 15/09/2026, due tentativi di taratura falliti.
+**Chiuso il 17/09/2026 per decisione di Daniele: non si tocca più.** Lo stato attuale (terza riga della tabella) è quello definitivo. Quel che segue si tiene solo perché, se qualcuno riaprisse la questione, ricominciare dalla taratura sarebbe la terza volta a vuoto.
 
 | | `PRESSURE_MIN` | `PRESSURE_ALPHA_MIN` | variazione misurata | esito |
 |---|---|---|---|---|
@@ -51,7 +100,7 @@ Il ramo `navigator.share` è verificato solo con stub su Chrome desktop. Su iOS 
 - **A fine gesto non si ridisegna mai dal modello**: si travasano i pixel già a schermo. Senza, il tratto saltava del 42% al rilascio.
 - **La punta di gesso ha dimensione fissa**: un tratto largo si ottiene affiancando più impronte. Il gesso vero ha *più* grana, non grana più grande.
 - **Rosso e marrone escono dalla serie isoluminante** (cliente, 15/09/2026): a L 0.780 il rosso è un rosa salmone e il marrone non esiste. Costano contrasto, 4,6 e 4,3 contro 7,6–8,4.
-- **Spessori a 16 / 28 / 44** dal 15/09/2026: il passo scende a 1,83× e 1,64×, meno margine di quello che la Fase 0 si era data.
+- **Spessori a 21 / 27 / 50** (`WIDTHS`), alzati il 15/09/2026 perché sottile e medio erano troppo esili, e raddoppiati sotto i 700 px da `SCALA_STRUMENTI`. Il passo fra i tre è 1,29× e 1,85×: il salto sottile→medio è piccolo, e il commento in `palette.js` che promette «rapporto 2.2x» è rimasto indietro. Qui era scritto 16 / 28 / 44, valori che il codice non ha mai avuto — corretto il 17/09/2026.
 - **Commit automatico su GitHub a feature completata e verificata.**
 - **MCP playwright pinnato a 0.0.81**, non `@latest`: aggiornamenti a mano, in cambio di avvii che non vanno in timeout.
 

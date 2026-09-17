@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Lavagna — prova di design del tutorial (Fase 4b)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+
+<!--
+  PROVA DI DESIGN — non e' codice di produzione.
+
+  Riproduce la mensola vera (CSS copiato da prototipo/index.html) e ci mette
+  sopra il tutorial, con le varianti confrontabili a schermo. Serve a decidere
+  guardando, e va guardata SUL TELEFONO: il rischio dichiarato nel piano e' che
+  il velo scuro su una lavagna gia' nera non si legga.
+
+  Quel che sta qui e non andra' in produzione: il pannello di controllo in alto
+  a destra, i tre stili di evidenziazione (se ne tiene uno), le due varianti di
+  testo (se ne tiene una) e il disegno finto sulla lavagna.
+-->
+
+<style>
+  :root {
+    --page:  #15171A;
+    --board: #1F2225;
+    --ink:   #C8CCD0;
+    --dim:   #71777C;
+    --off:   #565C61;
+    --rule:  #2A2E32;
+
+    --stick-w: 30px;
+    --stick-h: 94px;
+    --lift:    24px;
+    --slot:    36px;
+    --icon:    46px;
+    --wscale:  0.43px;
+  }
+
+  @media (max-width: 700px) {
+    :root {
+      --stick-w: 22px;
+      --stick-h: 64px;
+      --lift:    18px;
+      --slot:    34px;
+      --icon:    44px;
+      --wscale:  0.34px;
+    }
+  }
+
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    position: fixed; overflow: hidden; overscroll-behavior: none;
+    background: var(--page);
+  }
+
+  body {
+    color: var(--ink);
+    font: 400 14px/1.4 'Atkinson Hyperlegible', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    display: flex; flex-direction: column; height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+
+  #stage {
+    flex: 1; min-height: 0; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .layers { position: relative; background: var(--board); overflow: hidden; }
+  .layers canvas { display: block; }
+
+  #btn-back {
+    position: absolute; top: 6px; left: 6px;
+    display: flex; align-items: center; gap: 8px;
+    height: 44px; padding: 0 14px 0 10px;
+    background: none; border: 0; color: var(--dim);
+    font: inherit; font-size: 13px; cursor: pointer;
+  }
+
+  /* ---------- mensola ----------
+     Una colonna in piu' rispetto a oggi: il "?" del tutorial. Sta all'inizio
+     della fila dei comandi, non in fondo, per non finire accanto a SALVA. */
+
+  .ledge {
+    display: grid; align-items: end; background: var(--page);
+    grid-template-columns: auto auto 1fr auto auto;
+    grid-template-areas: "widths tools . cmds save";
+    column-gap: 26px; padding: 0 34px 22px;
+  }
+
+  @media (max-width: 700px) {
+    .ledge {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "tools  tools"
+        "widths cmds"
+        "save   save";
+      column-gap: 8px; row-gap: 6px; padding: 6px 12px 16px;
+    }
+    .ledge .tools { gap: 10px; }
+  }
+
+  #widths { grid-area: widths; }
+  .tools  { grid-area: tools; }
+  .cmds   { grid-area: cmds; }
+  #btn-save { grid-area: save; }
+
+  .tools { display: flex; align-items: flex-end; gap: 24px; min-width: 0; }
+  #chalks { flex: 1 1 auto; display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
+
+  @media (min-width: 701px) { .tools .chalk { flex: 0 0 var(--slot); } }
+
+  .chalk, .eraser {
+    -webkit-appearance: none; appearance: none;
+    background: none; border: 0; padding: 0; margin: 0; font: inherit;
+    cursor: pointer; display: flex; align-items: flex-end; justify-content: center;
+    height: calc(var(--stick-h) + var(--lift));
+  }
+  .chalk { flex: 1 1 var(--slot); min-width: 0; }
+  .eraser { width: calc(var(--slot) * 1.7); --glow: #8A939944; }
+
+  .stick, .felt { transition: transform .16s cubic-bezier(.2,.9,.3,1), opacity .16s; opacity: .72; }
+  .felt { opacity: .85; }
+  .stick { width: var(--stick-w); height: var(--stick-h); border-radius: 7px 7px 3px 3px; background: var(--grad); }
+
+  .felt {
+    width: calc(var(--slot) * 1.55); height: calc(var(--stick-h) * .62);
+    border-radius: 5px 5px 3px 3px; overflow: hidden;
+    background: linear-gradient(96deg, #464D54 0%, #6E767D 45%, #4E555C 100%);
+  }
+  .felt::before {
+    content: ''; display: block; height: 36%;
+    background: linear-gradient(177deg, #7D6139 0%, #58431F 100%);
+    border-bottom: 1px solid rgba(0,0,0,.6);
+  }
+  .felt::after {
+    content: ''; display: block; height: 64%;
+    background: repeating-linear-gradient(95deg, transparent 0 3px, rgba(250,248,243,.42) 3px 5px, transparent 5px 10px);
+  }
+
+  [aria-pressed="true"] .stick, [aria-pressed="true"] .felt {
+    opacity: 1; transform: translateY(calc(var(--lift) * -1));
+    box-shadow: 0 14px 20px -12px rgba(0,0,0,.85), 0 0 26px -4px var(--glow);
+  }
+  .chalks-idle .stick { opacity: 1; }
+
+  #widths { display: flex; align-items: center; gap: 10px; }
+  .wbtn {
+    -webkit-appearance: none; appearance: none; background: none; border: 0;
+    padding: 0; margin: 0; cursor: pointer; height: var(--stick-h);
+    display: flex; align-items: center;
+  }
+  .wbtn i { display: block; width: 46px; background: var(--c); border-radius: 999px; opacity: .28; transition: opacity .16s, transform .16s; }
+  @media (max-width: 700px) { .wbtn i { width: 30px; } }
+  .wbtn[aria-pressed="true"] i { opacity: 1; transform: translateY(-6px); }
+
+  .cmds { display: flex; align-items: center; justify-content: flex-end; height: var(--stick-h); }
+  .cmd {
+    -webkit-appearance: none; appearance: none; background: none; border: 0;
+    padding: 0; margin: 0; width: var(--icon); height: var(--icon);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink); cursor: pointer; transition: color .14s;
+  }
+  .cmd:disabled { color: #3C4247; cursor: default; }
+  #btn-clear { color: var(--dim); margin-left: 16px; }
+  /* Il "?" e' un comando, non uno strumento: stesso registro di annulla e
+     cestino, ma piu' spento del cestino — e' la voce meno urgente della fila. */
+  #btn-help { color: var(--off); margin-right: 16px; font-weight: 700; font-size: 19px; }
+
+  /* ---------- SALVA ----------
+     Un tasto solo al posto di SCARICA + INVIA. Prende la pillola piena, che
+     era la gerarchia dell'invio: e' l'azione dichiarata della schermata. */
+
+  #btn-save {
+    -webkit-appearance: none; appearance: none;
+    align-self: end; margin-bottom: calc((var(--stick-h) - 50px) / 2);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    height: 50px; padding: 0 26px; border: 0; border-radius: 25px;
+    background: #2E3439; color: var(--ink);
+    font: inherit; font-weight: 700; font-size: 15px; letter-spacing: .04em;
+    cursor: pointer;
+  }
+  @media (max-width: 700px) {
+    #btn-save { height: 48px; font-size: 14px; gap: 8px; margin: 4px 0 0; }
+    /* Due modi di occupare l'ultima riga, da scegliere guardandoli. Largo:
+       l'azione e' dichiarata e non si puo' mancare, ma e' un blocco pieno a
+       tutta larghezza. A destra: piu' sobrio, e resta dov'era INVIA. */
+    body[data-save="largo"]  #btn-save { justify-self: stretch; }
+    body[data-save="destra"] #btn-save { justify-self: end; padding: 0 22px; }
+  }
+
+  /* ==================== TUTORIAL ====================
+     Tre stili di evidenziazione, uno solo sopravvivera'. Il riquadro si
+     posiziona sull'elemento vero via getBoundingClientRect: su mobile la
+     mensola cambia griglia e le coordinate scritte a mano sarebbero sbagliate. */
+
+  #tut { position: fixed; inset: 0; z-index: 50; }
+  #tut[hidden] { display: none; }
+
+  /* Il buco nel velo. Un solo elemento: il velo E' la sua ombra, estesa oltre
+     lo schermo. Quattro div attorno all'area farebbero la stessa cosa con
+     quattro volte il codice e una cucitura visibile sugli angoli. */
+  #spot {
+    position: absolute; border-radius: 10px;
+    transition: left .34s cubic-bezier(.4,0,.2,1), top .34s cubic-bezier(.4,0,.2,1),
+                width .34s cubic-bezier(.4,0,.2,1), height .34s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+  }
+
+  /* --- stile A: buio attorno --- */
+  [data-style="velo"] #spot {
+    box-shadow: 0 0 0 9999px rgba(8, 9, 11, .78);
+    /* Un filo di luce sul bordo del buco: senza, su fondo scuro il confine
+       fra area in luce e velo non si vede e sembra l'app spenta. */
+    outline: 1px solid rgba(250, 248, 243, .22);
+  }
+
+  /* --- stile B: riquadro rosso, come chiesto --- */
+  [data-style="rosso"] #spot {
+    outline: 3px solid #FE4335;
+    box-shadow: 0 0 18px -2px rgba(254, 67, 53, .55);
+  }
+
+  /* --- stile C: cerchiato a gesso, velo leggero --- */
+  [data-style="gesso"] #spot {
+    outline: 3px dashed rgba(250, 248, 243, .82);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 9999px rgba(8, 9, 11, .34);
+  }
+
+  /* --- stile D: buio forte E cerchio di gesso ---
+     Il velo porta l'attenzione, il tratteggio dice con che mano e' stato
+     fatto: e' l'unico dei quattro che non introduce un linguaggio estraneo
+     all'app, e in cambio di una riga di CSS. */
+  [data-style="misto"] #spot {
+    box-shadow: 0 0 0 9999px rgba(8, 9, 11, .78);
+    outline: 3px dashed rgba(250, 248, 243, .78);
+    outline-offset: 3px;
+  }
+
+  /* --- la finestra ---
+     Un pannello, non una card dentro una card: dentro non c'e' nessun altro
+     box. Il fondo e' piu' chiaro della lavagna perche' piu' scuro sembrerebbe
+     un buco; l'ombra la stacca senza bisogno di un bordo. */
+  #panel {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: min(430px, calc(100vw - 32px));
+    box-sizing: border-box;
+    padding: 22px 24px 18px;
+    border-radius: 14px;
+    background: #272C31;
+    box-shadow: 0 26px 60px -18px rgba(0,0,0,.9), 0 0 0 1px rgba(250,248,243,.07);
+    transition: top .34s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* Criterio 4: la gerarchia sta nel corpo e nel peso, su fondo condiviso.
+     "PASSO 1 DI 7" e' anche l'unico indicatore di avanzamento: sette pallini
+     sarebbero sette dispositivi grafici per l'informazione che qui porta una
+     riga di testo. */
+  #step-n {
+    font-size: 9px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--dim);
+    margin: 0 0 10px;
+  }
+
+  #step-t {
+    margin: 0 0 20px;
+    font-size: 21px; line-height: 1.34; font-weight: 400; color: #EDEFF1;
+  }
+  @media (max-width: 700px) { #step-t { font-size: 19px; } }
+
+  /* Stessa grammatica della mensola: pillola piena per l'azione dichiarata,
+     testo nudo per la via laterale. L'app lo dice gia' con SALVA. */
+  #panel .row { display: flex; align-items: center; gap: 6px; }
+  #panel button {
+    -webkit-appearance: none; appearance: none; border: 0; font: inherit;
+    font-weight: 700; font-size: 15px; letter-spacing: .04em;
+    height: 46px; cursor: pointer;
+  }
+  #tut-skip {
+    background: none; color: var(--dim); padding: 0 10px; margin-right: auto;
+    transition: color .14s;
+  }
+  #tut-skip:hover { color: var(--ink); }
+  #tut-next {
+    background: #FAF8F3; color: #1A1D20;
+    padding: 0 26px; border-radius: 23px;
+  }
+
+  /* ==================== pannello di prova ====================
+     Non va in produzione. Volutamente in un registro estraneo all'app, cosi'
+     non lo si confonde con la UI che si sta giudicando. */
+
+  #lab {
+    position: fixed; z-index: 90;
+    top: calc(env(safe-area-inset-top) + 8px); right: calc(env(safe-area-inset-right) + 8px);
+    background: rgba(10,12,14,.93); border: 1px solid var(--rule); border-radius: 6px;
+    padding: 8px 10px; font: 400 11px/1.5 ui-monospace, Consolas, monospace;
+    max-width: calc(100vw - 16px);
+  }
+  #lab .lrow { display: flex; align-items: center; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  #lab .lrow:first-of-type { margin-top: 0; }
+  #lab b { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 700; margin-right: 2px; }
+  #lab button {
+    font: inherit; color: var(--ink); background: #1F2225;
+    border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px; min-height: 30px; cursor: pointer;
+  }
+  #lab button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #15171A; font-weight: 700; }
+  #lab .hint { color: var(--off); margin-top: 7px; font-size: 10px; max-width: 250px; }
+  #lab.folded .lbody { display: none; }
+  #lab .fold { position: absolute; top: 4px; right: 4px; padding: 3px 7px; min-height: 0; }
+  #lab.folded { padding-right: 34px; }
+</style>
+</head>
+<body data-save="largo">
+
+<div class="app">
+
+  <div id="stage">
+    <div class="layers" id="layers">
+      <canvas id="base"></canvas>
+    </div>
+    <button type="button" id="btn-back">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/><path d="M10 12h11"/><path d="M14 8l-4 4 4 4"/>
+      </svg>
+      <span>Torna al sito</span>
+    </button>
+  </div>
+
+  <div class="ledge">
+
+    <div id="widths" role="group" aria-label="Spessore"></div>
+
+    <div class="tools">
+      <div id="chalks" role="group" aria-label="Gessetto"></div>
+      <button type="button" class="eraser" id="tool-eraser" aria-pressed="false" aria-label="Cancellino">
+        <span class="felt"></span>
+      </button>
+    </div>
+
+    <div class="cmds">
+      <button type="button" class="cmd" id="btn-help" aria-label="Come funziona">?</button>
+      <button type="button" class="cmd" id="btn-undo" aria-label="Annulla">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8h11a5 5 0 0 1 0 10H8"/><path d="M7 4L3 8l4 4"/>
+        </svg>
+      </button>
+      <button type="button" class="cmd" id="btn-redo" aria-label="Rifai">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 8H10a5 5 0 0 0 0 10h6"/><path d="M17 4l4 4-4 4"/>
+        </svg>
+      </button>
+      <button type="button" class="cmd" id="btn-clear" aria-label="Cancella tutto">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6"/><path d="M14 11v6"/>
+        </svg>
+      </button>
+    </div>
+
+    <button type="button" id="btn-save">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>
+      </svg>
+      <span>SALVA</span>
+    </button>
+
+  </div>
+</div>
+
+<!-- il tutorial -->
+<div id="tut" data-style="misto">
+  <div id="spot"></div>
+  <div id="panel">
+    <p id="step-n"></p>
+    <p id="step-t"></p>
+    <div class="row">
+      <button type="button" id="tut-skip">CHIUDI</button>
+      <button type="button" id="tut-next">PROCEDI</button>
+    </div>
+  </div>
+</div>
+
+<!-- strumento di prova, non va in produzione -->
+<div id="lab">
+  <button class="fold" id="lab-fold" aria-label="Chiudi il pannello">–</button>
+  <div class="lbody">
+    <div class="lrow"><b>Evidenza</b>
+      <button data-style="misto" aria-pressed="true">buio+gesso</button>
+      <button data-style="velo" aria-pressed="false">buio</button>
+      <button data-style="rosso" aria-pressed="false">rosso</button>
+      <button data-style="gesso" aria-pressed="false">gesso</button>
+    </div>
+    <div class="lrow"><b>Testi</b>
+      <button data-copy="adulto" aria-pressed="true">come da richiesta</button>
+      <button data-copy="bimbo" aria-pressed="false">da bambino</button>
+    </div>
+    <div class="lrow"><b>Salva</b>
+      <button data-save="largo" aria-pressed="true">largo</button>
+      <button data-save="destra" aria-pressed="false">a destra</button>
+    </div>
+    <div class="lrow"><b>Step</b>
+      <button id="lab-prev">←</button>
+      <span id="lab-step" style="min-width:34px;text-align:center">1/7</span>
+      <button id="lab-next">→</button>
+      <button id="lab-restart">riparti</button>
+    </div>
+    <div class="hint">Da guardare sul telefono. Frecce ← → per gli step, M / V / R / G per l'evidenza.</div>
+  </div>
+</div>
+
+<script>
+/* ---------- la lavagna finta ----------
+   Serve solo a giudicare il velo su una lavagna con del contenuto: una
+   lavagna vuota non dice se l'evidenziazione funziona. Il gesso e' timbrato
+   come in produzione (chalk.js), qui in versione grezza. */
+
+const CHALKS = [
+  { id: 'bianco',  hex: '#FAF8F3' }, { id: 'giallo',  hex: '#C9B957' },
+  { id: 'arancio', hex: '#F1A366' }, { id: 'rosso',   hex: '#FE4335' },
+  { id: 'rosa',    hex: '#F197C2' }, { id: 'lilla',   hex: '#C9A3F5' },
+  { id: 'azzurro', hex: '#71BFFF' }, { id: 'marrone', hex: '#AD794B' },
+  { id: 'verde',   hex: '#85CC87' },
+];
+const WIDTHS = [21, 27, 50];
+
+const mix = (hex, target, t) => {
+  const parse = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const a = parse(hex), b = parse(target);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
+};
+const gradiente = (hex) =>
+  `linear-gradient(96deg, ${mix(hex,'#000000',.38)} 0%, ${hex} 26%, ${mix(hex,'#FFFFFF',.30)} 48%, ${hex} 74%, ${mix(hex,'#000000',.38)} 100%)`;
+
+const chalksEl = document.getElementById('chalks');
+for (const c of CHALKS) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'chalk';
+  b.setAttribute('aria-label', c.id);
+  b.setAttribute('aria-pressed', String(c.id === 'bianco'));
+  b.style.setProperty('--grad', gradiente(c.hex));
+  b.style.setProperty('--glow', `${c.hex}55`);
+  const s = document.createElement('span'); s.className = 'stick';
+  b.appendChild(s); chalksEl.appendChild(b);
+}
+
+const widthsEl = document.getElementById('widths');
+widthsEl.style.setProperty('--c', '#FAF8F3');
+for (const w of WIDTHS) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'wbtn';
+  b.setAttribute('aria-pressed', String(w === 27));
+  const i = document.createElement('i');
+  i.style.height = `calc(var(--wscale) * ${w})`;
+  b.appendChild(i); widthsEl.appendChild(b);
+}
+
+const stage = document.getElementById('stage');
+const layers = document.getElementById('layers');
+const canvas = document.getElementById('base');
+
+function scarabocchio() {
+  const r = stage.getBoundingClientRect();
+  const w = Math.max(80, Math.floor(r.width)), h = Math.max(80, Math.floor(r.height));
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  layers.style.width = w + 'px'; layers.style.height = h + 'px';
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+
+  const g = canvas.getContext('2d');
+  g.scale(dpr, dpr);
+  g.clearRect(0, 0, w, h);
+
+  /* Una casa, un sole, un prato: contenuto plausibile per un disegno di
+     bambino. Sta sulla META' SINISTRA, cosi' la finestra del tutorial al
+     centro non gli finisce sopra e si giudica il velo, non l'ingombro. */
+  const tratti = [
+    { c: '#FAF8F3', p: [[14,78],[14,50],[38,50],[38,78],[14,78]] },  // pareti
+    { c: '#FE4335', p: [[11,50],[26,34],[41,50]] },                  // tetto
+    { c: '#71BFFF', p: [[22,78],[22,63],[30,63],[30,78]] },          // porta
+    { c: '#C9B957', p: [[46,17],[46,17]] },                          // sole
+    { c: '#85CC87', p: [[5,80],[62,80]] },                           // prato
+  ];
+  const raggio = Math.max(5, Math.min(w, h) / 68);
+  for (const t of tratti) {
+    dipingi(g, t.p.map(([x, y]) => [x * w / 100, y * h / 100]), t.c, raggio);
+  }
+  return { w, h };
+}
+
+/**
+ * Timbra impronte sfocate lungo la spezzata: e' il gesso di chalk.js, in
+ * versione grezza. Qui basta che somigli — il rendering vero non c'entra con
+ * quel che si sta giudicando.
+ */
+function dipingi(g, pts, hex, raggio) {
+  const [r0, g0, b0] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const timbra = (x, y) => {
+    for (let j = 0; j < 2; j++) {
+      g.fillStyle = `rgba(${r0},${g0},${b0},${.07 + Math.random() * .13})`;
+      g.beginPath();
+      g.arc(x + (Math.random() - .5) * raggio * .9, y + (Math.random() - .5) * raggio * .9,
+            raggio * (.5 + Math.random() * .5), 0, 6.2832);
+      g.fill();
+    }
+  };
+  if (pts.length === 1 || (pts.length === 2 && pts[0][0] === pts[1][0] && pts[0][1] === pts[1][1])) {
+    // Il sole: un punto solo, riempito a spirale.
+    for (let rr = raggio * .3; rr <= raggio * 2.8; rr += raggio * .45) {
+      for (let a = 0; a < 6.2832; a += .12) {
+        timbra(pts[0][0] + Math.cos(a) * rr, pts[0][1] + Math.sin(a) * rr);
+      }
+    }
+    return;
+  }
+  for (let i = 1; i < pts.length; i++) {
+    const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+    const d = Math.hypot(x2 - x1, y2 - y1), n = Math.max(1, Math.round(d / (raggio * .22)));
+    for (let k = 0; k <= n; k++) {
+      timbra(x1 + (x2 - x1) * (k / n), y1 + (y2 - y1) * (k / n));
+    }
+  }
+}
+
+/* ---------- gli step ----------
+   Dati, non codice: cambiare una frase non tocca il motore. Il selettore
+   punta all'elemento vero, cosi' il riquadro segue la mensola quando la
+   griglia cambia sotto i 700 px. */
+
+const STEPS = [
+  { sel: '#layers', pad: -10,
+    adulto: 'Trascina il dito sulla lavagna per disegnare.',
+    bimbo:  'Disegna qui con il dito!' },
+  { sel: '#chalks',
+    adulto: 'Scegli il colore del gessetto con cui disegnare sullo schermo.',
+    bimbo:  'Scegli il colore del gessetto.' },
+  { sel: '#widths',
+    adulto: 'Scegli lo spessore del gessetto.',
+    bimbo:  'Un segno sottile, o grosso?' },
+  { sel: '#tool-eraser',
+    adulto: 'Usa il cancellino per cancellare alcune parti del tuo disegno.',
+    bimbo:  'Il cancellino toglie un pezzo di disegno.' },
+  { sel: '#btn-undo,#btn-redo',
+    adulto: 'Annulla o ripeti l’ultimo tratto che hai disegnato.',
+    bimbo:  'Hai sbagliato un segno? Torna indietro.' },
+  { sel: '#btn-clear',
+    adulto: 'Cancella tutto il tuo disegno per farne uno nuovo.',
+    bimbo:  'Butta via tutto e ricomincia da zero.' },
+  { sel: '#btn-save',
+    adulto: 'Scarica o condividi il tuo disegno, e mandacelo: i migliori verranno pubblicati nel sito!',
+    bimbo:  'Salva il disegno e mandacelo: i più belli finiscono sul sito!' },
+];
+
+const tut = document.getElementById('tut');
+const spot = document.getElementById('spot');
+const panel = document.getElementById('panel');
+const stepN = document.getElementById('step-n');
+const stepT = document.getElementById('step-t');
+const btnNext = document.getElementById('tut-next');
+const btnSkip = document.getElementById('tut-skip');
+
+let i = 0;
+let copy = 'adulto';
+
+/**
+ * Il riquadro si prende dall'elemento, mai da coordinate scritte a mano.
+ * Con piu' selettori separati da virgola si unisce il rettangolo di tutti:
+ * serve allo step di annulla/rifai, che sono due pulsanti ma un concetto.
+ */
+function areaDi(sel, pad = 8) {
+  const els = [...document.querySelectorAll(sel)];
+  if (!els.length) return null;
+  const r = els.map((e) => e.getBoundingClientRect());
+  const L = Math.min(...r.map((b) => b.left)),  T = Math.min(...r.map((b) => b.top));
+  const R = Math.max(...r.map((b) => b.right)), B = Math.max(...r.map((b) => b.bottom));
+  return { left: L - pad, top: T - pad, width: (R - L) + pad * 2, height: (B - T) + pad * 2 };
+}
+
+/**
+ * La finestra "al centro" non puo' stare al centro sempre: allo step 0 l'area
+ * evidenziata E' il centro, e la finestra la coprirebbe. Sta nella meta'
+ * opposta a quella dove cade l'area. Difetto del design richiesto, trovato
+ * montandolo.
+ */
+function posiziona(area) {
+  const H = innerHeight;
+  const ph = panel.offsetHeight;
+  const areaInBasso = (area.top + area.height / 2) > H / 2;
+  const margine = 18;
+  const top = areaInBasso
+    ? Math.max(margine, Math.min(area.top - ph - margine, (H - ph) / 2))
+    : Math.min(H - ph - margine, Math.max(area.top + area.height + margine, (H - ph) / 2));
+  panel.style.top = Math.max(margine, top) + 'px';
+}
+
+function mostra() {
+  const s = STEPS[i];
+  stepN.textContent = `PASSO ${i + 1} DI ${STEPS.length}`;
+  stepT.textContent = s[copy];
+  btnNext.textContent = i === STEPS.length - 1 ? 'HO CAPITO' : 'PROCEDI';
+
+  const area = areaDi(s.sel, s.pad === undefined ? 8 : s.pad);
+  if (area) {
+    spot.style.left = area.left + 'px';
+    spot.style.top = area.top + 'px';
+    spot.style.width = area.width + 'px';
+    spot.style.height = area.height + 'px';
+    requestAnimationFrame(() => posiziona(area));
+  }
+  document.getElementById('lab-step').textContent = `${i + 1}/${STEPS.length}`;
+}
+
+btnNext.addEventListener('click', () => {
+  if (i === STEPS.length - 1) { tut.hidden = true; return; }
+  i++; mostra();
+});
+btnSkip.addEventListener('click', () => { tut.hidden = true; });
+document.getElementById('btn-help').addEventListener('click', () => { i = 0; tut.hidden = false; mostra(); });
+
+/* ---------- pannello di prova ---------- */
+
+const setStyle = (v) => {
+  tut.dataset.style = v;
+  document.querySelectorAll('#lab [data-style]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === v)));
+};
+const setCopy = (v) => {
+  copy = v;
+  document.querySelectorAll('#lab [data-copy]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.copy === v)));
+  mostra();
+};
+const setSave = (v) => {
+  document.body.dataset.save = v;
+  document.querySelectorAll('#lab [data-save]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.save === v)));
+  requestAnimationFrame(mostra);   // la mensola cambia altezza: il riquadro va rifatto
+};
+document.querySelectorAll('#lab [data-style]').forEach((b) => b.addEventListener('click', () => setStyle(b.dataset.style)));
+document.querySelectorAll('#lab [data-copy]').forEach((b) => b.addEventListener('click', () => setCopy(b.dataset.copy)));
+document.querySelectorAll('#lab [data-save]').forEach((b) => b.addEventListener('click', () => setSave(b.dataset.save)));
+document.getElementById('lab-prev').addEventListener('click', () => { i = (i - 1 + STEPS.length) % STEPS.length; tut.hidden = false; mostra(); });
+document.getElementById('lab-next').addEventListener('click', () => { i = (i + 1) % STEPS.length; tut.hidden = false; mostra(); });
+document.getElementById('lab-restart').addEventListener('click', () => { i = 0; tut.hidden = false; mostra(); });
+document.getElementById('lab-fold').addEventListener('click', () => document.getElementById('lab').classList.toggle('folded'));
+
+addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') document.getElementById('lab-next').click();
+  else if (e.key === 'ArrowLeft') document.getElementById('lab-prev').click();
+  else if (e.key === 'm' || e.key === 'M') setStyle('misto');
+  else if (e.key === 'v' || e.key === 'V') setStyle('velo');
+  else if (e.key === 'r' || e.key === 'R') setStyle('rosso');
+  else if (e.key === 'g' || e.key === 'G') setStyle('gesso');
+});
+
+/* ---------- avvio e layout ---------- */
+
+function relayout() { scarabocchio(); mostra(); }
+new ResizeObserver(relayout).observe(stage);
+addEventListener('orientationchange', () => setTimeout(relayout, 140));
+relayout();
+</script>
+</body>
+</html>
