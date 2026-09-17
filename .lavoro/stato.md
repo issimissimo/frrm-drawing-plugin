@@ -79,6 +79,7 @@ Costo stimato: 6 passi, di cui due sono attese o prove su device. L'ordine di gr
 ## Decisioni prese e perché
 
 - **Fase 4b (tutorial) chiusa il 17/09/2026**: sette passi, velo scuro più riquadro tratteggiato a gesso, testi da bambino, avvio alla prima apertura e `?` per riaprirlo. Progettata in cinque giri su `design-tutorial/prova.html` prima di scrivere codice di produzione, ed è il motivo per cui l'implementazione è filata.
+- **Cinque correzioni del cliente al tutorial, 18/09/2026**: «PROSSIMO» diventa «AVANTI»; il passo 3 dice «Scegli un gessetto sottile, medio o grosso»; il riquadro del passo 3 abbraccia i segni e non i pulsanti; il tratteggio **scorre** (`<rect>` SVG animato in `stroke-dashoffset`, che un `outline` non può fare); il margine laterale della mensola sale a 16px su mobile perché il tratteggio degli elementi a filo di schermo non venga tagliato. Dettaglio e trappole in `prototipo/README.md`.
 - **Spessore/velocità: chiuso, non si tocca più** (decisione di Daniele, 17/09/2026). `PRESSURE_MIN 0.84`, `PRESSURE_ALPHA_MIN 0.85`. Chi riaprisse non ricominci ritarando: la conclusione era che *la metrica non descrive il fenomeno*, e due tarature alla cieca non hanno risolto.
 - **Un solo SALVA al posto di SCARICA + INVIA.** Toglie la possibilità di scaricare senza inviare: oggi non si vede perché l'invio non esiste, quando arriverà va deciso se un tocco fa entrambe le cose senza chiedere.
 - **Nessun CHIUDI nei primi sei passi del tutorial**, per non farlo chiudere per sbaglio. Su desktop `Esc` funziona comunque; sul dito no.

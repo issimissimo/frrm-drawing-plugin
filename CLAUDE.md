@@ -18,7 +18,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Stato
 
-> **Fase 4b (tutorial) chiusa il 17/09/2026.** Il prototipo è consegnabile e online.
+> **Fase 4b (tutorial) chiusa il 17/09/2026**, più cinque correzioni del cliente il 18/09/2026 (AVANTI al posto di PROSSIMO, testo del passo 3, riquadro degli spessori sui segni e non sui pulsanti, tratteggio animato, margine della mensola a 16px su mobile). Il prototipo è consegnabile e online.
 >
 > **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
@@ -74,6 +74,9 @@ Tre cose da non disfare per sbaglio:
 - **La finestra non sta al centro**, ma nella metà opposta all'area in luce — al primo passo l'area *è* il centro e la finestra coprirebbe quel che spiega.
 - **`.btn[hidden] { display: none }` non è ridondante**: `.btn` è `inline-flex` e vince sull'attributo `hidden`. Senza, RIPETI compare a tutti i passi. Già succeduto.
 - **`data-tutorial` sul `<body>` serve**: accende l'aspetto dei tasti spenti mentre il tutorial è aperto. Senza, quattro passi su sette evidenziano un'area vuota, perché alla prima apertura non c'è un disegno e annulla / rifai / SALVA sono `disabled`. Cambia solo il colore: lo stato disabilitato resta.
+- **`#spot-line` ha `width`/`height` espliciti e non solo `inset`**: un `<svg>` è un elemento rimpiazzato e con le sole distanze dai bordi resta a 300×150. Il riquadro risulta giusto a misurarlo e sbagliato a guardarlo.
+- **Il passo degli spessori punta a `#widths .wbtn i`, non a `#widths`**: i pulsanti sono alti `--stick-h` per il dito, i segni dentro ne occupano 19. Puntare il pulsante invade i gessetti sopra e SALVA sotto.
+- **`pad` 6 + `inset` 4 + mezzo tratto = 11,5px, e il padding laterale della mensola su mobile è 16px**: i due numeri si cambiano insieme, o il tratteggio degli elementi a filo di schermo viene tagliato. E oltre i 17px la mensola a 360px non si stringe più, sfora.
 
 **I font della Fondazione non sono nel repo.** `index.html` dichiara `SebinoSoft` e si aspetta i `.woff2` in `prototipo/font/`: sono font commerciali di terzi e il repo è pubblico. Si riscaricano col comando in `prototipo/README.md`; `.lavoro/pubblica.sh` li carica se li trova e avvisa se non ci sono. **Da verificare**: che la licenza webfont copra `issimissimo.com`, che non è il dominio della Fondazione.
 

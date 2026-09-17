@@ -183,14 +183,14 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 
 | | |
 |---|---|
-| Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato a gesso |
+| Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato a gesso, che scorre |
 | Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
 | Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
 | Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
 | «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1:<percorso>` |
 | Per rivederlo | il `?` nella mensola, o `?tutorial` in coda all'URL |
 
-Quattro cose che non si leggono dal codice:
+Le cose che non si leggono dal codice:
 
 **Il riquadro si prende dall'elemento, mai da coordinate.** Sotto i 700 px la mensola cambia griglia e quel che sta a destra finisce in mezzo: `areaUnione()` lavora sui `getBoundingClientRect` reali, e con più selettori unisce i rettangoli — serve ad annulla/rifai, due pulsanti ma un concetto.
 
@@ -198,11 +198,22 @@ Quattro cose che non si leggono dal codice:
 
 **Il velo intercetta i tocchi, ed è voluto.** Mentre il tutorial è aperto non si disegna e non si toccano gli strumenti: verificato che `elementFromPoint` sul centro della lavagna restituisca `#tut` e che chiudendo il tutorial senza aver toccato nulla il disegno resti vuoto.
 
-**Non c'è un CHIUDI nei primi sei passi.** È una richiesta esplicita: un CHIUDI accanto a PROSSIMO si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo è che chi lo riapre col `?` deve fare sette tocchi per uscirne — `Esc` funziona, ma non sul dito. Se dà fastidio, la correzione è una `×` discreta nell'angolo, lontana da PROSSIMO.
+**Non c'è un CHIUDI nei primi sei passi.** È una richiesta esplicita: un CHIUDI accanto ad AVANTI si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo è che chi lo riapre col `?` deve fare sette tocchi per uscirne — `Esc` funziona, ma non sul dito. Se dà fastidio, la correzione è una `×` discreta nell'angolo, lontana da AVANTI.
 
 **Il velo su desktop mostra due grigi**, ed è normale: la lavagna è `#1F2225` e il fondo pagina `#15171A`, quindi sotto il velo la lavagna resta la zona più chiara. Non è un riquadro di troppo.
 
 **La chiave del «già visto» porta dentro il percorso della pagina.** `localStorage` è per *origine*, non per cartella: tutte le versioni pubblicate sotto `temp/` condividono lo stesso archivio, quindi con una chiave fissa chi aveva visto il tutorial su una cartella non lo vedeva più su quella pubblicata dopo — e la pubblicazione in cartelle numerate, che serve a battere la cache, faceva sparire proprio la cosa da provare. In produzione la lavagna sta a un solo indirizzo e il comportamento è quello voluto.
+
+**Il tratteggio è un `<rect>` SVG, non un `outline`** — cambiato il 18/09/2026 su richiesta del cliente, che lo voleva animato. `stroke-dashoffset` si anima, `outline-style` no: il tratto scorre lungo il perimetro in senso orario, un ciclo da 22px ogni 1,1s, e si ferma con `prefers-reduced-motion`. Due trappole, entrambe già pagate:
+
+- **Un `<svg>` è un elemento rimpiazzato**: con il solo `inset: -4px` resta alla sua dimensione predefinita di 300×150 invece di stirarsi sul riquadro. Servono `width`/`height` espliciti. Le misure di `#spot` erano giuste e il tratteggio stava altrove — se ne accorge solo uno screenshot.
+- `width="100%"` va messo come **attributo**, non in CSS: le geometry properties di SVG2 sono recenti, l'attributo lo capiscono tutti.
+
+**Quanto sporge il riquadro fuori dall'elemento detta il margine della mensola.** Sono `pad` (6) + `inset` (4) + mezzo tratto (1,5) = **11,5px**, e su mobile `.ledge` tiene 16px di padding laterale proprio per starci dentro: sotto, il tratteggio degli elementi a filo di schermo — gessetti, cancellino, cestino, SALVA — viene tagliato dal bordo e sembra schiacciato. I due numeri si cambiano insieme.
+
+⚠️ **A 360px la mensola è satura**: il suo min-content misura 326px, quindi oltre i 17px di padding il contenuto non si stringe, *sfora*, e il lato destro torna a filo — peggio di prima. Provato a 20px il 18/09/2026: `.tools` finiva a 346 invece di 340. Chi volesse più margine deve prima far scendere il min-content, non alzare il padding.
+
+**Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
 
 **Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
 

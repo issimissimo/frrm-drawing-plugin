@@ -472,7 +472,7 @@ const rect = (left, top, w, h) => ({ left, top, right: left + w, bottom: top + h
 test('tutorial: i sette passi puntano a elementi che esistono nella mensola', () => {
   // Non c'e' DOM qui: si controlla che i selettori siano quelli scritti in
   // index.html. Se qualcuno rinomina un id, il tutorial punterebbe al vuoto.
-  const attesi = ['#layers', '#chalks', '#widths', '#tool-eraser',
+  const attesi = ['#layers', '#chalks', '#widths .wbtn i', '#tool-eraser',
                   '#btn-undo,#btn-redo', '#btn-clear', '#btn-save'];
   assert(STEPS.length === 7, `${STEPS.length} passi invece di 7`);
   STEPS.forEach((s, i) => assert(s.sel === attesi[i], `passo ${i + 1}: ${s.sel}`));

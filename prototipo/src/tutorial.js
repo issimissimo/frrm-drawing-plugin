@@ -52,12 +52,24 @@ export const chiaveVisto = (percorso = percorsoCorrente()) => `${CHIAVE_VISTO}:$
  * attorno all'elemento; negativo lo stringe, che serve alla lavagna — il suo
  * bordo e' gia' il bordo dello schermo.
  *
+ * Il pad di default vale 6, e non e' un numero libero: sommato all'inset e al
+ * mezzo tratto del tratteggio (vedi #spot-line in index.html) da' 11,5px, che
+ * e' quanto il riquadro sporge fuori dall'elemento. Su mobile la mensola
+ * tiene 16px di margine laterale proprio per starci dentro. Alzarlo qui
+ * rimette a filo di schermo i riquadri dei passi 2, 3, 4, 6 e 7.
+ *
  * `{cosa}` diventa "con il dito" o "con il mouse": vedi testoStep().
  */
 export const STEPS = [
   { sel: '#layers',            pad: -10, testo: 'Disegna nell’area tratteggiata {cosa}.' },
   { sel: '#chalks',                      testo: 'Scegli il colore del gessetto.' },
-  { sel: '#widths',                      testo: 'Un gessetto sottile, medio o grosso?' },
+  // Punta ai SEGNI, non ai pulsanti. I .wbtn sono alti --stick-h (64px sul
+  // telefono, 94 sul desktop) perche' devono essere bersagli da dito, ma il
+  // segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante
+  // invade i gessetti sopra e SALVA sotto. Misurato il 18/09/2026 a 360px.
+  // Prendendo gli <i> il riquadro abbraccia quel che si vede, e la cosa
+  // funziona da sola sui due layout senza una costante da mantenere.
+  { sel: '#widths .wbtn i',              testo: 'Scegli un gessetto sottile, medio o grosso.' },
   { sel: '#tool-eraser',                 testo: 'Il cancellino toglie un pezzo di disegno.' },
   { sel: '#btn-undo,#btn-redo',          testo: 'Hai sbagliato un segno? Torna indietro.' },
   { sel: '#btn-clear',                   testo: 'Butta via tutto e ricomincia da zero.' },
@@ -81,7 +93,7 @@ export function testoStep(i, coarse) {
  * Torna null su una lista vuota: un passo che punta a un elemento che non
  * esiste non deve far cadere il tutorial.
  */
-export function areaUnione(rects, pad = 8) {
+export function areaUnione(rects, pad = 6) {
   if (!rects || !rects.length) return null;
   const L = Math.min(...rects.map((r) => r.left));
   const T = Math.min(...rects.map((r) => r.top));
@@ -138,14 +150,14 @@ export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti,
 
     etichetta.textContent = `TUTORIAL: PASSO ${i + 1} DI ${STEPS.length}`;
     testo.textContent = testoStep(i, coarse);
-    btnAvanti.querySelector('span').textContent = ultimo ? 'HO CAPITO' : 'PROSSIMO';
+    btnAvanti.querySelector('span').textContent = ultimo ? 'HO CAPITO' : 'AVANTI';
     // All'ultimo passo il tasto chiude: una freccia "avanti" direbbe che c'e'
     // un altro passo.
     btnAvanti.dataset.ico = ultimo ? 'check' : 'avanti';
     btnRipeti.hidden = !ultimo;
 
     const els = [...document.querySelectorAll(s.sel)];
-    const area = areaUnione(els.map((e) => e.getBoundingClientRect()), s.pad ?? 8);
+    const area = areaUnione(els.map((e) => e.getBoundingClientRect()), s.pad ?? 6);
     if (!area) return;
 
     spot.style.left = `${area.left}px`;
