@@ -65,6 +65,7 @@ Tre cose da non disfare per sbaglio:
 - **Il riquadro del tutorial si prende dall'elemento** (`getBoundingClientRect`), mai da coordinate: sotto i 700 px la mensola cambia griglia.
 - **La finestra non sta al centro**, ma nella metà opposta all'area in luce — al primo passo l'area *è* il centro e la finestra coprirebbe quel che spiega.
 - **`.btn[hidden] { display: none }` non è ridondante**: `.btn` è `inline-flex` e vince sull'attributo `hidden`. Senza, RIPETI compare a tutti i passi. Già succeduto.
+- **`data-tutorial` sul `<body>` serve**: accende l'aspetto dei tasti spenti mentre il tutorial è aperto. Senza, quattro passi su sette evidenziano un'area vuota, perché alla prima apertura non c'è un disegno e annulla / rifai / SALVA sono `disabled`. Cambia solo il colore: lo stato disabilitato resta.
 
 **I font della Fondazione non sono nel repo.** `index.html` dichiara `SebinoSoft` e si aspetta i `.woff2` in `prototipo/font/`: sono font commerciali di terzi e il repo è pubblico. Si riscaricano col comando in `prototipo/README.md`; `.lavoro/pubblica.sh` li carica se li trova e avvisa se non ci sono. **Da verificare**: che la licenza webfont copra `issimissimo.com`, che non è il dominio della Fondazione.
 
@@ -120,9 +121,9 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-03/>
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-04/>
 
-⚠️ La **`-02` ha un difetto noto** (RIPETI visibile a ogni passo del tutorial) e non va data a nessuno.
+⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano.
 
 Cartella **numerata**, dal 17/09/2026: il link da dare al cliente è quello, senza query string. La numerazione è la difesa dalla cache di SiteGround — un URL nuovo non è in nessuna cache, né del proxy né del browser di chi ha già visto il prototipo. **Ogni consegna al cliente va in una cartella nuova** (`-02`, `-03`), non sopra la precedente. Le vecchie si lasciano dove sono: servono a confrontare, e cancellarle non fa guadagnare niente.
 

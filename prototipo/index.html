@@ -478,6 +478,23 @@
   #btn-avanti[data-ico="check"] .ico-avanti { display: none; }
   #btn-avanti[data-ico="check"] .ico-check { display: block; }
 
+  /* ---------- i tasti spenti, durante il tutorial ----------
+     Alla prima apertura non c'e' ancora un disegno, quindi annulla, rifai e
+     SALVA sono disabilitati e quasi invisibili: quattro passi su sette
+     evidenziavano un'area in cui non si vedeva niente.
+
+     Qui si cambia SOLO l'aspetto: l'attributo disabled resta, e i tasti
+     restano inerti — e comunque il velo intercetta i tocchi. Il cestino non
+     e' mai disabled ma sta a --dim, che sotto il velo e' altrettanto illeggibile:
+     durante il tutorial sale anche lui, e si perde per qualche secondo la sua
+     gerarchia piu' bassa. E' il minore dei due mali. */
+  body[data-tutorial] .cmd:disabled,
+  body[data-tutorial] #btn-clear { color: var(--ink); }
+  body[data-tutorial] .btn:disabled {
+    color: #FAF8F3;
+    border-color: var(--btn-border);
+  }
+
   /* ---------- taratura (solo con ?debug=1) ---------- */
 
   #debug[hidden] { display: none; }

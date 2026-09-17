@@ -58,7 +58,19 @@ Passi:
 6. [x] **Prima apertura e riapertura**: flag `localStorage` con try/catch su lettura *e* scrittura, icona `?` in testa alla fila dei comandi.
 7. [x] **Verificato in Chrome e documentato.** `README.md` e `CLAUDE.md` aggiornati. **Resta da provare sui due device reali** (vedi sotto).
 
-**Online: <https://issimissimo.com/temp/frmm-drawing-plugin-03/>** — la `-02` ha un difetto noto (RIPETI visibile a ogni passo) e non va data a nessuno.
+**Online: <https://issimissimo.com/temp/frmm-drawing-plugin-04/>.** Le precedenti hanno difetti noti e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano.
+
+**Riaperta il 17/09/2026: i tasti spenti erano illeggibili proprio nei passi che li spiegano.** Alla prima apertura non c'è ancora un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva nulla. Era un difetto vero, non un dettaglio, e l'unico modo di trovarlo era usare l'app — il controllo automatico guardava che il riquadro fosse nel posto giusto, non che dentro ci fosse qualcosa di visibile.
+
+Risolto con `data-tutorial` sul `<body>`, che mentre il tutorial è aperto cambia **solo l'aspetto**: `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Misurato sul contrasto contro il fondo della mensola, non a occhio:
+
+| | prima | durante il tutorial |
+|---|---|---|
+| annulla / rifai | 1,57 | **9,9** |
+| cestino | 4,0 | **9,9** |
+| SALVA | 1,57 | **15,06** |
+
+Effetto collaterale accettato: per la durata del tutorial il cestino perde la sua gerarchia più bassa e pesa come annulla e rifai. A `--dim` sotto il velo era altrettanto illeggibile.
 
 Criterio di finito, verificato in Chrome a 1440×900 e 390×844:
 

@@ -201,6 +201,8 @@ Quattro cose che non si leggono dal codice:
 
 **Il velo su desktop mostra due grigi**, ed è normale: la lavagna è `#1F2225` e il fondo pagina `#15171A`, quindi sotto il velo la lavagna resta la zona più chiara. Non è un riquadro di troppo.
 
+**Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
+
 ## Salva e scarica il disegno
 
 **Dal 17/09/2026 SCARICA e INVIA sono un tasto solo, SALVA**, che prende il fondo pieno e la piena larghezza su mobile: è l'azione dichiarata della schermata. Oggi scarica e, sul dito, apre il foglio di condivisione. **L'invio al backend si innesterà qui dentro**, in Fase 6, senza toccare la mensola.

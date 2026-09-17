@@ -139,8 +139,26 @@ export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti,
     });
   }
 
-  function apri(da = 0) { i = da; root.hidden = false; disegna(); }
-  function chiudi() { root.hidden = true; segnaVisto(); }
+  /**
+   * `data-tutorial` sul body accende l'ASPETTO dei tasti spenti.
+   *
+   * Alla prima apertura non c'e' ancora un disegno: annulla, rifai e SALVA
+   * sono disabilitati e quasi invisibili, e quattro passi su sette
+   * evidenziavano un'area dove non si vedeva niente. Lo stato resta
+   * disabilitato — cambia solo come si vede. Le regole stanno in index.html.
+   */
+  function apri(da = 0) {
+    i = da;
+    document.body.dataset.tutorial = '1';
+    root.hidden = false;
+    disegna();
+  }
+
+  function chiudi() {
+    root.hidden = true;
+    delete document.body.dataset.tutorial;
+    segnaVisto();
+  }
 
   btnAvanti.addEventListener('click', () => {
     if (i === STEPS.length - 1) { chiudi(); return; }
