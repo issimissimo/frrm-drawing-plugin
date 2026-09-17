@@ -20,11 +20,17 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 > **Fase 4b (tutorial) chiusa il 17/09/2026.** Il prototipo è consegnabile e online.
 >
-> **Resta da provare su device reale**: il tutorial è verificato in Chrome, non su iPhone né su Android, e il ramo `navigator.share` del download non è mai stato provato su un telefono vero. Sono la prima cosa da fare, e si fanno insieme su un solo URL.
+> **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
-> **Prossima fase concordata: la Fase 7 — integrazione in una pagina Elementor tramite shortcode.** Il piano è in `.lavoro/stato.md` e **comincia con due decisioni, non col codice**: iframe o inline, e dove si prova (staging o WordPress locale). Le fasi 5, 6, 8, 9, 10 restano chiuse: SALVA continuerà a scaricare e non a inviare.
+> **Prossima fase concordata: l'integrazione in una pagina Elementor tramite shortcode — che è la Fase 8 del brief, non la 7.** Il piano è in `.lavoro/stato.md` e **comincia con tre decisioni, non col codice**: pagina dedicata o integrata, iframe o inline, e dove si prova. Le fasi 5, 6, 7, 9, 10 restano fuori perimetro: SALVA continuerà a scaricare e non a inviare.
 >
-> ⚠️ **Inline non è una variante di stile.** L'app blocca lo scroll con `html, body { position: fixed }`, e in una pagina WordPress quelle regole non si possono applicare: inline vuol dire riscrivere la strategia anti-scroll, che è la Definition of Done della Fase 1 e l'unico vero rischio che il progetto aveva. La raccomandazione è **iframe**, con i prezzi noti elencati nello stato.
+> ⚠️ **La numerazione era sbagliata, corretta il 18/09/2026.** Il brief numera: 7 backend (inbox, CPT, REST, moderazione), 8 integrazione WP/Elementor, 9 hardening/legale/QA, 10 gallery e go-live. Qui era scalata di uno da 7 in poi, e l'effetto era che **la Fase 9 spariva**: privacy policy, testo di consenso, anti-abuso, retention. Su disegni di bambini non è una fase che si perde per una trascrizione. Vale la numerazione del brief.
+>
+> ⚠️ **Il nodo iframe/inline era mal posto.** La Fase 8 del brief prescrive il template **Elementor Canvas**, senza header né footer: lì `html, body { position: fixed }` torna applicabile quasi com'è e il rischio anti-scroll si sgonfia. La domanda che viene prima è se la lavagna sta in una pagina dedicata o dentro una pagina normale. Dettaglio nello stato.
+>
+> ⚠️ **Due scostamenti dal brief da non dimenticare**: **D1 (aspect 4:3 fisso) è stato violato** in Fase 4 — la lavagna si adatta alla finestra e la motivazione di D1 era «gallery coerente», conto da pagare prima della Fase 6 — e la **Fase 5 (persistenza locale) è in scope v1 del brief**, non un extra. Censimento completo nello stato.
+>
+> **La DoD della Fase 4 non è mai stata soddisfatta**: il brief chiede il test con un utente sotto i 10 anni. Il tutorial è nato perché la UI da sola non bastava, che è il sintomo che quella DoD descrive.
 >
 > Dettaglio in `.lavoro/stato.md`.
 
@@ -109,7 +115,7 @@ Due note di metodo, per non rifare il lavoro:
 
 ### Cosa resta fuori, e va detto se ci si avvicina
 
-Le **Fasi 5–10** (IndexedDB, export con logo, plugin WP, moderazione, gallery, go-live) sono **fuori perimetro**. La Fase 4 è stata fatta, riaprendo il perimetro esplicitamente. Anche la DoD della Fase 0 è stata ridotta di conseguenza: testo del form di invio e decisione legale servono alle Fasi 6–9 e non sono stati scritti.
+Le **Fasi 5–10** sono **fuori perimetro**. Con i nomi del brief, che è l'unica numerazione valida: 5 persistenza IndexedDB, 6 export a tre risoluzioni e payload di invio, 7 backend (inbox, CPT, REST, moderazione), 8 integrazione WP/Elementor, 9 hardening/legale/QA, 10 gallery e go-live. La Fase 4 è stata fatta, riaprendo il perimetro esplicitamente. Anche la DoD della Fase 0 è stata ridotta di conseguenza: testo del form di invio e decisione legale servono alle Fasi 6–9 e non sono stati scritti.
 
 Se una sessione futura comincia a costruire persistenza, backend o integrazione WP, va nominato prima di scrivere il codice.
 

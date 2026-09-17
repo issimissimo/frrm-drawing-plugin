@@ -1,5 +1,5 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 17/09/2026
+Ultimo aggiornamento: 18/09/2026
 Versione corrente: prototipo fasi 0–4b. Nessun numero di versione.
 
 ## Dove siamo
@@ -8,16 +8,23 @@ Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, 
 
 Online: <https://issimissimo.com/temp/frmm-drawing-plugin-05/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **44 test** (`node test/run.js`).
 
-**Tutto è verificato in Chrome desktop. Niente è ancora stato provato su un telefono vero da quando esiste il tutorial.**
+**Provato su telefono il 18/09/2026: il tutorial funziona e SALVA funziona.** Cadono i due punti che erano in sospeso dal 17/09. Resta non fatta la sola verifica che nessun automatismo può dare: **il test con un bambino**, che è la DoD della Fase 4 nel brief e non è mai stata soddisfatta.
 
 ## Piano attivo
 
-Obiettivo: la lavagna si apre dentro una pagina del sito WordPress della Fondazione, inserita da un **shortcode**, e continua a funzionare come funziona oggi sul telefono. È la **Fase 7** del brief; le fasi 5 e 6 restano chiuse, quindi SALVA continuerà a scaricare e non a inviare.
+Obiettivo: la lavagna si apre dentro una pagina del sito WordPress della Fondazione, inserita da un **shortcode**, e continua a funzionare come funziona oggi sul telefono. È la **Fase 8** del brief; le fasi 5, 6 e 7 restano chiuse, quindi SALVA continuerà a scaricare e non a inviare.
 
-**Due decisioni da prendere prima di scrivere una riga.** Sono la ragione per cui questa fase non comincia dal codice:
+> ⚠️ **Numerazione corretta il 18/09/2026.** Fino a ieri questa fase era chiamata «Fase 7», che nel brief è invece il **backend** (inbox, CPT, REST, moderazione). L'errore aveva fatto sparire dall'elenco operativo la **Fase 9 del brief — hardening, legale, QA**: privacy policy, testo di consenso, anti-abuso, retention. Su un progetto che raccoglie disegni di bambini non è una fase che si può perdere. La numerazione del brief è l'unica valida: 7 backend, 8 integrazione WP, 9 hardening/legale, 10 gallery e go-live.
+>
+> Fare la 8 prima della 7 è una scelta, non un errore: SALVA scarica e basta, quindi l'integrazione non ha bisogno del backend. Ma **il plugin nasce una volta sola**: va progettato sapendo che dovrà ospitare anche CPT e REST, non solo uno shortcode.
 
-1. **Iframe o inline?** Vedi «Il nodo dell'integrazione» sotto. La raccomandazione è **iframe**, e non è una preferenza di stile: inline si porta dietro la riscrittura della gestione dello scroll, che è la cosa validata su device più importante del progetto.
-2. **Dove si prova?** Installare un plugin non provato sul sito di produzione di una Fondazione non si fa. Serve sapere se esiste uno **staging** su SiteGround, o se si prova su un WordPress locale. Senza questa risposta il piano non ha un posto dove atterrare.
+**Tre decisioni da prendere prima di scrivere una riga.** Sono la ragione per cui questa fase non comincia dal codice:
+
+1. **Pagina dedicata o lavagna dentro una pagina normale?** È la domanda che viene prima di iframe/inline, e il brief l'aveva già decisa: la Fase 8 prescrive il template **Elementor Canvas**, «niente header/footer che rubano altezza verticale». Su una pagina Canvas la lavagna è sola, `html, body { position: fixed }` torna applicabile quasi com'è, e il rischio principale si sgonfia.
+
+   ⏳ **In attesa: Daniele lo chiede alla Fondazione** (18/09/2026). Finché non arriva la risposta, la Fase 8 non si apre — le decisioni 2 e 3 dipendono da questa.
+2. **Iframe o inline?** Dipende dalla 1. Con una pagina Canvas l'inline diventa praticabile e resta solo un problema di prefissi e specificità (CSS di Elementor su `button` e sulla tipografia, id generici `#hud`/`#tut`). Dentro una pagina normale, con header e footer, l'iframe è l'unica risposta sensata. Vedi «Il nodo dell'integrazione» sotto.
+3. **Dove si prova?** Installare un plugin non provato sul sito di produzione di una Fondazione non si fa. Serve sapere se esiste uno **staging** su SiteGround, o se si prova su un WordPress locale. Senza questa risposta il piano non ha un posto dove atterrare.
 
 Criterio di finito (da confermare quando le due decisioni sono prese):
 
@@ -29,15 +36,15 @@ Criterio di finito (da confermare quando le due decisioni sono prese):
 
 Fuori perimetro, e va detto se ci si avvicina:
 
-- **L'invio al backend** (Fase 6) e **la persistenza** (Fase 5). SALVA scarica, punto.
-- **Moderazione e gallery** (Fasi 8–9).
+- **L'export completo** (Fase 6), **la persistenza locale** (Fase 5) e **il backend** (Fase 7). SALVA scarica, punto.
+- **Hardening e legale** (Fase 9), **gallery e go-live** (Fase 10).
 - Il logo nell'export: dipendenza esterna ancora aperta.
 - Qualunque modifica al motore del gesso. Se l'integrazione sembra chiederla, è il segno che la strada scelta è sbagliata.
 
 Passi:
 
-1. [ ] **Rispondere alle due decisioni qui sopra.** Punto di fermata.
-2. [ ] **Provare il prototipo attuale su iPhone 13 Pro e Galaxy S10** (vedi «Non provato su device»). Va fatto *prima* dell'integrazione: se il tutorial ha un problema sul telefono, si scopre su un URL semplice e non dentro WordPress.
+1. [ ] **Rispondere alle tre decisioni qui sopra.** Punto di fermata.
+2. [x] **Provare il prototipo attuale sul telefono** — fatto il 18/09/2026: tutorial e SALVA funzionano.
 3. [ ] **Il plugin minimo**: una cartella `lavagna/` con l'header del plugin e uno shortcode che stampa l'app. Nessuna opzione, nessuna pagina di amministrazione.
 4. [ ] **Far convivere l'app con la pagina**: scroll, altezza, safe area, e «Torna al sito» che deve portare da qualche parte di sensato.
 5. [ ] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì.
@@ -45,7 +52,7 @@ Passi:
 
 Rischi aperti:
 
-- **La gestione dello scroll è la cosa più fragile che tocchiamo.** `html, body { position: fixed }` non si può mettere in una pagina WordPress, e tutta la tenuta su iOS della Fase 1 è costruita su quello.
+- **La gestione dello scroll è la cosa più fragile che tocchiamo.** Tutta la tenuta su iOS della Fase 1 è costruita su `html, body { position: fixed }`. Quanto sia un rischio dipende dalla decisione 1: in una pagina **Elementor Canvas** quelle regole tornano applicabili quasi com'è, perché nella pagina non c'è altro da far scorrere; in una pagina normale con header e footer non si possono mettere, e andrebbe riscritta la strategia — che è la DoD della Fase 1.
 - **Il CSS di Elementor e del tema.** Inline, la mensola erediterebbe regole su `button`, `padding`, `box-sizing` e la tipografia globale. In iframe il problema non esiste.
 - **Il plugin va su un sito di terzi**, vivo, di una Fondazione. Ogni prova ha un pubblico.
 - **Un plugin è codice destinato a durare.** Fra sei mesi nessuno ricorderà com'è fatto: merita un README suo dentro la cartella del plugin.
@@ -53,6 +60,8 @@ Rischi aperti:
 Costo stimato: 6 passi, di cui due sono attese o prove su device. L'ordine di grandezza dipende tutto dalla decisione 1: in iframe è una sessione, inline sono diverse e con il rischio di rompere la Fase 1.
 
 ### Il nodo dell'integrazione: iframe o inline
+
+> **Il brief aveva già sciolto questo nodo, e la sessione del 17/09 non se n'era accorta.** La Fase 8 prescrive il template **Elementor Canvas**: senza header né footer, nella pagina non c'è altro da far scorrere e il punto qui sotto quasi decade. Quanto segue vale integralmente solo nell'ipotesi di una pagina normale.
 
 **Inline** (lo shortcode stampa l'HTML della lavagna nella pagina): i font arrivano gratis da Elementor e non c'è un iframe da dimensionare. Ma:
 
@@ -108,15 +117,36 @@ Costo stimato: 6 passi, di cui due sono attese o prove su device. L'ordine di gr
 - **Il token GitHub è in chiaro** in `~/.claude/.secrets/github-pat.txt`, nella configurazione MCP utente e nel transcript del 05/09/2026: **da revocare e rigenerare**.
 - Il `.md` del brief ha il markdown escapato (`\---`, `\*\*`). È voluto, non va ripulito.
 
-### Non provato su device, e va fatto prima di integrare
+### Provato su device — 18/09/2026
 
-Aprire <https://issimissimo.com/temp/frmm-drawing-plugin-05/> su **iPhone 13 Pro (Safari)** e **Galaxy S10 (Chrome)**:
+Il **tutorial** e **SALVA** sono stati provati sul telefono e funzionano. Cade il ramo `navigator.share`, che era verificato solo con uno stub su Chrome desktop ed era tutta la ragione per cui esiste: il JPEG finisce dove deve.
 
-1. il tutorial parte alla prima apertura, il velo si legge con la luminosità di un telefono, il passo 1 dice **«con il dito»**, e ruotando lo schermo a tutorial aperto il riquadro segue la mensola;
-2. **SALVA su iPhone**: il JPEG deve finire in **Foto**, non nei Download di Safari. Il ramo `navigator.share` è verificato solo con uno stub su Chrome desktop, ed è tutta la ragione per cui esiste.
+Resta la verifica che nessun test automatico può dare, e che il brief mette come **DoD della Fase 4**: *«test con un utente reale sotto i 10 anni. Se chiede "come faccio a…", la UI è sbagliata.»* Non è mai stata fatta. Vale la pena notare che **il tutorial è nato perché la UI da sola non bastava**, che è precisamente il sintomo descritto lì: il test serve a sapere se il tutorial ha risolto o solo coperto.
 
-E la verifica che nessun test può dare: **il tutorial funziona?** Lo dice una persona che non ha mai visto l'app, preferibilmente un bambino.
+### Scostamenti dal brief, censiti il 18/09/2026
+
+Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti. Tre sono stati decisi, due sono deriva.
+
+- **D1, aspect ratio fisso 4:3 — violato, e il conto non è pagato.** Il brief lo prescrive con una sola motivazione dichiarata: «aspect fisso = gallery coerente» (Fase 10). Il codice fa altro: `freezeBoardHeight()` in `palette.js` fissa l'altezza **sulla finestra di apertura**, quindi `drawing.board.h` vale 1200 su desktop e altro su ogni telefono, e `export.js` propaga quel rapporto nel JPEG. La ragione è buona (su un telefono verticale il 4:3 lascia bande enormi) ma **la conseguenza sulla gallery non è scritta da nessuna parte**. Oggi non si vede perché gallery e invii non esistono. Va deciso prima della Fase 6, non alla 10: o una gallery che tollera proporzioni miste (masonry, che il brief cita), o un formato fisso imposto in export.
+- **Fase 5 (persistenza locale) è in scope v1 del brief**, §2, alla pari col canvas. Qui è diventata «fuori perimetro». Oggi il disegno si perde chiudendo la pagina: bambino sul telefono del genitore, arriva una telefonata, dieci minuti di lavoro spariti. È il difetto più visibile che il prototipo ancora ha.
+- **Export**: il brief (Fase 6) vuole tre risoluzioni — 400 / 1600 / 3200 — in PNG o WebP. Oggi è una sola a 1600 in JPEG. Per il download sul device il JPEG è la scelta giusta (400 KB, nessun artefatto sul nero); per archivio e gallery servirà il resto. Costo basso: `EXPORT_W` e `dimensioni()` sono già parametrizzati.
+- **§4 chiuso più restrittivamente del default del brief**: niente nickname, non «nickname facoltativo». Sceltа sana e semplifica, ma **il brief legge ancora `nickname?` nel payload di §6**: va annotato lì, o alla Fase 7 qualcuno lo implementerà.
+- **DoD della Fase 0 ancora incompleta**: testo del form di invio e decisione legale non scritti. Riduzione voluta, che torna bloccante alla Fase 6 e alla 9.
 
 ## Prossimo passo
 
-Provare il prototipo sui due telefoni veri (i due punti qui sopra). Solo dopo si apre la Fase 7, e la prima cosa che chiede è la scelta fra iframe e inline.
+**Il test con un bambino** — scelto il 18/09/2026. È la DoD della Fase 4 nel brief, non è mai stata soddisfatta, costa un pomeriggio e zero righe di codice. Si fa su <https://issimissimo.com/temp/frmm-drawing-plugin-05/>, da un telefono, con qualcuno fra i 5 e i 12 anni che non ha mai visto l'app.
+
+Cosa si guarda, e non è la stessa cosa che chiedere se gli è piaciuto:
+
+1. **Arriva in fondo al tutorial da solo**, o lo chiude al terzo passo? Se lo chiude, la domanda è se poi disegna lo stesso.
+2. **Quali domande fa.** Il brief è netto: «se chiede *come faccio a…*, la UI è sbagliata». Vanno annotate testualmente, non riassunte: la parola che usa per una cosa è più informativa dell'icona che stiamo usando noi.
+3. **Trova il cancellino?** È il tasto che ha già richiesto un intervento del cliente per leggibilità.
+4. **Cambia colore e spessore senza che glielo si dica?**
+5. **Cosa fa dopo aver finito**, se cerca un modo di tenere il disegno senza che nessuno gli indichi SALVA.
+
+L'esito decide se la Fase 4 si chiude davvero o se ha un giro di correzioni — che è molto meglio scoprire prima di impacchettare tutto in un plugin WordPress.
+
+Bloccato in attesa: **la Fase 8** non si apre finché la Fondazione non dice se la lavagna va in una pagina dedicata o dentro una pagina del sito.
+
+Aperto e non assegnato: **D1**, il rapporto della lavagna. Non urge finché non esistono gli invii, ma costa un'ora oggi e una riscrittura alla Fase 10.
