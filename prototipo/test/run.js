@@ -473,15 +473,16 @@ test('tutorial: i sette passi puntano a elementi che esistono nella mensola', ()
   // Non c'e' DOM qui: si controlla che i selettori siano quelli scritti in
   // index.html. Se qualcuno rinomina un id, il tutorial punterebbe al vuoto.
   const attesi = ['#layers', '#chalks', '#widths .wbtn i', '#tool-eraser',
-                  '#btn-undo,#btn-redo', '#btn-clear', '#btn-save'];
+                  '#btn-undo', '#btn-clear', '#btn-save'];
   assert(STEPS.length === 7, `${STEPS.length} passi invece di 7`);
   STEPS.forEach((s, i) => assert(s.sel === attesi[i], `passo ${i + 1}: ${s.sel}`));
   for (const s of STEPS) assert(s.testo.trim().length > 0, 'un passo senza testo');
 });
 
 test('tutorial: il primo passo dice "dito" sul dito e "mouse" col mouse', () => {
-  assert(testoStep(0, true).includes('con il dito'), testoStep(0, true));
-  assert(testoStep(0, false).includes('con il mouse'), testoStep(0, false));
+  // Maiuscole: dal 18/09/2026 il segnaposto apre la frase.
+  assert(testoStep(0, true).startsWith('Con il dito'), testoStep(0, true));
+  assert(testoStep(0, false).startsWith('Con il mouse'), testoStep(0, false));
   // Nessun altro passo cambia col device: un {cosa} dimenticato resterebbe
   // in chiaro nel testo mostrato al bambino.
   for (let i = 1; i < STEPS.length; i++) {

@@ -238,7 +238,6 @@ eraserBtn.addEventListener('click', () => {
 /* ---------- comandi ---------- */
 
 const btnUndo = document.getElementById('btn-undo');
-const btnRedo = document.getElementById('btn-redo');
 const btnClear = document.getElementById('btn-clear');
 /**
  * Puo' essere null, e non e' teoria: il proxy di SiteGround tiene in cache
@@ -251,13 +250,11 @@ const btnSave = document.getElementById('btn-save');
 
 function syncButtons() {
   btnUndo.disabled = !history.canUndo;
-  btnRedo.disabled = !history.canRedo;
   // Una lavagna di sole gommate non e' un disegno: vedi haDisegno().
   if (btnSave) btnSave.disabled = !haDisegno(drawing);
 }
 
 btnUndo.addEventListener('click', () => { if (history.undo()) { repaint(); syncButtons(); } });
-btnRedo.addEventListener('click', () => { if (history.redo()) { repaint(); syncButtons(); } });
 
 btnClear.addEventListener('click', () => {
   if (!history.count) return;
@@ -303,10 +300,12 @@ document.getElementById('btn-back').addEventListener('click', () => {
   if (window.history.length > 1) window.history.back();
 });
 
+// Niente Ctrl+Y ne' Ctrl+Shift+Z: tolto il pulsante rifai (18/09/2026), una
+// scorciatoia che lo fa lo stesso sarebbe una via nascosta che contraddice
+// quel che la mensola dichiara.
 document.addEventListener('keydown', (e) => {
   if (!(e.ctrlKey || e.metaKey)) return;
   if (e.key === 'z' && !e.shiftKey) { if (history.undo()) { repaint(); syncButtons(); } e.preventDefault(); }
-  else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { if (history.redo()) { repaint(); syncButtons(); } e.preventDefault(); }
 });
 
 /* ---------- layout ---------- */

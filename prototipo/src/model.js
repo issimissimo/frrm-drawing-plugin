@@ -39,6 +39,13 @@ export function createStroke({ tool = 'chalk', color, width, seed = makeSeed() }
 }
 
 /**
+ * ⚠️ Dal 18/09/2026 `redo()` e `canRedo` NON sono raggiungibili dall'interfaccia:
+ * il pulsante rifai e' stato tolto su richiesta del cliente, insieme alla
+ * scorciatoia da tastiera. Restano qui perche' il giorno in cui lo
+ * rivolessero e' un pulsante da ricablare, non una funzione da riscrivere —
+ * ma non sono codice vivo. Chi legge `canRedo` in giro per il programma sta
+ * guardando qualcosa che nessuno aggiorna piu'.
+ *
  * Undo e redo. Con gli stroke in un array costano quanto un pop, che e' il
  * motivo per cui D1 sceglie il vettoriale.
  */

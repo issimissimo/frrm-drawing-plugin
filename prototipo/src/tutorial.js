@@ -61,17 +61,20 @@ export const chiaveVisto = (percorso = percorsoCorrente()) => `${CHIAVE_VISTO}:$
  * `{cosa}` diventa "con il dito" o "con il mouse": vedi testoStep().
  */
 export const STEPS = [
-  { sel: '#layers',            pad: -10, testo: 'Disegna nell’area tratteggiata {cosa}.' },
-  { sel: '#chalks',                      testo: 'Scegli il colore del gessetto.' },
+  { sel: '#layers',            pad: -10, testo: '{cosa} disegni nell’area tratteggiata.' },
+  { sel: '#chalks',                      testo: 'Qui scegli il colore del gessetto.' },
   // Punta ai SEGNI, non ai pulsanti. I .wbtn sono alti --stick-h (64px sul
   // telefono, 94 sul desktop) perche' devono essere bersagli da dito, ma il
   // segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante
   // invade i gessetti sopra e SALVA sotto. Misurato il 18/09/2026 a 360px.
   // Prendendo gli <i> il riquadro abbraccia quel che si vede, e la cosa
   // funziona da sola sui due layout senza una costante da mantenere.
-  { sel: '#widths .wbtn i',              testo: 'Scegli un gessetto sottile, medio o grosso.' },
-  { sel: '#tool-eraser',                 testo: 'Il cancellino toglie un pezzo di disegno.' },
-  { sel: '#btn-undo,#btn-redo',          testo: 'Hai sbagliato un segno? Torna indietro.' },
+  { sel: '#widths .wbtn i',              testo: 'Qui scegli lo spessore del gessetto: sottile, medio o grosso.' },
+  { sel: '#tool-eraser',                 testo: 'Con il cancellino togli un pezzo di disegno.' },
+  // Un solo pulsante dal 18/09/2026: rifai e' stato tolto su richiesta del
+  // cliente. Prima il riquadro univa annulla e rifai, due pulsanti e un
+  // concetto.
+  { sel: '#btn-undo',                    testo: 'Hai sbagliato qualcosa? Torna indietro.' },
   { sel: '#btn-clear',                   testo: 'Butta via tutto e ricomincia da zero.' },
   { sel: '#btn-save',                    testo: 'Salva e condividi il disegno. Inoltre i più belli li faremo vedere a tutti!' },
 ];
@@ -85,7 +88,8 @@ export const STEPS = [
  * grande resta "dito", una finestra desktop stretta resta "mouse".
  */
 export function testoStep(i, coarse) {
-  return STEPS[i].testo.replace('{cosa}', coarse ? 'con il dito' : 'con il mouse');
+  // Maiuscole: dal 18/09/2026 il segnaposto apre la frase.
+  return STEPS[i].testo.replace('{cosa}', coarse ? 'Con il dito' : 'Con il mouse');
 }
 
 /**

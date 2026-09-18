@@ -215,7 +215,9 @@ Le cose che non si leggono dal codice:
 
 **Il `?` sta in fondo alla riga dei comandi, dopo il cestino** — spostato il 18/09/2026 su segnalazione del cliente. Prima era il primo della riga, quindi confinava con gli spessori: si toccava per sbaglio scegliendo un tratto, e il tutorial ripartiva in mezzo a un disegno. È il peggior vicino possibile per un controllo che si usa mentre si disegna. In fondo non confina con niente di analogo, e il `margin` che lo staccava è passato da `right` a `left`.
 
-Resta che accanto agli spessori ora c'è **annulla**: se lo si sfiora si perde l'ultimo tratto, ma rifai è lì di fianco. Un danno reversibile al posto di uno invasivo.
+**Rifai è stato tolto poche ore dopo**, e ha sistemato da solo il resto: `.cmds` è allineato a destra, quindi togliendo un pulsante i comandi sono scivolati là e l'aria fra l'ultimo segno di spessore e annulla è passata da **10px a 54px**. Il vicino pericoloso degli spessori non c'è più.
+
+⚠️ **Ma annulla ora è irreversibile.** Finché c'era rifai, sfiorare annulla costava un secondo; oggi il tratto è perso. È il motivo per cui quei 54px contano più di prima, e per cui la scorciatoia `Ctrl+Y` è stata tolta insieme al pulsante: una via nascosta che rifà contraddirebbe quello che la mensola dichiara. `history.redo()` esiste ancora in `model.js`, ma **nessuno la chiama** — è lì per il giorno in cui la rivolessero.
 
 **Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
 
