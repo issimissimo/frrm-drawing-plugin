@@ -239,6 +239,8 @@ Il bordo a 2,89 **non è una conseguenza del tutorial**: è la grammatica dei ta
 
 **La gerarchia fra i due tasti sta tutta nel contenitore.** Da quando RIPETI è bianco, i due hanno **lo stesso colore di testo**: si distinguono perché HO CAPITO ha fondo e bordo e RIPETI no — un tasto contro un link. Prima RIPETI era a `--dim` e la differenza stava anche nel colore. Funziona, ma è una gerarchia che regge su un solo dispositivo invece che su due: togliere il bordo a HO CAPITO la azzererebbe.
 
+**SALVA spento ha anche il fondo spento** (`#FFFFFF08` invece di `#FFFFFF1A`, cliente 18/09/2026): con il fondo pieno sembrava un tasto premibile con la scritta sbiadita. È l'unico `.btn` che vada mai in `disabled`, quindi la regola sta su `.btn:disabled` e non tocca nient'altro. **Dentro il tutorial il fondo torna pieno** insieme a testo e bordo: al passo 7 l'app sta indicando SALVA e deve mostrarlo com'è da acceso.
+
 **Durante il tutorial i tasti spenti si accendono, ma solo nell'aspetto.** Alla prima apertura non c'è un disegno, quindi annulla, rifai e SALVA sono `disabled` e il cestino sta a `--dim`: quattro passi su sette evidenziavano un'area in cui non si vedeva niente. `data-tutorial` sul `<body>` alza il colore — `disabled` resta, i tasti restano inerti, e comunque il velo intercetta i tocchi. Il contrasto sul fondo della mensola passa da 1,57 a 9,9 su annulla e da 1,57 a 15,06 su SALVA. Per la durata del tutorial il cestino perde la sua gerarchia più bassa: a `--dim` sotto il velo era illeggibile quanto gli altri.
 
 ## Salva e scarica il disegno

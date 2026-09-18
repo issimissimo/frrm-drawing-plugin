@@ -406,7 +406,15 @@
   .btn.secondario { color: var(--dim); border-color: transparent; }
   .btn.secondario:hover { color: var(--ink); }
   .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  .btn:disabled { color: #3C4247; border-color: #FFFFFF14; cursor: default; }
+  /* Spento vuol dire spento anche nel fondo (18/09/2026): con --btn-bg pieno
+     SALVA sembrava un tasto premibile con la scritta sbiadita. Riguarda solo
+     SALVA — e' l'unico .btn che vada mai in disabled. */
+  .btn:disabled {
+    color: #3C4247;
+    background: #FFFFFF08;
+    border-color: #FFFFFF14;
+    cursor: default;
+  }
 
   /* ---------- salva ----------
      Un tasto solo al posto di SCARICA + INVIA (17/09/2026): e' l'azione
@@ -558,8 +566,12 @@
      gerarchia piu' bassa. E' il minore dei due mali. */
   body[data-tutorial] .cmd:disabled,
   body[data-tutorial] #btn-clear { color: var(--ink); }
+  /* Torna anche il fondo, non solo testo e bordo: al passo 7 il tutorial
+     indica SALVA, e deve mostrarlo com'e' da acceso. Fuori dal tutorial resta
+     quasi trasparente. */
   body[data-tutorial] .btn:disabled {
     color: #FAF8F3;
+    background: var(--btn-bg);
     border-color: var(--btn-border);
   }
 
