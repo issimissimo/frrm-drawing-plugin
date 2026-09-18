@@ -134,7 +134,7 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-09/> — con `?tutorial` in coda il tutorial parte comunque.
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-10/> — con `?tutorial` in coda il tutorial parte comunque.
 
 ⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente. La `-05` non ha difetti — è solo priva delle correzioni del 18/09/2026 (AVANTI, riquadro degli spessori, tratteggio animato in arancione, corpi più grandi) e serve da confronto. La `-06` è **il giro intermedio con i tasti arancioni**, rientrato poche ore dopo: non va data al cliente, perché mostra una scelta che è stata annullata. La `-07` è buona ma precede lo spostamento del `?` e il fondo spento di SALVA.
 
@@ -144,7 +144,11 @@ Cartella **numerata**, dal 17/09/2026: il link da dare al cliente è quello, sen
 
 Solo `prototipo/index.html`, `prototipo/src/` e `prototipo/font/` — i test e `package.json` non servono in rete. I percorsi sono tutti relativi, quindi la cartella si può spostare.
 
-Lo script di caricamento sta in `.lavoro/pubblica.sh`: prende il numero di cartella come argomento, carica i 12 file e rilegge il listing per confronto.
+Lo script di caricamento sta in `.lavoro/pubblica.sh`: prende il numero di cartella come argomento, carica i 16 file (`index.html`, 12 moduli, 3 font) e rilegge il listing per confronto.
+
+⚠️ **Lo script usa `--ftp-ssl-control`, e non è una svista.** Questo server manda il `close notify` ma non completa lo shutdown TLS del **canale dati**: curl aspetta 10 secondi a ogni trasferimento, e con 16 file erano ~3 minuti. Misurato il 18/09/2026 nel trace (`* SSL shutdown timeout`), dopo aver scambiato due volte quel tempo per lentezza della rete mentre la banda era 21 Mbit/s. Togliendo il TLS dal solo canale dati si passa da 11,3s a 0,98s per operazione.
+
+Il prezzo è che **i file viaggiano in chiaro**: accettabile qui perché sono già in un repo pubblico, e le credenziali restano sul canale di controllo, che è cifrato. **Non va copiato** in uno script che carichi dati di clienti o roba non pubblica. E `--ssl-reqd` annulla `--ftp-ssl-control`: i due non si mettono insieme.
 
 Credenziali FTP in `~/.claude/.secrets/ftp-siteground.env`, condivise fra i progetti del workspace; le regole d’uso stanno in `~/.claude/rules/credenziali.md`.
 
