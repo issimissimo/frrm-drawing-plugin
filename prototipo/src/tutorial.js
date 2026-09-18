@@ -61,22 +61,22 @@ export const chiaveVisto = (percorso = percorsoCorrente()) => `${CHIAVE_VISTO}:$
  * `{cosa}` diventa "con il dito" o "con il mouse": vedi testoStep().
  */
 export const STEPS = [
-  { sel: '#layers',            pad: -10, testo: '{cosa} disegni nell’area tratteggiata.' },
-  { sel: '#chalks',                      testo: 'Qui scegli il colore del gessetto.' },
+  { sel: '#layers',            pad: -10, testo: 'In questa zona dello schermo potrai disegnare con il tuo {cosa}.' },
+  { sel: '#chalks',                      testo: 'Qui potrai scegliere il colore del gessetto da utilizzare.' },
   // Punta ai SEGNI, non ai pulsanti. I .wbtn sono alti --stick-h (64px sul
   // telefono, 94 sul desktop) perche' devono essere bersagli da dito, ma il
   // segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante
   // invade i gessetti sopra e SALVA sotto. Misurato il 18/09/2026 a 360px.
   // Prendendo gli <i> il riquadro abbraccia quel che si vede, e la cosa
   // funziona da sola sui due layout senza una costante da mantenere.
-  { sel: '#widths .wbtn i',              testo: 'Qui scegli lo spessore del gessetto: sottile, medio o grosso.' },
-  { sel: '#tool-eraser',                 testo: 'Con il cancellino togli un pezzo di disegno.' },
+  { sel: '#widths .wbtn i',              testo: 'Qui potrai scegliere lo spessore del gessetto da utilizzare: sottile, medio o grosso.' },
+  { sel: '#tool-eraser',                 testo: 'Con il cancellino potrai cancellare parti del tuo disegno.' },
   // Un solo pulsante dal 18/09/2026: rifai e' stato tolto su richiesta del
   // cliente. Prima il riquadro univa annulla e rifai, due pulsanti e un
   // concetto.
-  { sel: '#btn-undo',                    testo: 'Hai sbagliato qualcosa? Torna indietro.' },
-  { sel: '#btn-clear',                   testo: 'Butta via tutto e ricomincia da zero.' },
-  { sel: '#btn-save',                    testo: 'Salva e condividi il disegno. Inoltre i più belli li faremo vedere a tutti!' },
+  { sel: '#btn-undo',                    testo: 'Se hai sbagliato qualcosa niente paura, torna indietro con questo tasto.' },
+  { sel: '#btn-clear',                   testo: 'Se vuoi ricominciare da capo clicca qui per cancellare tutto.' },
+  { sel: '#btn-save',                    testo: 'Quando ti piace il tuo disegno, condividilo con noi e con i tuoi amici. I più belli li faremo vedere a tutti!' },
 ];
 
 /**
@@ -88,8 +88,7 @@ export const STEPS = [
  * grande resta "dito", una finestra desktop stretta resta "mouse".
  */
 export function testoStep(i, coarse) {
-  // Maiuscole: dal 18/09/2026 il segnaposto apre la frase.
-  return STEPS[i].testo.replace('{cosa}', coarse ? 'Con il dito' : 'Con il mouse');
+  return STEPS[i].testo.replace('{cosa}', coarse ? 'dito' : 'mouse');
 }
 
 /**
@@ -140,7 +139,7 @@ export function segnaVisto(store = globalThis.localStorage, percorso = percorsoC
  * Crea il tutorial sugli elementi passati. Non li cerca da solo: main.js li
  * prende con la sua guardia, che esiste per un motivo (vedi README).
  */
-export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti, btnRipeti }) {
+export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti, btnRipeti, btnChiudi }) {
   if (!root || !spot || !panel) return null;
 
   let i = 0;
@@ -201,6 +200,10 @@ export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti,
     disegna();
   });
   btnRipeti.addEventListener('click', () => apri(0));
+  // Opzionale: l'HTML in cache di SiteGround puo' non averlo ancora. Senza
+  // guardia il modulo morirebbe all'avvio e la lavagna non si aprirebbe —
+  // stesso motivo per cui main.js protegge btnSave.
+  if (btnChiudi) btnChiudi.addEventListener('click', chiudi);
 
   // Il riquadro e' in coordinate di viewport: ruotare il telefono o cambiare
   // la finestra lo lascia dov'era. Stesso ritardo di relayout() in main.js.

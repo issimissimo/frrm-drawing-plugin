@@ -501,17 +501,52 @@
     transform: translateX(-50%);
     width: min(430px, calc(100vw - 32px));
     box-sizing: border-box;
-    padding: 22px 24px 18px;
+    /* 26 in testa e non 22: il tasto di chiusura arriva a 44px dal bordo, e
+       il testo del passo deve cominciare sotto. */
+    padding: 26px 24px 18px;
     background: #272C31;
     box-shadow: 0 30px 70px -18px rgba(0, 0, 0, 0.92);
     transition: top .34s cubic-bezier(.4, 0, .2, 1);
   }
+
+  /* Il segno e' piccolo (13px) ma il bersaglio e' 44, come gli altri comandi
+     della mensola: discreto all'occhio e prendibile col dito. Nessun fondo e
+     nessun bordo — un altro contenitore in una finestra gia' piccola. */
+  #btn-chiudi {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    /* --dim e non --off: a --off il segno dava 2,08:1 sul fondo della
+       finestra, sotto la soglia di 3 per un controllo, e a cinque anni non
+       si vedeva. --dim da' 3,11 e resta discreto — e' lo stesso grigio del
+       cestino nella mensola. */
+    color: var(--dim);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color .14s;
+  }
+  #btn-chiudi svg { width: 13px; height: 13px; }
+  #btn-chiudi:hover { color: var(--ink); }
+  #btn-chiudi:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
 
   /* L'importanza si dichiara con corpo e peso su fondo condiviso. "PASSO n DI
      7" e' anche l'unico indicatore di avanzamento: sette pallini sarebbero
      sette dispositivi grafici per quel che porta una riga di testo. */
   #step-n {
     margin: 0 0 10px;
+    /* Tiene l'etichetta fuori da sotto la X: e' l'unica riga che le sta
+       accanto, il testo del passo comincia piu' in basso. Misurato il
+       18/09/2026 — senza, la prima riga ci passava sotto in quattro passi
+       su sette. */
+    padding-right: 46px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -705,6 +740,14 @@
     <svg id="spot-line" aria-hidden="true"><rect width="100%" height="100%"/></svg>
   </div>
   <div id="panel" role="dialog" aria-modal="true" aria-labelledby="step-t">
+    <!-- Chiude il tutorial da qualunque passo. Sta nell'angolo e lontano da
+         AVANTI proprio perche' il 17/09/2026 un CHIUDI accanto al tasto
+         primario era stato escluso: si toccava per sbaglio. -->
+    <button type="button" id="btn-chiudi" aria-label="Chiudi il tutorial">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+      </svg>
+    </button>
     <p id="step-n"></p>
     <p id="step-t"></p>
     <div class="row">

@@ -480,9 +480,12 @@ test('tutorial: i sette passi puntano a elementi che esistono nella mensola', ()
 });
 
 test('tutorial: il primo passo dice "dito" sul dito e "mouse" col mouse', () => {
-  // Maiuscole: dal 18/09/2026 il segnaposto apre la frase.
-  assert(testoStep(0, true).startsWith('Con il dito'), testoStep(0, true));
-  assert(testoStep(0, false).startsWith('Con il mouse'), testoStep(0, false));
+  // Il segnaposto ha gia' cambiato posto due volte nella frase: si controlla
+  // che la parola ci sia, non dove sta.
+  assert(testoStep(0, true).includes('dito'), testoStep(0, true));
+  assert(testoStep(0, false).includes('mouse'), testoStep(0, false));
+  assert(!testoStep(0, true).includes('mouse'), 'sul dito non deve comparire il mouse');
+  assert(!testoStep(0, false).includes('dito'), 'col mouse non deve comparire il dito');
   // Nessun altro passo cambia col device: un {cosa} dimenticato resterebbe
   // in chiaro nel testo mostrato al bambino.
   for (let i = 1; i < STEPS.length; i++) {

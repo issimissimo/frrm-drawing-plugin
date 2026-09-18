@@ -186,7 +186,7 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 | Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato arancione, che scorre |
 | Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
 | Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
-| Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
+| Uscita | la `×` in alto a destra da qualunque passo, HO CAPITO all'ultimo, `Esc` da tastiera |
 | «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1:<percorso>` |
 | Per rivederlo | il `?` in fondo a destra nella mensola, o `?tutorial` in coda all'URL |
 
@@ -198,7 +198,15 @@ Le cose che non si leggono dal codice:
 
 **Il velo intercetta i tocchi, ed è voluto.** Mentre il tutorial è aperto non si disegna e non si toccano gli strumenti: verificato che `elementFromPoint` sul centro della lavagna restituisca `#tut` e che chiudendo il tutorial senza aver toccato nulla il disegno resti vuoto.
 
-**Non c'è un CHIUDI nei primi sei passi.** È una richiesta esplicita: un CHIUDI accanto ad AVANTI si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo è che chi lo riapre col `?` deve fare sette tocchi per uscirne — `Esc` funziona, ma non sul dito. Se dà fastidio, la correzione è una `×` discreta nell'angolo, lontana da AVANTI.
+**Si chiude con la `×` in alto a destra, e la storia di quel tasto spiega dov'è.** Il 17/09/2026 un CHIUDI era stato escluso su richiesta: accanto ad AVANTI si tocca per sbaglio e il tutorial sparisce prima di aver spiegato niente. Il prezzo era che chi lo riapriva col `?` doveva fare sette tocchi per uscirne, e il 18/09/2026 il cliente ha chiesto il tasto. È la correzione che il README stesso prevedeva: **una `×` discreta nell'angolo, lontana da AVANTI**, non un CHIUDI accanto al tasto primario.
+
+Tre misure, tutte verificate:
+
+- **bersaglio 40×40 con il segno a 13px**: discreto all'occhio e prendibile col dito. Nessun fondo e nessun bordo — un altro contenitore in una finestra piccola.
+- **colore `--dim`, non `--off`**: a `--off` il contrasto sul fondo della finestra era `2,08:1`, sotto la soglia di 3 per un controllo, e a cinque anni non si vedeva. `--dim` dà `3,11:1` ed è lo stesso grigio del cestino.
+- **il pannello ha `padding-top: 26px` e l'etichetta `padding-right: 46px`**: senza, la prima riga di testo passava sotto la `×` in quattro passi su sette. Misurato coi rect reali delle righe, non con la box del paragrafo — quella è larga quanto il pannello e non dice niente.
+
+Chiude da qualunque passo, segna il tutorial come visto e ripulisce `data-tutorial` dal body, esattamente come HO CAPITO.
 
 **Il velo su desktop mostra due grigi**, ed è normale: la lavagna è `#1F2225` e il fondo pagina `#15171A`, quindi sotto il velo la lavagna resta la zona più chiara. Non è un riquadro di troppo.
 

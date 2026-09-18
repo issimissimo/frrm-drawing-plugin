@@ -453,6 +453,7 @@ const tutorial = createTutorial({
   testo: document.getElementById('step-t'),
   btnAvanti: document.getElementById('btn-avanti'),
   btnRipeti: document.getElementById('btn-ripeti'),
+  btnChiudi: document.getElementById('btn-chiudi'),
 });
 
 const btnHelp = document.getElementById('btn-help');
