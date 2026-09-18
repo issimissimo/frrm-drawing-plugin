@@ -6,7 +6,7 @@ Versione corrente: prototipo fasi 0–4b. Nessun numero di versione.
 
 Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla/rifai, e il disegno si **scarica in JPEG** sul device. Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura, SCARICA e INVIA sono un solo **SALVA**, e i tasti hanno lo stile del sito della Fondazione.
 
-Online: <https://issimissimo.com/temp/frmm-drawing-plugin-06/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **44 test** (`node test/run.js`).
+Online: <https://issimissimo.com/temp/frmm-drawing-plugin-07/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **44 test** (`node test/run.js`).
 
 **Provato su telefono il 18/09/2026: il tutorial funziona e SALVA funziona.** Cadono i due punti che erano in sospeso dal 17/09. Resta non fatta la sola verifica che nessun automatismo può dare: **il test con un bambino**, che è la DoD della Fase 4 nel brief e non è mai stata soddisfatta.
 
@@ -143,7 +143,7 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Il test con un bambino** — scelto il 18/09/2026. È la DoD della Fase 4 nel brief, non è mai stata soddisfatta, costa un pomeriggio e zero righe di codice. Si fa su <https://issimissimo.com/temp/frmm-drawing-plugin-06/>, da un telefono, con qualcuno fra i 5 e i 12 anni che non ha mai visto l'app.
+**Il test con un bambino** — scelto il 18/09/2026. È la DoD della Fase 4 nel brief, non è mai stata soddisfatta, costa un pomeriggio e zero righe di codice. Si fa su <https://issimissimo.com/temp/frmm-drawing-plugin-07/>, da un telefono, con qualcuno fra i 5 e i 12 anni che non ha mai visto l'app.
 
 Cosa si guarda, e non è la stessa cosa che chiedere se gli è piaciuto:
 
