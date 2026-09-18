@@ -151,7 +151,7 @@ export function createTutorial({ root, spot, panel, etichetta, testo, btnAvanti,
     const s = STEPS[i];
     const ultimo = i === STEPS.length - 1;
 
-    etichetta.textContent = `TUTORIAL: PASSO ${i + 1} DI ${STEPS.length}`;
+    etichetta.textContent = `ISTRUZIONI: ${i + 1} DI ${STEPS.length}`;
     testo.textContent = testoStep(i, coarse);
     btnAvanti.querySelector('span').textContent = ultimo ? 'HO CAPITO' : 'AVANTI';
     // All'ultimo passo il tasto chiude: una freccia "avanti" direbbe che c'e'

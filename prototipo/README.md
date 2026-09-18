@@ -185,7 +185,7 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 |---|---|
 | Evidenziazione | velo `rgba(8,9,11,.78)` più riquadro tratteggiato arancione, che scorre |
 | Finestra | nella metà opposta all'area, mai sopra ciò che spiega |
-| Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
+| Avanzamento | «ISTRUZIONI: n DI 7», nessun pallino |
 | Uscita | la `×` in alto a destra da qualunque passo, HO CAPITO all'ultimo, `Esc` da tastiera |
 | «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1:<percorso>` |
 | Per rivederlo | il `?` in fondo a destra nella mensola, o `?tutorial` in coda all'URL |
@@ -229,7 +229,7 @@ Chiude da qualunque passo, segna il tutorial come visto e ripulisce `data-tutori
 
 **Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
 
-**L'arancione istituzionale vive qui dentro, e solo qui** (cliente, 18/09/2026: si parla di bambini). Porta **il tratteggio animato e l'etichetta «PASSO n DI 7»** a 11px. Nella mensola non entra: lì nove gessetti portano già informazione col colore, e un tasto arancione pieno sarebbe l'elemento più colorato dello schermo senza dire nulla. Sotto il velo i gessetti sono spenti, quindi l'obiezione cade e l'arancione resta l'unica cosa accesa — che è esattamente il punto.
+**L'arancione istituzionale vive qui dentro, e solo qui** (cliente, 18/09/2026: si parla di bambini). Porta **il tratteggio animato e l'etichetta «ISTRUZIONI: n DI 7»** a 11px. Nella mensola non entra: lì nove gessetti portano già informazione col colore, e un tasto arancione pieno sarebbe l'elemento più colorato dello schermo senza dire nulla. Sotto il velo i gessetti sono spenti, quindi l'obiezione cade e l'arancione resta l'unica cosa accesa — che è esattamente il punto.
 
 **Sui tasti c'è passato per un giro, ed è stato tolto** (stesso giorno, richiesta del cliente). AVANTI / HO CAPITO sono tornati alla grammatica dei tasti presa dal sito: testo `#FAF8F3`, bordo `2px #FFFFFF54`, fondo `#FFFFFF1A`. Se qualcuno ci riprovasse, sappia che il contrasto del testo scendeva da 9,69:1 a **3,39:1** e quello del bordo a 2,10:1 — l'arancione istituzionale su un fondo tasto chiaro non ci arriva, e lo sfondo era da lasciare com'era.
 
@@ -239,7 +239,7 @@ Chiude da qualunque passo, segna il tutorial come visto e ripulisce `data-tutori
 
 | | rapporto | soglia | |
 |---|---|---|---|
-| «PASSO n DI 7» arancione, 11px/700 | 4,64:1 | 4,5 | passa |
+| «ISTRUZIONI: n DI 7» arancione, 11px/700 | 4,64:1 | 4,5 | passa |
 | testo del passo, 19px | 12,22:1 | 4,5 | passa |
 | HO CAPITO / AVANTI | 9,69:1 | 4,5 | passa |
 | RIPETI bianco su trasparente | 13,27:1 | 4,5 | passa |

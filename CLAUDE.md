@@ -18,7 +18,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Stato
 
-> **Fase 4b (tutorial) chiusa il 17/09/2026**, più due tornate di correzioni del cliente il 18/09/2026: prima AVANTI al posto di PROSSIMO, testo del passo 3, riquadro degli spessori sui segni e non sui pulsanti, tratteggio animato e margine della mensola a 16px su mobile; poi **l'arancione istituzionale dentro il tutorial** e i testi più grandi, perché si parla di bambini. L'arancione era passato anche sui tasti AVANTI / HO CAPITO ed è stato tolto poche ore dopo, su richiesta: restano arancioni **solo il tratteggio e l'etichetta «PASSO n DI 7»**. Il prototipo è consegnabile e online.
+> **Fase 4b (tutorial) chiusa il 17/09/2026**, più due tornate di correzioni del cliente il 18/09/2026: prima AVANTI al posto di PROSSIMO, testo del passo 3, riquadro degli spessori sui segni e non sui pulsanti, tratteggio animato e margine della mensola a 16px su mobile; poi **l'arancione istituzionale dentro il tutorial** e i testi più grandi, perché si parla di bambini. L'arancione era passato anche sui tasti AVANTI / HO CAPITO ed è stato tolto poche ore dopo, su richiesta: restano arancioni **solo il tratteggio e l'etichetta «ISTRUZIONI: n DI 7»**. Il prototipo è consegnabile e online.
 >
 > **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
@@ -137,6 +137,8 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 **Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-10/> — con `?tutorial` in coda il tutorial parte comunque.
 
 ⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente. La `-05` non ha difetti — è solo priva delle correzioni del 18/09/2026 (AVANTI, riquadro degli spessori, tratteggio animato in arancione, corpi più grandi) e serve da confronto. La `-06` è **il giro intermedio con i tasti arancioni**, rientrato poche ore dopo: non va data al cliente, perché mostra una scelta che è stata annullata. La `-07` è buona ma precede lo spostamento del `?` e il fondo spento di SALVA.
+
+⚠️ **La `-11` e la `-12` sono state ritirate il 18/09/2026**: contengono i **gessetti accorciati** e, la `-12`, anche la finestra del tutorial compattata. Il cliente ha cambiato idea poche ore dopo averli chiesti, e il codice è tornato indietro con un `reset --hard` su `ac04733`. **Non vanno date a nessuno**: mostrano una mensola che il progetto non ha più. Restano online come tutte le altre — si lasciano dove sono, non si cancella niente dall'FTP.
 
 ⚠️ **La cartella numerata batte la cache HTTP, non il `localStorage`**, che è per origine: tutte le versioni sotto `temp/` condividono lo stesso archivio. Qualunque stato che il prototipo ricorda va messo in una chiave che porta dentro `location.pathname`, altrimenti una versione nuova eredita quel che sapeva la precedente — ed è già costato un "il tutorial non parte più" il 17/09/2026. Vedi `chiaveVisto()` in `prototipo/src/tutorial.js`.
 
