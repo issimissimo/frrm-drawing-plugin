@@ -39,6 +39,18 @@ export function freezeBoardHeight(aspect) {
 /** Oltre 2 il costo di fill rate non ripaga: un iPhone a DPR 3 perde frame. */
 export const DPR_CAP = 2;
 
+/**
+ * Sotto questa larghezza CSS della lavagna lo schermo e' "stretto".
+ *
+ * Non e' una media query: e' la larghezza REALE della lavagna, quindi vale
+ * anche per una finestra desktop rimpicciolita o per un telefono in
+ * orizzontale. Una soglia sola per tutte le decisioni che ne dipendono —
+ * oggi il raddoppio degli strumenti (main.js) e la misura del logo
+ * sull'immagine salvata (export.js) — cosi' che "stretto" voglia dire la
+ * stessa cosa dappertutto.
+ */
+export const SOGLIA_STRETTA = 700;
+
 export const BOARD_BG = '#1F2225';
 
 /**

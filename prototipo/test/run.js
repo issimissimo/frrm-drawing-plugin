@@ -11,7 +11,9 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
-import { nomeFile, haDisegno, dimensioni, EXPORT_W } from '../src/export.js';
+import { nomeFile, haDisegno, dimensioni, EXPORT_W,
+         larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
+         LOGO_MARGINE } from '../src/export.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
          giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
@@ -463,6 +465,32 @@ test('export: l immagine e larga 1600 e tiene il rapporto della lavagna', () => 
   // E qualunque larghezza si chieda, il rapporto non cambia.
   const meta = dimensioni({ board: { w: 1600, h: 1200 } }, 800);
   close(meta.w / meta.h, 4 / 3, 0.002, 'rapporto a meta risoluzione');
+});
+
+test('export: il logo ha due misure, e la soglia e quella degli strumenti', () => {
+  // La soglia e' la stessa che raddoppia gli strumenti (SOGLIA_STRETTA = 700):
+  // se qualcuno la spostasse per un motivo solo, i due comportamenti
+  // divergerebbero senza che nulla lo segnali.
+  assert(larghezzaLogo(390) === LOGO_W_STRETTA, 'telefono in verticale');
+  assert(larghezzaLogo(699) === LOGO_W_STRETTA, 'appena sotto la soglia');
+  assert(larghezzaLogo(700) === LOGO_W_LARGA, 'sulla soglia e gia largo');
+  assert(larghezzaLogo(1440) === LOGO_W_LARGA, 'desktop');
+
+  // "1/3 vw": su telefono la lavagna e' larga quanto il viewport.
+  assert(LOGO_W_STRETTA === 533, `un terzo di 1600 -> ${LOGO_W_STRETTA}`);
+  assert(LOGO_W_LARGA === 220, `desktop -> ${LOGO_W_LARGA}`);
+});
+
+test('export: il logo sta nell angolo e non si deforma', () => {
+  // 512x451, il file reale.
+  const r = rettangoloLogo(LOGO_W_LARGA, 512 / 451);
+  assert(r.x === LOGO_MARGINE && r.y === LOGO_MARGINE, `angolo -> ${r.x},${r.y}`);
+  assert(r.w === LOGO_W_LARGA, `larghezza -> ${r.w}`);
+  close(r.w / r.h, 512 / 451, 0.001, 'rapporto del logo');
+
+  // Il rettangolo sta dentro la lavagna anche nel caso piu' largo.
+  const m = rettangoloLogo(LOGO_W_STRETTA, 512 / 451);
+  assert(m.x + m.w < 1600, `sfora a destra: ${m.x + m.w}`);
 });
 
 /* ---------------- tutorial ---------------- */

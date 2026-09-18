@@ -26,7 +26,7 @@ set -a; source ~/.claude/.secrets/ftp-siteground.env; set +a
 #     * SSL shutdown timeout          <- 10 secondi esatti
 #
 # Questo server manda il "close notify" ma non completa lo shutdown TLS del
-# canale DATI, e curl aspetta 10 secondi a ogni trasferimento. Con 16 file
+# canale DATI, e curl aspetta 10 secondi a ogni trasferimento. Con 17 file
 # erano ~3 minuti, scambiati due volte per lentezza della rete mentre la banda
 # era 21 Mbit/s. Togliendo il TLS dal canale dati: da 11,3s a 0,98s per
 # operazione.
@@ -56,7 +56,7 @@ fi
 # SiteGround costa ~11 secondi, di cui 48 ms di TCP e il resto di attesa del
 # server dopo il trasferimento (la sessione TLS sul canale dati non viene
 # chiusa e curl aspetta il timeout). Con una connessione per file erano ~3
-# minuti per 16 file, ed e' stato scambiato due volte per lentezza della rete
+# minuti per 17 file, ed e' stato scambiato due volte per lentezza della rete
 # quando la banda era 21 Mbit/s. Aprire una volta sola e' l'unica cura.
 #
 # --fail-early: senza, un file che fallisce a meta' lascerebbe una cartella
@@ -68,6 +68,15 @@ push "$LOCAL/index.html" "$DEST/index.html"
 for f in "$LOCAL"/src/*.js; do
   push "$f" "$DEST/src/$(basename "$f")"
 done
+# Il logo della Fondazione, che va solo sull'immagine scaricata dall'utente
+# (fase-0-specifiche.md 7.2). Se manca, online si salva senza logo e nessuno
+# se ne accorge finche' non guarda un file scaricato: meglio dirlo qui.
+if [[ -f "$LOCAL/images/logo.png" ]]; then
+  push "$LOCAL/images/logo.png" "$DEST/images/logo.png"
+else
+  echo "  !!  images/logo.png mancante: le immagini salvate non avranno il logo." >&2
+fi
+
 # I font non sono nel repo (di terzi, repo pubblico) ma servono online, e
 # dagli URL della Fondazione non si possono linkare: manca il CORS.
 if compgen -G "$LOCAL/font/*.woff2" >/dev/null; then
@@ -80,11 +89,12 @@ ftp_do --ftp-create-dirs --fail-early \
        -w '  ok  %{url_effective}  (%{size_upload} byte)\n' \
        "${args[@]}"
 
-# Anche i tre listing in una sola connessione, per lo stesso motivo.
+# Anche i quattro listing in una sola connessione, per lo stesso motivo.
 echo
 echo "--- listing di controllo: $DEST ---"
 ftp_do "ftp://$FTP_HOST:$FTP_PORT$DEST/" \
        "ftp://$FTP_HOST:$FTP_PORT$DEST/src/" \
+       "ftp://$FTP_HOST:$FTP_PORT$DEST/images/" \
        "ftp://$FTP_HOST:$FTP_PORT$DEST/font/"
 echo
 echo "https://issimissimo.com/temp/frmm-drawing-plugin-$NN/"

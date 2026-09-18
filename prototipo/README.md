@@ -259,7 +259,7 @@ Il bordo a 2,89 **non è una conseguenza del tutorial**: è la grammatica dei ta
 
 Conseguenza da tenere presente: non esiste più il modo di scaricare *senza* inviare. Oggi non si vede, perché l'invio non c'è; quando arriverà va deciso se un solo tocco fa entrambe le cose senza chiedere.
 
-Il download è stato aggiunto il 16/09/2026 su richiesta: è una fetta anticipata della Fase 6 (requisiti in `fase-0-specifiche.md` §7). **Manca il logo della Fondazione**, che è una dipendenza esterna; quando arriva si compone in `disegnaSuCanvas()`, dopo i tratti.
+Il download è stato aggiunto il 16/09/2026 su richiesta: è una fetta anticipata della Fase 6 (requisiti in `fase-0-specifiche.md` §7). **Il logo della Fondazione è arrivato il 18/09/2026** e si compone in `disegnaSuCanvas()`, dopo i tratti: la dipendenza esterna aperta dal 31/08/2026 è chiusa.
 
 Tutto avviene sul device: nessun server, nessun dato in uscita.
 
@@ -281,6 +281,32 @@ Tre scelte che non si leggono dal codice:
 
 Il pulsante resta spento finché non c'è un tratto di gesso: una lavagna di sole gommate non è un disegno.
 
+### Il logo (§7.1)
+
+`prototipo/images/logo.png`, 512x451 RGBA. In alto a sinistra, a 40 unità dai due bordi.
+
+| Lavagna | Larghezza del logo | Sull'immagine a 1600 |
+|---|---|---|
+| stretta (< 700 px CSS) | `BOARD_W / 3` = 533 unità | 533 px, un terzo |
+| larga | 220 unità | 220 px, il 13,75% |
+
+Due misure e non una perché l'immagine salvata non ha un formato solo: su telefono è un ritratto alto ~3460 unità, dove 220 sarebbero un francobollo; su desktop è un panorama, dove un terzo della larghezza coprirebbe il disegno.
+
+**La soglia è `SOGLIA_STRETTA` in `palette.js`, la stessa che raddoppia gli strumenti.** Prima era il letterale `700` dentro `main.js`: ora è una costante sola, perché "schermo stretto" deve voler dire la stessa cosa nei due posti che lo decidono. E come `SCALA_STRUMENTI` si valuta **al primo layout**: rimpicciolire la finestra a metà disegno non cambia le misure sotto le mani di chi sta disegnando.
+
+Tre cose da non disfare:
+
+**Il logo è un parametro, e vale zero se non lo si chiede.** `disegnaSuCanvas(drawing, larghezza, logoW)` non lo mette a meno che non gli si passi una larghezza. È il verso giusto per §7.2: il PNG che in Fase 6 partirà per la moderazione, e quello della gallery, il logo **non** lo devono avere. Chi scriverà l'invio non deve ricordarsi di toglierlo — deve ricordarsi di metterlo, e non lo farà.
+
+**Il logo si precarica all'avvio** (`precaricaLogo()` in coda a `main.js`) e si compone in modo sincrono. Discende dalla nota sul Blob qui sopra: al click di SALVA non c'è tempo per un `decode()`. Se il file non fosse pronto o mancasse, l'immagine esce **senza** logo invece di non uscire — un `console.warn` e nient'altro.
+
+**`LOGO_SRC` si risolve su `import.meta.url`, non sulla pagina.** Un `src` relativo si risolverebbe sull'URL del documento, e in Fase 8 il documento sarà una pagina di WordPress che sta altrove: così il logo segue il codice ovunque finisca.
+
+Due limiti misurati, non teorici:
+
+- **Il file è 512 px di lato, sotto i 600 chiesti da §7.1.** A 533 unità lo si sta ingrandendo del 4%: non si vede. A 220 si riduce, e `imageSmoothingQuality = 'high'` è lì per quello.
+- **A 220 unità il nome della Fondazione non si legge.** Il logo resta riconoscibile come marchio — arcobaleno e cuori tengono bene sul `#1F2225` — ma il testo attorno all'arco diventa un ornamento colorato. A 533 si legge. Se il nome deve essere leggibile anche su desktop, la misura da provare è ~320 unità; è una decisione del cliente, non un difetto del codice.
+
 **Da provare su device vero**: il ramo `navigator.share` è verificato solo in simulazione (stub su Chrome desktop). Su iOS il file deve finire in Foto, non nei Download.
 
 ## File
@@ -301,6 +327,7 @@ src/tutorial.js i sette passi, il riquadro e il "gia visto"
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
 font/           i .woff2 della Fondazione, NON versionati (vedi sopra)
+images/logo.png il logo, solo per l'immagine che l'utente si porta via
 ```
 
 I due canvas (`base` e `overlay`) servono perché a fine gesto lo stroke grezzo viene sostituito da quello semplificato: con un canvas solo, cancellare il tratto provvisorio costringerebbe a un ridisegno completo a ogni tratto.

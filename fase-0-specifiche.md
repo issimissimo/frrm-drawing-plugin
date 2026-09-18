@@ -222,8 +222,15 @@ Il logo della Fondazione viene composto sull'immagine esportata, **in alto a sin
 |---|---|
 | Posizione | angolo alto-sinistra |
 | Margine | 40 unità di lavagna dai due bordi |
-| Altezza | ~90 unità *(da tarare sul file reale)* |
+| Larghezza | **220 unità** su lavagna larga, **533** (un terzo) su lavagna stretta |
 | Formato richiesto | SVG, oppure PNG con canale alpha, lato >= 600 px |
+
+**✅ Arrivato il 18/09/2026** — `prototipo/images/logo.png`, PNG RGBA 512x451. La dipendenza esterna aperta il 31/08/2026 è chiusa. Due scostamenti da quanto scritto qui sopra, entrambi accettati:
+
+- **Si misura in larghezza, non in altezza**, e le misure sono due: "1/3 vw" su telefono, 220 unità su desktop (richiesta di Daniele del 18/09/2026). Un'altezza sola non poteva funzionare, perché l'immagine salvata è un ritratto su telefono e un panorama su desktop.
+- **Il file è 512 px, non 600.** Irrilevante: la misura massima a cui viene disegnato è 533 px, cioè un ingrandimento del 4%.
+
+Resta aperta **la leggibilità del nome a 220 unità**: il marchio si riconosce, le parole no. È una scelta da sottoporre al cliente, non un difetto.
 
 **Serve una versione del logo per fondo scuro, e non è scontato averla.** La lavagna è `#1F2225`: un logo disegnato per la carta bianca sparisce o si sporca di aloni. Va chiesto alla Fondazione il file in negativo o monocromatico chiaro. È una dipendenza esterna: conviene richiederla molto prima della Fase 6, perché i tempi non dipendono da noi.
 

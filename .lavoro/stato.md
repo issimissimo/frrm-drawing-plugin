@@ -4,9 +4,11 @@ Versione corrente: prototipo fasi 0–4b. Nessun numero di versione.
 
 ## Dove siamo
 
-Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla (senza rifai), e il disegno si **scarica in JPEG** sul device. Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura, SCARICA e INVIA sono un solo **SALVA**, e i tasti hanno lo stile del sito della Fondazione.
+Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla (senza rifai), e il disegno si **scarica in JPEG** sul device, **col logo della Fondazione in alto a sinistra** (18/09/2026). Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura, SCARICA e INVIA sono un solo **SALVA**, e i tasti hanno lo stile del sito della Fondazione.
 
-Online: <https://issimissimo.com/temp/frmm-drawing-plugin-13/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **44 test** (`node test/run.js`).
+Online: <https://issimissimo.com/temp/frmm-drawing-plugin-14/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **46 test** (`node test/run.js`).
+
+**Il logo è arrivato il 18/09/2026** e chiude la dipendenza esterna aperta il 31/08. Sta solo sull'immagine scaricata, come vuole §7.2 — il PNG per la moderazione e la gallery non lo avranno, ed è un parametro a zero di default proprio perché resti così. Due cose da portare al cliente: **a 220 unità il nome della Fondazione non si legge** (il marchio sì), e **il logo copre l'angolo alto-sinistra del disegno**, rischio già accettato in §7.1 ma mai guardato su disegni veri di bambini.
 
 **Provato su telefono il 18/09/2026: il tutorial funziona e SALVA funziona.** Cadono i due punti che erano in sospeso dal 17/09. Resta non fatta la sola verifica che nessun automatismo può dare: **il test con un bambino**, che è la DoD della Fase 4 nel brief e non è mai stata soddisfatta.
 

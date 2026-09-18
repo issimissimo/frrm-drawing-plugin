@@ -19,7 +19,7 @@
  */
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
-         SMOOTHING, DEFAULT_SMOOTHING } from './palette.js';
+         SMOOTHING, DEFAULT_SMOOTHING, SOGLIA_STRETTA } from './palette.js';
 import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
@@ -27,7 +27,7 @@ import { createDrawing, createHistory } from './model.js';
 import { render, renderStroke, strokeGeometry } from './render.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
-import { scarica, haDisegno } from './export.js';
+import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
 
 const stage = document.getElementById('stage');
@@ -67,7 +67,16 @@ let lastLayout = null;
  * qualunque scala (D1): se raddoppiassimo al render, lo stesso Drawing darebbe
  * immagini diverse su device diversi.
  */
-const SCALA_STRUMENTI = primoLayout.cssW < 700 ? 2 : 1;
+const SCALA_STRUMENTI = primoLayout.cssW < SOGLIA_STRETTA ? 2 : 1;
+
+/**
+ * Il logo sull'immagine salvata, in unita' di lavagna (export.js).
+ *
+ * Si decide qui e una volta sola, come SCALA_STRUMENTI e per la stessa
+ * ragione: rimpicciolire la finestra a meta' disegno non deve cambiare le
+ * misure sotto le mani di chi sta disegnando.
+ */
+const LOGO_W = larghezzaLogo(primoLayout.cssW);
 
 let strokeWidth = DEFAULT_WIDTH * SCALA_STRUMENTI;
 
@@ -283,7 +292,7 @@ btnClear.addEventListener('click', () => {
 btnSave?.addEventListener('click', () => {
   if (btnSave.disabled) return;
   btnSave.disabled = true;
-  scarica(drawing)
+  scarica(drawing, LOGO_W)
     .catch((e) => {
       // Provvisorio come la conferma del cestino: va rifatto come pannello
       // dentro la lavagna.
@@ -467,6 +476,12 @@ if (!tutorial && btnHelp) btnHelp.hidden = true;
 relayout();
 syncTools();
 syncButtons();
+
+/* Il logo si carica ora perche' al click di SALVA non c'e' tempo: l'export e'
+   sincrono per non perdere l'attivazione del tocco (export.js, nota 3). Fra
+   l'apertura della pagina e il primo salvataggio passano minuti; se anche non
+   bastassero, l'immagine esce senza logo e il disegno si salva lo stesso. */
+precaricaLogo();
 
 /**
  * Alla prima apertura il tutorial parte da solo, poi mai piu'.
