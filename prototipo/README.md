@@ -188,7 +188,7 @@ Sette passi, chiesti dal cliente il 17/09/2026: alcuni aprono la lavagna e non s
 | Avanzamento | «TUTORIAL: PASSO n DI 7», nessun pallino |
 | Uscita | solo all'ultimo passo, oppure `Esc` da tastiera |
 | «Già visto» | `localStorage`, chiave `lavagna.tutorial.visto.v1:<percorso>` |
-| Per rivederlo | il `?` nella mensola, o `?tutorial` in coda all'URL |
+| Per rivederlo | il `?` in fondo a destra nella mensola, o `?tutorial` in coda all'URL |
 
 Le cose che non si leggono dal codice:
 
@@ -212,6 +212,10 @@ Le cose che non si leggono dal codice:
 **Quanto sporge il riquadro fuori dall'elemento detta il margine della mensola.** Sono `pad` (6) + `inset` (4) + mezzo tratto (1,5) = **11,5px**, e su mobile `.ledge` tiene 16px di padding laterale proprio per starci dentro: sotto, il tratteggio degli elementi a filo di schermo — gessetti, cancellino, cestino, SALVA — viene tagliato dal bordo e sembra schiacciato. I due numeri si cambiano insieme.
 
 ⚠️ **A 360px la mensola è satura**: il suo min-content misura 326px, quindi oltre i 17px di padding il contenuto non si stringe, *sfora*, e il lato destro torna a filo — peggio di prima. Provato a 20px il 18/09/2026: `.tools` finiva a 346 invece di 340. Chi volesse più margine deve prima far scendere il min-content, non alzare il padding.
+
+**Il `?` sta in fondo alla riga dei comandi, dopo il cestino** — spostato il 18/09/2026 su segnalazione del cliente. Prima era il primo della riga, quindi confinava con gli spessori: si toccava per sbaglio scegliendo un tratto, e il tutorial ripartiva in mezzo a un disegno. È il peggior vicino possibile per un controllo che si usa mentre si disegna. In fondo non confina con niente di analogo, e il `margin` che lo staccava è passato da `right` a `left`.
+
+Resta che accanto agli spessori ora c'è **annulla**: se lo si sfiora si perde l'ultimo tratto, ma rifai è lì di fianco. Un danno reversibile al posto di uno invasivo.
 
 **Il passo degli spessori punta ai segni, non ai pulsanti.** I `.wbtn` sono alti `--stick-h` (64px sul telefono, 94 sul desktop) perché devono essere bersagli da dito, ma il segno di gesso dentro ne occupa 19: un riquadro attorno al pulsante invadeva i gessetti sopra di 2px e SALVA sotto di 4. Il selettore è `#widths .wbtn i`, così il riquadro abbraccia quel che si vede e la cosa funziona da sola sui due layout, senza una costante da mantenere. Misurato dopo: 15,9px di aria verso i gessetti, 22 verso SALVA.
 

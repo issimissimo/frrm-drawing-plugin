@@ -364,7 +364,9 @@
      cestino, ma la voce meno urgente della fila, e in testa per non finire
      accanto a SALVA. Niente fondo e niente bordo: darli anche a lui e alla
      fila accanto trasformerebbe la mensola in una griglia di scatole. */
-  #btn-help { color: var(--off); margin-right: 16px; font-weight: 700; font-size: 19px; }
+  /* margin-left, perche' il ? sta in fondo alla riga: stacca lui dal cestino
+     come il cestino e' staccato da rifai. */
+  #btn-help { color: var(--off); margin-left: 16px; font-weight: 700; font-size: 19px; }
   #btn-help:hover { color: var(--ink); }
 
   /* ---------- i tasti ----------
@@ -636,7 +638,6 @@
     </div>
 
     <div class="cmds">
-      <button type="button" class="cmd" id="btn-help" aria-label="Come funziona">?</button>
       <button type="button" class="cmd" id="btn-undo" aria-label="Annulla" disabled>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 8h11a5 5 0 0 1 0 10H8"/><path d="M7 4L3 8l4 4"/>
@@ -653,6 +654,11 @@
           <path d="M6 7l1 13h10l1-13"/><path d="M10 11v6"/><path d="M14 11v6"/>
         </svg>
       </button>
+      <!-- Ultimo della riga, e non piu' primo (18/09/2026): accanto agli
+           spessori si toccava per sbaglio scegliendo un tratto, e il tutorial
+           partiva in mezzo a un disegno. In fondo non confina con niente che
+           si usi mentre si disegna. -->
+      <button type="button" class="cmd" id="btn-help" aria-label="Come funziona">?</button>
     </div>
 
     <button type="button" id="btn-save" class="btn primario" aria-label="Salva e condividi il disegno" disabled>
