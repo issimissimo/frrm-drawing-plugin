@@ -4,7 +4,7 @@ Versione corrente: prototipo fasi 0–4b. Nessun numero di versione.
 
 ## Dove siamo
 
-Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla/rifai, e il disegno si **scarica in JPEG** sul device. Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura, SCARICA e INVIA sono un solo **SALVA**, e i tasti hanno lo stile del sito della Fondazione.
+Si disegna a gesso su lavagna nera con nove gessetti, tre spessori, cancellino, annulla (senza rifai), e il disegno si **scarica in JPEG** sul device. Dal 17/09/2026 c'è un **tutorial in sette passi** che parte alla prima apertura, SCARICA e INVIA sono un solo **SALVA**, e i tasti hanno lo stile del sito della Fondazione.
 
 Online: <https://issimissimo.com/temp/frmm-drawing-plugin-09/> (con `?tutorial` il tutorial parte comunque). Codice su <https://github.com/issimissimo/frrm-drawing-plugin>, **44 test** (`node test/run.js`).
 
