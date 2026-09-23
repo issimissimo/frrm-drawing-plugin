@@ -147,11 +147,15 @@ Due note di metodo, per non rifare il lavoro:
 
    ~~Dipendenza esterna da avviare presto: serve il **logo in versione per fondo scuro**~~ — **chiuso il 18/09/2026**: il logo è arrivato ed è a colori su fondo trasparente. Sul `#1F2225` regge: arcobaleno, cuori e nuvole grigie si leggono; il testo attorno all'arco no, ma solo alla misura desktop.
 
-### Cosa resta fuori, e va detto se ci si avvicina
+### Perimetro, aggiornato il 23/09/2026
 
-Le **Fasi 5–10** sono **fuori perimetro**. Con i nomi del brief, che è l'unica numerazione valida: 5 persistenza IndexedDB, 6 export a tre risoluzioni e payload di invio, 7 backend (inbox, CPT, REST, moderazione), 8 integrazione WP/Elementor, 9 hardening/legale/QA, 10 gallery e go-live. La Fase 4 è stata fatta, riaprendo il perimetro esplicitamente. Anche la DoD della Fase 0 è stata ridotta di conseguenza: testo del form di invio e decisione legale servono alle Fasi 6–9 e non sono stati scritti.
+Numerazione del brief, l'unica valida: 5 persistenza IndexedDB, 6 export e payload di invio, 7 backend (inbox, CPT, REST, moderazione), 8 integrazione WP/Elementor, 9 hardening/legale/QA, 10 gallery e go-live.
 
-Se una sessione futura comincia a costruire persistenza, backend o integrazione WP, va nominato prima di scrivere il codice.
+- **Fatte**: 0–4b e **8** (sullo staging).
+- **In corso, piano approvato il 23/09/2026**: **6, 7, 9, 10**, tutte sullo staging. Il piano, con le decisioni d'apertura, è in `.lavoro/stato.md`.
+- **Fuori**: la **5** (unica eccezione: il `client_id`), l'**alta risoluzione**, e il **go-live in produzione**, che resta una decisione di Daniele.
+
+Se una sessione futura comincia a costruire persistenza o a toccare il sito di produzione, va nominato prima di scrivere il codice.
 
 ## ⚠️ Due nomi diversi, ed è voluto
 
