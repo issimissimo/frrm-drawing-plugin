@@ -1,11 +1,11 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 23/09/2026 (notte)
-Versione corrente: plugin `frmm-lavagna` **1.5.1** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
+Versione corrente: plugin `frmm-lavagna` **1.6.0** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
 
 ## Dove siamo
 
 La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA **chiede prima** «SALVA E INVIA» / «SOLO SALVA», poi scarica o condivide; con INVIA, nello stesso tocco, il disegno parte per la bacheca. **Provata sul telefono da Daniele il 23/09/2026: funziona tutto**, WhatsApp compreso.
-In produzione il plugin non c'è. 68 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 40 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
+In produzione il plugin non c'è. 68 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 40 sullo staging (`python .lavoro/prova-invio.py`) e 14 sulla bacheca (`python .lavoro/prova-bacheca.py`, consuma due disegni in attesa a giro). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
 
 ## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passi 1–2 fatti)
 
@@ -26,7 +26,7 @@ Passi:
    - **Niente doppioni**: ogni invio porta un `invio_id`, uguale a ogni tentativo; il server risponde 200 e non scrive se l'ha già (anche nel cestino). Verificato sullo staging: due arrivi, un disegno in bacheca.
    - **Misura della ripresa**: ogni disegno registra `_frmm_tentativo`. Dopo un periodo di prova si conta quanti sono arrivati al primo colpo; se la ripresa servisse spesso, si passa alla strada A (prima l'invio, poi un tocco in più per condividere).
    - Resta valido dalla 1.4.x: `client_id` in `frmm-lavagna:client_id` (senza percorso), punti arrotondati al centesimo nella copia che parte, JPEG senza logo, endpoint accettato solo same-origin. Tasti impilati a tutta larghezza sotto i 480px (affiancati «SALVA E INVIA» andava a capo); SOLO SALVA bianco su trasparente, perché il no sia disponibile quanto il sì. Peso: disegno fitto 1600×2248 → JPEG 368 KB + JSON 83 KB.
-3. [ ] Bacheca: colonna miniatura, Approva/Rifiuta, email con miniatura.
+3. [x] Bacheca — **plugin 1.6.0, 23/09/2026**; manca la conferma che l'email arrivi. `includes/bacheca.php`: elenco con la miniatura al posto del titolo (clic = immagine intera in un'altra scheda), **Approva / Rifiuta come pulsanti nella riga** (un click, con nonce e permessi per disegno: sul sito c'è PublishPress Capabilities), Approva anche in blocco, numero dei disegni in attesa nel menu come i commenti, colonna **Tentativo** (la misura della ripresa). Approvato = pubblicato, ma il CPT resta non pubblico: nessuna pagina, 404 da anonimo. Rifiutato = cestino. **I non approvati sono fuori dalla Libreria media** (griglia, elenco e ogni selettore d'immagine: Elementor, FileBird); l'approvato ci entra, perché la galleria dovrà poterlo prendere (D3). `includes/notifica.php`: email ad `admin_email` (sullo staging è `d.suppo@issimissimo.com`, non la Fondazione) con la miniatura 300 px **incorporata** (`cid:`), non linkata: le immagini remote i programmi di posta le bloccano. Filtro `frmm_lavagna_destinatari` per cambiare destinatario. Un doppione non manda una seconda email.
 4. [ ] Anti-abuso con script ripetibile: rate limit per IP **in hash** e per `client_id`, limiti prima di leggere il corpo, honeypot.
 5. [ ] Retention: Rifiuta = cestino, 30 giorni, hook che cancella l'allegato.
 6. [ ] Bozze legali: sezione privacy policy + due righe della finestra di invio, per un genitore.
@@ -86,4 +86,4 @@ Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collega
 
 ## Prossimo passo
 
-**Passo 3: la bacheca.** Colonna miniatura, Approva/Rifiuta in due click, email con miniatura, e i disegni in attesa tolti dalla Libreria media. Conviene mostrare anche `_frmm_tentativo`: è la misura della ripresa. Sullo staging ci sono una ventina di disegni di prova da usare come materiale.
+**Confermare che l'email del passo 3 arrivi** (a `d.suppo@issimissimo.com`, con la miniatura visibile senza "mostra immagini"). Poi **passo 4: anti-abuso** — il rate limit è anche il tetto delle email: oggi 500 invii sarebbero 500 email.

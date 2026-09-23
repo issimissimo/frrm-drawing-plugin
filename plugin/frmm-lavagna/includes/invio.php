@@ -211,6 +211,10 @@ function frmm_lavagna_archivia($client_id, $disegno, $tmp, $invio_id = null, $te
     wp_update_attachment_metadata($att_id, wp_generate_attachment_metadata($att_id, $percorso));
     set_post_thumbnail($post_id, $att_id);
 
+    // Solo qui, a disegno scritto per intero: un doppione (invio_id gia'
+    // visto) non arriva fin qui, e non manda una seconda email.
+    do_action('frmm_lavagna_nuovo_disegno', $post_id, $att_id);
+
     return $post_id;
 }
 

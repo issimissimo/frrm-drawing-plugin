@@ -141,6 +141,8 @@ Il codice sta in `includes/`:
 
 - `disegni.php` — il tipo di contenuto `frmm_disegno`: non pubblico, non in REST, senza URL. Visibile solo in bacheca, dove si modera. Il nome ha il prefisso, e non e' `disegno` come nel brief, perche' i tipi di WordPress condividono un solo spazio di nomi.
 - `invio.php` — l'endpoint. Scrive l'immagine in `uploads/frmm-lavagna/` con un **nome casuale a 128 bit**, crea il post `pending`, lo collega all'allegato e lo mette come immagine in evidenza. Se un pezzo fallisce, toglie i pezzi gia' scritti.
+- `bacheca.php` — la moderazione: miniatura al posto del titolo, **Approva / Rifiuta** come pulsanti nella riga, Approva in blocco, il numero dei disegni in attesa nel menu, la colonna Tentativo. Toglie i disegni **non approvati** dalla Libreria media e da ogni selettore d'immagine, perche' nessuno ne inserisca uno in una pagina prima che sia stato guardato. L'approvato ci resta, perche' la galleria dovra' poterlo prendere.
+- `notifica.php` — l'email a ogni disegno arrivato, ad `admin_email` o a quel che dice il filtro `frmm_lavagna_destinatari`. La miniatura e' **incorporata** nel messaggio e non linkata: le immagini remote i programmi di posta le bloccano, e l'email diventerebbe un riquadro vuoto.
 - `validazione.php` — i controlli, **senza WordPress**, cosi' si provano in locale: `php -d extension=gd plugin/test/validazione.php`.
 
 Cose da non disfare per sbaglio:
@@ -170,6 +172,6 @@ Il logo e i font restano senza versione: se cambiassero, vanno rinominati.
 
 ## Cosa non fa (ancora)
 
-Mancano l'email all'amministratore, la miniatura e i tasti Approva/Rifiuta in bacheca, il rate limit, la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
+Mancano il rate limit (e con lui il tetto alle email), la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
 
 L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.
