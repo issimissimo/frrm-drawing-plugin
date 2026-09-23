@@ -172,6 +172,6 @@ Il logo e i font restano senza versione: se cambiassero, vanno rinominati.
 
 ## Cosa non fa (ancora)
 
-Mancano il rate limit (e con lui il tetto alle email), la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
+Mancano il rate limit (e con lui il tetto alle email), la retention dei rifiutati e la galleria. Sono i passi 4-9 del piano in `.lavoro/stato.md`.
 
 L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.
