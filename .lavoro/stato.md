@@ -4,7 +4,7 @@ Versione corrente: plugin `frmm-lavagna` **1.5.1** (installato solo sullo stagin
 
 ## Dove siamo
 
-La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA **chiede prima** «SALVA E INVIA» / «SOLO SALVA», poi scarica o condivide; con INVIA, nello stesso tocco, il disegno parte per la bacheca. La 1.4.1 (domanda *dopo*) è stata provata sul telefono il 23/09/2026 e ha funzionato; la 1.5.1 solo da Playwright sullo staging.
+La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA **chiede prima** «SALVA E INVIA» / «SOLO SALVA», poi scarica o condivide; con INVIA, nello stesso tocco, il disegno parte per la bacheca. **Provata sul telefono da Daniele il 23/09/2026: funziona tutto**, WhatsApp compreso.
 In produzione il plugin non c'è. 68 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 40 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
 
 ## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passi 1–2 fatti)
@@ -20,7 +20,7 @@ Fuori perimetro: go-live in produzione · Fase 5 (unica eccezione: il `client_id
 
 Passi:
 1. [x] Endpoint senza l'app — **fatto il 23/09/2026, plugin 1.3.0**. CPT `frmm_disegno` (prefissato: i tipi WP condividono lo spazio di nomi), `POST /wp-json/frmm-lavagna/v1/invio` multipart (`client_id`, `disegno` JSON, `immagine` JPEG). Tipo dai byte, JPEG 1600 × `board.h` ±1, Drawing ricostruito campo per campo, **immagine ricodificata con GD** (toglie qualunque coda: provato con un poliglotta JPEG+PHP). File in `uploads/frmm-lavagna/<128 bit>.jpg`. Da anonimo verificati chiusi `?attachment_id=`, `?p=`, `/wp/v2/media` (404/401), cartella 403, Yoast senza sitemap degli allegati. Il plugin di sicurezza SiteGround **non** blocca i POST anonimi.
-2. [x] Invio dall'app — **plugin 1.5.1, 23/09/2026**, da riprovare sul telefono. `src/invio.js`.
+2. [x] Invio dall'app — **plugin 1.5.1, 23/09/2026, provato sul telefono**. `src/invio.js`.
    - **La domanda sta PRIMA di salvare** (Daniele, dopo la prova sul telefono della 1.4.1): chi condivide su WhatsApp resta in WhatsApp e non torna a rispondere a una domanda fatta dopo. SALVA → «SALVA E INVIA» / «SOLO SALVA»; il tocco sulla risposta fa partire il salvataggio, ed è quel tocco che dà l'attivazione al foglio di condivisione. Una domanda per disegno: salvare di nuovo lo stesso disegno rifà la scelta di prima senza chiedere. Esc chiude senza salvare.
    - **Invio e condivisione in parallelo, con ripresa** (scelta B, Daniele). Aspettare l'upload prima di aprire la condivisione non si può: Safari rifiuta `navigator.share` dopo un'attesa di rete, in silenzio. L'invio parte nello stesso tocco; se non arriva si riprova quando la pagina torna visibile, quando torna la rete, e a tempo (10 s → 10 min, 6 tentativi). La coda è in memoria (max 5): se iOS chiude la scheda si perde, ma con lei si perde anche il disegno.
    - **Niente doppioni**: ogni invio porta un `invio_id`, uguale a ogni tentativo; il server risponde 200 e non scrive se l'ha già (anche nel cestino). Verificato sullo staging: due arrivi, un disegno in bacheca.
@@ -86,4 +86,4 @@ Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collega
 
 ## Prossimo passo
 
-**Prova dal telefono della 1.5.1** (iPhone e Android, `/lavagna-prova-plugin/`): SALVA → domanda → SALVA E INVIA → condivisione su WhatsApp → il disegno è in bacheca. Poi **passo 3: la bacheca** — dove conviene mostrare anche `_frmm_tentativo`, che è la misura della ripresa.
+**Passo 3: la bacheca.** Colonna miniatura, Approva/Rifiuta in due click, email con miniatura, e i disegni in attesa tolti dalla Libreria media. Conviene mostrare anche `_frmm_tentativo`: è la misura della ripresa. Sullo staging ci sono una ventina di disegni di prova da usare come materiale.
