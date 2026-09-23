@@ -16,7 +16,71 @@ Online: <https://issimissimo.com/temp/frmm-drawing-plugin-14/> (con `?tutorial` 
 
 **Dal 23/09/2026 si lavora alla Fase 8**, l'integrazione in WordPress: la lavagna dentro una pagina con header, in un Container Elementor, via shortcode e in iframe. Piano e decisioni qui sotto.
 
-## Piano attivo
+## Piano attivo — Fasi 6, 7, 9, 10 (aperto il 23/09/2026)
+
+Obiettivo: un bambino che ha finito un disegno puo' **sceglierlo di mandarlo alla Fondazione**; il disegno arriva in bacheca, un adulto lo approva o lo rifiuta guardando la miniatura, e quelli approvati compaiono in una galleria sul sito. Tutto **sullo staging**.
+
+Le quattro fasi con la numerazione del brief: **6** export e invio dall'app, **7** backend e moderazione, **9** anti-abuso, retention, testi legali e QA, **10** galleria. La **5** (persistenza locale) e **D1** restano fuori per decisione di Daniele — ma vedi sotto: D1 si e' chiuso lo stesso.
+
+### Decisioni prese all'apertura (23/09/2026)
+
+1. **SALVA chiede dopo.** Resta un solo tasto nella mensola: scarica come oggi, poi una finestra chiede «Vuoi mandarlo alla Fondazione?» con INVIA e NO GRAZIE. Rispetta il §7 delle specifiche — *salvare e inviare sono due azioni distinte, nessuna richiede l'altra* — senza toccare la mensola ne' il tutorial. Il SALVA unico del 17/09 aveva lasciato questa domanda aperta di proposito.
+2. **D1 chiuso: la galleria accetta proporzioni miste.** Nessun formato imposto in export. *Come* mostrarle — masonry, il plugin «custom marquee» che fa scorrere le immagini, o altro — **non e' deciso** ed e' un punto di fermata della Fase 10, non della 6.
+3. **Una sola risoluzione: 1600px**, quella che la lavagna esporta gia'. Niente 3200, niente thumbnail generata dal telefono: le miniature le fa WordPress da solo all'upload. Dal brief cadono due delle tre risoluzioni.
+4. **Niente Cloudflare Turnstile.** Anti-abuso con rate limit, limiti di dimensione, validazione dell'immagine e honeypot, con la moderazione umana comunque a valle. Nessun terzo che tratti dati di bambini.
+5. **Niente nonce WordPress sull'endpoint.** Il brief lo prevede, ma per un utente non collegato e' teatro: lo ottiene chiunque dalla stessa pagina, e con la cache di SiteGround rischia di arrivare scaduto e far fallire gli invii veri. Scostamento dal brief dichiarato qui.
+
+### Assunzioni da confermare (le ho scelte io, correggimi)
+
+- **Formato dell'immagine inviata: JPEG 1600px senza logo**, lo stesso motore del download. Il brief dice PNG/WebP, ma sul gesso il PNG comprime male e il JPEG e' gia' misurato (~400 KB, nessun artefatto visibile sul nero). Il logo resta a zero: e' il default di `disegnaSuCanvas`, scelto il 18/09 proprio perche' chi scrive l'invio non debba ricordarsi di toglierlo.
+- **L'email di notifica va all'indirizzo amministratore del sito** (`admin_email`), con la miniatura allegata. Si cambia con una costante.
+- **Retention dei rifiutati: il cestino di WordPress, 30 giorni.** Rifiutare = cestinare, e WordPress svuota il cestino da solo dopo 30 giorni. Con un'aggiunta che non e' opzionale: cancellando un post WordPress **non cancella l'immagine allegata**, quindi serve un hook che la porti via insieme.
+- **I testi legali li scrivo io come bozza**, Daniele li porta alla Fondazione. Approvarli non e' un passo di questo piano: e' una dipendenza esterna.
+- **Il plugin resta `frmm-lavagna`**, non `fondazione-lavagna` come nel brief. Si spacchetta in `includes/` adesso, come promesso nel suo header.
+
+Criterio di finito, verificabile sullo staging:
+
+- **Dal telefono**: disegno → SALVA → l'immagine si scarica → la finestra chiede → INVIA → una conferma che un bambino capisce. Con NO GRAZIE non parte niente, e lo si verifica sul server, non sulla parola.
+- **L'email arriva** all'indirizzo amministratore, con la miniatura.
+- **In bacheca il disegno si vede come miniatura** nella lista, senza aprire nulla; si approva o si rifiuta in **due click**.
+- **Un approvato compare nella galleria** della pagina di staging; **un rifiutato non compare mai**, e sparisce dal server — immagine compresa — quando il cestino si svuota.
+- **Le prove di abuso del brief falliscono tutte**, con uno script ripetibile: 500 invii di fila, un payload da 50 MB, un file che non e' un'immagine, un'immagine che non viene dalla lavagna, un JSON malformato.
+- **Nessuna immagine in attesa e' raggiungibile a un URL indovinabile.**
+- Le bozze dei testi legali (privacy policy e finestra di invio) sono consegnate.
+
+Fuori perimetro, e va detto se ci si avvicina:
+
+- **Il go-live in produzione.** Tutto resta sullo staging, per decisione di Daniele.
+- **Fase 5** (persistenza locale) e tutto cio' che ne dipende: la bozza «marcata come inviata» della Fase 6 non esiste, perche' non c'e' una bozza. **Unica eccezione dichiarata: il `client_id`**, che nel brief nasce in Fase 5 ma serve al rate limit della 7. Sono tre righe: un UUID in `localStorage`.
+- **Alta risoluzione, Turnstile, nickname, attribuzione.**
+- **L'approvazione dei testi legali**, che e' della Fondazione.
+- **Il design della galleria** oltre la scelta dello strumento: si usa quel che Elementor o il plugin scelto offrono.
+
+Passi — ognuno consegnabile e provabile da solo:
+
+1. [ ] **L'endpoint, senza l'app.** Plugin spacchettato in `includes/`; CPT `disegno` non pubblico, stato `pending`; `POST /wp-json/frmm-lavagna/v1/invio` che accetta `client_id`, JSON del disegno e immagine, li valida (dimensioni, MIME letto dai byte e non dall'estensione, struttura del JSON) e salva l'immagine come allegato **con un nome casuale a 128 bit**, il JSON come meta. Provato con uno script dal PC, non dal telefono: il disegno compare in bacheca come `pending`.
+2. [ ] **L'invio dall'app.** `client_id`; export 1600 senza logo; la finestra dopo SALVA; conferma e messaggio d'errore che un bambino capisce; l'URL dell'endpoint passato dallo shortcode all'iframe come parametro, senza scriverlo nell'app. **Si chiede di nuovo solo se il disegno e' cambiato** dall'ultimo invio: un bambino che salva tre volte lo stesso disegno non deve mandarlo tre volte. Provato dal telefono sullo staging.
+3. [ ] **La bacheca.** Colonna con la miniatura, Approva e Rifiuta in due click, email all'amministratore con la miniatura. Provato: invio dal telefono → email → approvo dalla lista.
+4. [ ] **L'anti-abuso**, con lo script di prova ripetibile: rate limit per IP (**salvato come hash, non in chiaro**: l'IP e' un dato personale) e per `client_id`, limiti di dimensione prima di leggere il corpo, honeypot.
+5. [ ] **La retention**: Rifiuta = cestino, svuotamento a 30 giorni, e l'hook che cancella l'immagine insieme al post. Provato cancellando per davvero e controllando che il file non esista piu'.
+6. [ ] **Le bozze dei testi legali**: la sezione della privacy policy (`client_id`, immagini, IP in hash, conservazione, cancellazione) e le due righe della finestra di invio, scritte per un genitore. Consegnate a Daniele.
+7. [ ] **Punto di fermata: come si mostra la galleria.** Masonry, custom marquee o altro. Senza questa risposta la Fase 10 non parte.
+8. [ ] **La galleria sullo staging**, con lo strumento scelto. Solo i disegni approvati; nessuna lettura dell'inbox (D3).
+9. [ ] **QA su device veri**: iPhone Safari, Android Chrome, Firefox, Safari desktop, il flusso intero. E' la DoD della Fase 9.
+
+Rischi aperti:
+
+- **Le immagini in attesa sono file pubblici.** Tutto cio' che sta in `wp-content/uploads/` si raggiunge con l'URL, anche prima della moderazione. Il nome casuale a 128 bit rende l'URL non indovinabile, ma non segreto: chi lo riceve, lo vede. L'alternativa robusta e' una cartella protetta fuori da `uploads`, da cui l'immagine esce solo all'approvazione — piu' codice, e una verifica che SiteGround rispetti le regole di accesso. **D3 promette «nemmeno per un istante»**: va deciso se il nome casuale basta.
+- **L'email dallo staging potrebbe non partire.** Gli ambienti di staging spesso hanno la posta limitata o intercettata. Se succede, e' un problema dello staging e non del plugin — ma la DoD del brief chiede che l'email arrivi.
+- **SiteGround ha un suo plugin di sicurezza** che puo' bloccare o limitare le chiamate REST anonime in POST. Si scopre al passo 1.
+- **Le immagini dei rifiutati passano comunque per la Media Library**, e WordPress ne genera piu' misure: per 30 giorni occupano spazio e compaiono nella libreria agli amministratori. Accettabile, ma da sapere.
+- **Il rate limit e le proporzioni miste insieme**: chi disegna in verticale e in orizzontale nella stessa giornata non ha niente di strano, ma la galleria dovra' reggere entrambi. Non e' un rischio del backend, e' un promemoria per la 10.
+- **I testi legali sono una dipendenza esterna**, e sono gli unici a poter bloccare la messa online. Non bloccano lo staging.
+- **Un domani la Fase 5** dovra' convivere con quel che si fa qui: il `client_id` va scritto gia' con la chiave che la 5 usera', non con una provvisoria.
+
+Costo stimato: **9 passi, quattro o cinque sessioni di lavoro**, piu' due attese che non dipendono da noi: la scelta dello strumento della galleria e l'approvazione dei testi legali. E' proporzionato all'obiettivo perche' **e' l'obiettivo del progetto**: e' la parte che fa arrivare i disegni alla Fondazione. Non e' un'espansione — ma e' tanto, e si chiude una fase per volta.
+
+## Fase 8 — chiusa sullo staging il 23/09/2026 (archivio del piano)
 
 Obiettivo: la lavagna si apre dentro una pagina del sito WordPress della Fondazione — pagina **con header**, shortcode dentro un **Container Elementor alto quanto lo schermo meno l'header** — e sul telefono continua a funzionare come funziona oggi. È la **Fase 8** del brief; le fasi 5, 6 e 7 restano chiuse, quindi SALVA continuerà a scaricare e non a inviare.
 
@@ -231,20 +295,8 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Fase 8 chiusa sullo staging il 23/09/2026.** Daniele ha provato la pagina Elementor vera — header fixed, Container con margin-top, `[lavagna altezza="schermo"]`, plugin 1.2.0 — su **iPhone/Safari e Chrome/Android**: funziona su entrambi. I tre difetti di Chrome Android (bande laterali, tratto sfalsato, salto all'apertura) sono spariti con le correzioni della 1.2.0.
+**Approvare il piano delle Fasi 6, 7, 9, 10** (sopra, in «Piano attivo»), con le cinque assunzioni da confermare: JPEG 1600 senza logo, email ad `admin_email`, retention col cestino a 30 giorni, testi legali in bozza da me, plugin che resta `frmm-lavagna`. E una decisione nei rischi: **se il nome casuale basta** a proteggere le immagini in attesa, o se servono in una cartella protetta.
 
-Il criterio di finito, voce per voce:
+Poi si parte dal passo 1, l'endpoint provato senza l'app.
 
-- [x] `[lavagna]` in un Container Elementor sullo staging, DoD della Fase 1 sul telefono — provato su due device.
-- [x] SALVA da dentro l'iframe — provato sulla -15 e sulla pagina vera.
-- [x] Il tutorial parte dentro la pagina.
-- [x] La mensola non finisce sotto l'header — ma **solo se il margin-top e' impostato anche su tablet e mobile** (65px). Da ricontrollare in Elementor se non e' gia' stato fatto.
-- [x] Nessuna altra pagina cambia: vero per costruzione, il plugin stampa qualcosa solo dove c'e' lo shortcode.
-- [ ] **Il tutorial non riparte dopo un aggiornamento del plugin** — la ragione per cui il cache buster sta nella query string. Mai provato di proposito. Si verifica gratis al prossimo aggiornamento.
-- [ ] **La lavagna nera dentro l'arancione**: vista, non decisa esplicitamente. Se nessuno ha chiesto una cornice, la decisione e' «niente cornice».
-
-**Cosa NON e' stato fatto, ed e' una decisione di Daniele, non un passo automatico:** il plugin e' **solo sullo staging**. Portarlo sul sito della Fondazione in produzione e' un'azione su un sito vivo di terzi, e non e' la Fase 10 (gallery e go-live) ma nemmeno ne e' esclusa: va deciso quando e se, sapendo che **SALVA scarica e basta** — nessun disegno arriva alla Fondazione finche' non c'e' la Fase 7.
-
-Le fasi rimaste, con la numerazione del brief: **5** persistenza locale (in scope v1, il difetto piu' visibile: il disegno si perde chiudendo la pagina), **6** export a tre risoluzioni, **7** backend e moderazione, **9** hardening e legale, **10** gallery e go-live. Nessuna e' aperta.
-
-Aperto e non assegnato: **D1**, il rapporto della lavagna. Il debito verso la gallery della Fase 10 non e' pagato, e diventa bloccante prima della Fase 6.
+Fase 8 chiusa sullo staging: vedi il suo archivio sopra. Il plugin in produzione non c'e', ed e' una decisione di Daniele.
