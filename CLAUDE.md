@@ -22,7 +22,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 >
 > **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
-> **Fase 8 in corso dal 23/09/2026: il plugin WordPress esiste ed è installato sullo staging.** Le tre decisioni che la aprivano sono sciolte: **pagina normale con header** (non Canvas), **iframe** (non inline), **staging SiteGround**. Le fasi 5, 6, 7, 9, 10 restano fuori perimetro: SALVA continua a scaricare e non a inviare.
+> **Fase 8 chiusa sullo staging il 23/09/2026**: il plugin 1.2.0 funziona nella pagina Elementor vera, provato su iPhone/Safari e Chrome/Android. **In produzione non è installato**: è una decisione di Daniele, non un passo automatico. Le tre decisioni che la aprivano sono sciolte: **pagina normale con header** (non Canvas), **iframe** (non inline), **staging SiteGround**. Le fasi 5, 6, 7, 9, 10 restano fuori perimetro: SALVA continua a scaricare e non a inviare.
 >
 > **La DoD della Fase 4 è soddisfatta**: il test con un bambino è stato fatto il 23/09/2026 ed è andato bene. Era l'ultima verifica del brief rimasta scoperta.
 >

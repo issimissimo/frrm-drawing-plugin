@@ -60,8 +60,8 @@ Passi:
 2. [x] **Le correzioni che il passo 1 rivela**, più le due già note. Lo screenshot del passo 1 ne ha già confermata una **guardandola, non deducendola**: sotto l'header della Fondazione, «Torna al sito» è un secondo tasto indietro a 10px dal primo, e la fascia scura che lo contiene mangia ~55px di lavagna per niente. **Togliere «Torna al sito»** (`#btn-back` in `index.html`, il cablaggio in `main.js`, e verificare che il tutorial non lo indichi in nessuno dei sette passi) e sistemare quel che il telefono avrà detto su safe area e altezza. Testabile: i 46 test passano, e il link del passo 1 ricaricato si comporta bene.
 3. [x] **Il plugin minimo.** Cartella `frmm-lavagna/` con header del plugin, un solo shortcode `[lavagna]`, l'app sotto `app/`, **nessuna opzione e nessuna pagina di amministrazione**. Lo shortcode stampa un `<iframe>` same-origin con `allow="web-share"`, **senza `sandbox`**, largo e alto il 100% del Container, più un `min-height` di sicurezza per chi lo infilasse in un Container ad altezza automatica. Nessun JS e nessun CSS della lavagna vengono messi in coda nella pagina: con l'iframe gli enqueue condizionali del brief diventano **zero enqueue**, ed è il modo più solido di non avere conflitti col tema. L'URL dell'iframe porta `?v=<versione del plugin>`: batte la cache di SiteGround come facevano le cartelle numerate, **e non cambia `location.pathname`**, quindi il «già visto» del tutorial sopravvive agli aggiornamenti. Più un `README.md` dentro la cartella del plugin. Testabile: `php -l` su ogni file e l'attivazione su un WP qualsiasi.
 4. [x] **Lo script di pacchetto.** Uno zip installabile che includa i **font**, che nel repo non ci sono e non ci possono stare. Senza questo passo il plugin è corretto e si installa sbagliato. Testabile: lo zip si installa e i font arrivano.
-5. [~] **Installazione sullo staging** e pagina Elementor vera: Container a `100dvh` meno header — **in `dvh`, non in `vh`**, o su iOS il Container sfora e la pagina torna a scorrere. ⏳ *Richiede gli accessi allo staging.*
-6. [ ] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì, più la lavagna nera guardata dentro il fondo arancione del sito.
+5. [x] **Installazione sullo staging** e pagina Elementor vera: Container a `100dvh` meno header — **in `dvh`, non in `vh`**, o su iOS il Container sfora e la pagina torna a scorrere. ⏳ *Richiede gli accessi allo staging.*
+6. [x] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì, più la lavagna nera guardata dentro il fondo arancione del sito.
 
 Rischi aperti:
 
@@ -231,19 +231,20 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Riprovare la pagina su Chrome Android**, dove i tre difetti si vedevano. Il plugin sullo staging e' gia' alla 1.2.0, quindi basta ricaricare la pagina — se resta qualcosa di vecchio, e' cache: l'URL dell'iframe porta `?v=1.2.0` e cambia a ogni versione.
+**Fase 8 chiusa sullo staging il 23/09/2026.** Daniele ha provato la pagina Elementor vera — header fixed, Container con margin-top, `[lavagna altezza="schermo"]`, plugin 1.2.0 — su **iPhone/Safari e Chrome/Android**: funziona su entrambi. I tre difetti di Chrome Android (bande laterali, tratto sfalsato, salto all'apertura) sono spariti con le correzioni della 1.2.0.
 
-Cosa guardare, nell'ordine:
+Il criterio di finito, voce per voce:
 
-1. **L'area di disegno copre tutta la larghezza?** Se restano bande nere ai lati a lavagna vuota, la corsa non e' chiusa e la diagnosi va rifatta.
-2. **Il tratto segue il dito?** Anche dopo aver scrollato, ruotato, o aperto e chiuso la tastiera.
-3. **L'iframe compare gia' al posto giusto**, senza il salto di un istante.
-4. Poi la DoD della Fase 1 per intero, e SALVA.
+- [x] `[lavagna]` in un Container Elementor sullo staging, DoD della Fase 1 sul telefono — provato su due device.
+- [x] SALVA da dentro l'iframe — provato sulla -15 e sulla pagina vera.
+- [x] Il tutorial parte dentro la pagina.
+- [x] La mensola non finisce sotto l'header — ma **solo se il margin-top e' impostato anche su tablet e mobile** (65px). Da ricontrollare in Elementor se non e' gia' stato fatto.
+- [x] Nessuna altra pagina cambia: vero per costruzione, il plugin stampa qualcosa solo dove c'e' lo shortcode.
+- [ ] **Il tutorial non riparte dopo un aggiornamento del plugin** — la ragione per cui il cache buster sta nella query string. Mai provato di proposito. Si verifica gratis al prossimo aggiornamento.
+- [ ] **La lavagna nera dentro l'arancione**: vista, non decisa esplicitamente. Se nessuno ha chiesto una cornice, la decisione e' «niente cornice».
 
-**Chiarito il 23/09/2026**: la pagina usa `[lavagna altezza="schermo"]`, e l'header e' **`position: fixed`** — il margin-top sul Container non e' un ripiego, serve perche' un header fuori dal flusso non occupa spazio e la lavagna gli finirebbe sotto.
+**Cosa NON e' stato fatto, ed e' una decisione di Daniele, non un passo automatico:** il plugin e' **solo sullo staging**. Portarlo sul sito della Fondazione in produzione e' un'azione su un sito vivo di terzi, e non e' la Fase 10 (gallery e go-live) ma nemmeno ne e' esclusa: va deciso quando e se, sapendo che **SALVA scarica e basta** — nessun disegno arriva alla Fondazione finche' non c'e' la Fase 7.
 
-La divisione delle responsabilita' e' quella giusta e si tiene: **il margine dice dove comincia la lavagna, lo script dice quanto e' alta**, e il margine entra gia' nel conto dello script perche' e' compreso nel punto di partenza. L'alternativa — `[lavagna]` con l'altezza data al Container — obbligherebbe a tenere sincronizzati due numeri per breakpoint.
+Le fasi rimaste, con la numerazione del brief: **5** persistenza locale (in scope v1, il difetto piu' visibile: il disegno si perde chiudendo la pagina), **6** export a tre risoluzioni, **7** backend e moderazione, **9** hardening e legale, **10** gallery e go-live. Nessuna e' aperta.
 
-⚠️ **L'altezza dell'header non e' una sola**, misurata sul sito: **55px da 1200 in su, 65px da 1024 in giu'**, con il salto esattamente sul breakpoint tablet di Elementor. Il margine va quindi impostato su **tutti e tre i dispositivi**: lasciarlo a 55 manda la lavagna 10px sotto l'header su tablet e telefono, cioe' dove la usano i bambini.
-
-Aperto e non assegnato: **D1**, il rapporto della lavagna. Confermato il 21/09/2026 che resta libero, quindi il debito verso la gallery della Fase 10 non e' pagato.
+Aperto e non assegnato: **D1**, il rapporto della lavagna. Il debito verso la gallery della Fase 10 non e' pagato, e diventa bloccante prima della Fase 6.
