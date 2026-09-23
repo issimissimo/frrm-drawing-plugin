@@ -112,6 +112,8 @@ Cose da non disfare per sbaglio:
 
 **I font della Fondazione non sono nel repo.** `index.html` dichiara `SebinoSoft` e si aspetta i `.woff2` in `prototipo/font/`: sono font commerciali di terzi e il repo è pubblico. Si riscaricano col comando in `prototipo/README.md`; `.lavoro/pubblica.sh` li carica se li trova e avvisa se non ci sono. **Da verificare**: che la licenza webfont copra `issimissimo.com`, che non è il dominio della Fondazione.
 
+**Opacità del tratto a 0.35 dal 23/09/2026** (`CHALK_ALPHA`, prima 0.80), chiesta dal cliente e scelta da Daniele su un confronto. Il valore non scala in proporzione, perché le impronte si sommano. Prezzi dichiarati nel commento della costante: colori più spenti, rosso e marrone sottili che si perdono, e bordi più trasparenti che fanno *sembrare* il tratto più sottile. **Se torna la lamentela "tratti sottili", la causa è questa, non `PRESSURE_*`.**
+
 **Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 
 Verificato: due render dello stesso Drawing danno 0 pixel diversi, il render a 800/1600/3200 px differisce dello 0,44%, un tratto costa 0,17 ms.
@@ -168,7 +170,7 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-17/> — con `?tutorial` in coda il tutorial parte comunque. Fuori da WordPress la domanda d'invio non compare (manca `?invio=`): la -17 è la -14 più la correzione di `adattaLavagna()` (la -16 è la stessa cosa col codice della domanda *dopo*, inattivo fuori da WordPress). La **-15** è la pagina ospite di prova della Fase 8. La **-13** è la -14 **senza il logo** sull'immagine scaricata.
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-18/> — con `?tutorial` in coda il tutorial parte comunque. Fuori da WordPress la domanda d'invio non compare (manca `?invio=`): la -18 è la -17 con il tratto a opacità 0.35 (23/09/2026, cliente); la -17 è la -14 più la correzione di `adattaLavagna()` (la -16 è la stessa cosa col codice della domanda *dopo*, inattivo fuori da WordPress). La **-15** è la pagina ospite di prova della Fase 8. La **-13** è la -14 **senza il logo** sull'immagine scaricata.
 
 ⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente. La `-05` non ha difetti — è solo priva delle correzioni del 18/09/2026 (AVANTI, riquadro degli spessori, tratteggio animato in arancione, corpi più grandi) e serve da confronto. La `-06` è **il giro intermedio con i tasti arancioni**, rientrato poche ore dopo: non va data al cliente, perché mostra una scelta che è stata annullata. La `-07` è buona ma precede lo spostamento del `?` e il fondo spento di SALVA.
 

@@ -207,7 +207,26 @@ export const DEFAULT_SMOOTHING = 'molto';
    Opacita' del singolo timbro. Le impronte si sovrappongono, quindi il valore
    e' molto sotto 1: alzarlo rende il tratto compatto e "a pennarello". */
 
-export const CHALK_ALPHA = 0.80;
+/**
+ * 0.35 dal 23/09/2026, prima 0.80: il cliente voleva il tratto meno opaco,
+ * "piu' gessetto". Scelto da Daniele su un confronto a parita' di tratti e di
+ * grana (0.80 / 0.65 / 0.50 / 0.35).
+ *
+ * Il valore NON scala in proporzione, perche' le impronte si sommano: sulla
+ * campitura bianca la copertura media e' andata da 0.81 a 0.63, e i pixel
+ * quasi pieni dal 57% all'11%. Sotto 0.65 non si vedeva quasi differenza.
+ *
+ * Prezzi dichiarati, misurati sul confronto:
+ *   - i colori escono piu' scuri e meno saturi sul fondo; rosso e marrone,
+ *     gia' i meno contrastati (4,6 e 4,3), in un tratto sottile si perdono
+ *     per primi;
+ *   - riempire una zona chiede piu' passate;
+ *   - i bordi piu' trasparenti fanno SEMBRARE il tratto piu' sottile. E' lo
+ *     stesso meccanismo della questione spessore/velocita' chiusa il
+ *     17/09/2026 (PRESSURE_*): se tornasse la lamentela "i tratti sono
+ *     sottili", la causa e' questa costante, non quelle.
+ */
+export const CHALK_ALPHA = 0.35;
 
 /**
  * Il cancellino deve togliere davvero al primo passaggio: a 0.55 lasciava

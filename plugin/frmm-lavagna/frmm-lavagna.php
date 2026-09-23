@@ -3,7 +3,7 @@
  * Plugin Name:       FRMM Lavagna
  * Plugin URI:        https://github.com/issimissimo/frrm-drawing-plugin
  * Description:       La lavagna a gessetti della Fondazione. Si inserisce in una pagina con lo shortcode [lavagna], dentro un Container Elementor a cui si sia data un'altezza.
- * Version:           1.6.0
+ * Version:           1.6.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Daniele Suppo
@@ -76,7 +76,7 @@ if (is_admin()) {
  * due divergono, cosi' la dimenticanza la trova una macchina e non un bambino
  * con la cache vecchia.
  */
-define('FRMM_LAVAGNA_VER', '1.6.0');
+define('FRMM_LAVAGNA_VER', '1.6.1');
 
 /**
  * Altezza minima del contenitore.

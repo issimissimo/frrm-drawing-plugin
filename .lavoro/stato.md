@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 23/09/2026 (notte)
-Versione corrente: plugin `frmm-lavagna` **1.6.0** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
+Versione corrente: plugin `frmm-lavagna` **1.6.1** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
 
 ## Dove siamo
 
@@ -37,6 +37,8 @@ Passi:
 Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collegato, mescolati ai media della Fondazione: qualcuno potrebbe inserirne uno in una pagina per sbaglio — da nascondere al passo 3 (`ajax_query_attachments_args`) · il nome casuale rende l'URL non indovinabile, non segreto · l'email dallo staging può non partire · il plugin di sicurezza di SiteGround può bloccare i POST REST anonimi (si scopre al passo 1) · SiteGround Optimizer, se sposta o differisce gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i rifiutati occupano la Media Library per 30 giorni · i testi legali sono una dipendenza esterna.
 
 ## Decisioni prese e perché
+
+- **Opacità del tratto 0.35 (23/09/2026, cliente → Daniele)**, era 0.80. Confronto a parità di tratti e grana: 0.65 indistinguibile da 0.80, 0.50 consigliato da Claude, 0.35 scelto. Copertura della campitura bianca 0.81 → 0.63, pixel quasi pieni 57% → 11%. Prezzi e rischio di ricaduta sulla questione spessore/velocità scritti sopra `CHALK_ALPHA`. Online nella -18 e sullo staging (1.6.1); **da provare sul telefono dal cliente**.
 
 - **Fase 8 chiusa (23/09/2026): iframe, non inline.** Dentro un iframe la viewport è il Container, e `100dvh`, media query, `#tut{position:fixed}` e i listener su `document` restano validi senza toccarli; inline andavano riscritti e avrebbero spento pinch e doppio tap su tutto il sito.
 - **Il plugin è un file PHP e un README; l'app non è duplicata**: `pacchetto.py` copia `prototipo/` dentro `app/` al momento dello zip, e rifiuta di costruire se le due versioni del plugin divergono.
