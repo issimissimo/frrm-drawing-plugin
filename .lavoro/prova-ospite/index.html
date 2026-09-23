@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<!-- ATTENZIONE: questo viewport e' copiato TALE E QUALE da quello misurato sul
+     sito della Fondazione il 23/09/2026. Niente user-scalable=no: la lavagna
+     standalone se lo mette da sola, dentro WordPress no, perche' il viewport
+     e' della pagina ospite e non dell'iframe. Se la prova dice che il pinch
+     sulla pagina da' fastidio, e' un'informazione che vogliamo avere ADESSO. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Prova ospite — la lavagna in una pagina con header</title>
+<style>
+  /* Altezze dell'header MISURATE sul sito vero il 23/09/2026 con il browser:
+     55px a 1920px di larghezza, 65px a 390px. La soglia e' quella di
+     Elementor (767), non i 700px con cui la lavagna cambia layout. */
+  :root { --header-h: 55px; }
+  @media (max-width: 767px) { :root { --header-h: 65px; } }
+
+  /* Il fondo del body del sito e' rgb(255,96,0) = #FF6000, misurato.
+     E' la prima volta che la lavagna nera si vede dentro l'arancione: il
+     passo 6 del piano chiede di guardarlo e decidere se serve una cornice. */
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #FF6000;
+    overflow: hidden;              /* la pagina NON scrolla: e' il presupposto */
+    overscroll-behavior: none;     /* niente pull-to-refresh sul bordo */
+  }
+
+  body {
+    font: 500 13px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* sticky e non fixed: cosi' resta nel flusso e il calc() qui sotto e'
+     corretto. Se sullo staging l'header fosse davvero position:fixed,
+     uscirebbe dal flusso e il contenitore andrebbe SOTTO, non dopo. */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: var(--header-h);
+    box-sizing: border-box;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  header b { font-weight: 700; letter-spacing: .02em; }
+  header nav { opacity: .85; font-size: 12px; }
+
+  /* Il cuore della prova. Un Container Elementor alto quanto lo schermo meno
+     l'header — in dvh, non in vh: su iOS Safari 100vh e' l'altezza a barra
+     degli indirizzi COLLASSATA, quindi con vh il contenitore sfora di ~60px
+     e la pagina torna a scorrere proprio mentre un bambino disegna sul bordo.
+     Con ?vh in coda all'URL si prova la versione sbagliata, per vedere la
+     differenza sul telefono invece di doverci credere. */
+  .contenitore {
+    height: calc(100dvh - var(--header-h));
+  }
+  html[data-unita="vh"] .contenitore {
+    height: calc(100vh - var(--header-h));
+  }
+
+  /* Come lo stampera' lo shortcode del plugin. display:block toglie i 4px
+     che un iframe inline si porta dietro dal line-height. */
+  .contenitore iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  /* Diagnostica. Serve a rispondere a una domanda sola, guardando: la pagina
+     sfora? Sul telefono non c'e' una console da aprire. */
+  #diag {
+    font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    opacity: .8;
+    white-space: nowrap;
+  }
+  #diag.sfora { opacity: 1; background: #000; padding: 4px 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <b>FONDAZIONE</b>
+  <div id="diag">—</div>
+  <nav>MENU</nav>
+</header>
+
+<!-- Questo e' il Container di Elementor, e l'iframe e' quel che ci mettera'
+     dentro lo shortcode.
+
+     src punta alla -14 gia' online, NON a una copia: il passo 1 del piano
+     vuole la lavagna esattamente com'e' stata validata, senza una riga
+     cambiata. Stesso dominio, quindi same-origin.
+
+     allow="web-share": la policy web-share ha default "self", che dovrebbe
+     gia' coprire un frame same-origin. Dichiararla e' gratis e toglie di
+     mezzo il dubbio. NIENTE sandbox: un sandbox senza allow-downloads
+     spegnerebbe il salvataggio, che e' tutto quello che l'utente porta a casa. -->
+<div class="contenitore">
+  <iframe id="lavagna" title="Lavagna" allow="web-share"></iframe>
+</div>
+
+<script>
+  const q = new URLSearchParams(location.search);
+
+  // ?vh  -> contenitore in 100vh invece di 100dvh, per vedere il difetto
+  if (q.has('vh')) document.documentElement.dataset.unita = 'vh';
+
+  // ?tutorial -> lo passa alla lavagna, che lo usa per ripartire da capo.
+  // Serve perche' il "gia' visto" sta in localStorage per ORIGINE + pathname,
+  // e dentro l'iframe il pathname e' quello della -14: chi l'ha gia' aperta
+  // non rivedrebbe il tutorial.
+  const base = '../frmm-drawing-plugin-14/';
+  document.getElementById('lavagna').src = base + (q.has('tutorial') ? '?tutorial' : '');
+
+  // La sola misura che conta qui: la pagina sfora l'altezza dello schermo?
+  // Se sfora, prima o poi scrolla, e la lavagna si sposta sotto il dito.
+  const diag = document.getElementById('diag');
+  const se = document.scrollingElement;
+  function misura() {
+    const sfora = se.scrollHeight - innerHeight;
+    diag.textContent = `${innerWidth}x${innerHeight} · sfora ${sfora}px · scroll ${Math.round(se.scrollTop)}`;
+    diag.classList.toggle('sfora', sfora > 0);
+  }
+  addEventListener('resize', misura);
+  addEventListener('scroll', misura, { passive: true });
+  misura();
+  setInterval(misura, 500);   // la barra di Safari cambia senza eventi affidabili
+</script>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 18/09/2026
+Ultimo aggiornamento: 23/09/2026
 Versione corrente: prototipo fasi 0–4b. Nessun numero di versione.
 
 ## Dove siamo
@@ -10,73 +10,94 @@ Online: <https://issimissimo.com/temp/frmm-drawing-plugin-14/> (con `?tutorial` 
 
 **Il logo è arrivato il 18/09/2026** e chiude la dipendenza esterna aperta il 31/08. Sta solo sull'immagine scaricata, come vuole §7.2 — il PNG per la moderazione e la gallery non lo avranno, ed è un parametro a zero di default proprio perché resti così. Due cose da portare al cliente: **a 220 unità il nome della Fondazione non si legge** (il marchio sì), e **il logo copre l'angolo alto-sinistra del disegno**, rischio già accettato in §7.1 ma mai guardato su disegni veri di bambini.
 
-**Provato su telefono il 18/09/2026: il tutorial funziona e SALVA funziona.** Cadono i due punti che erano in sospeso dal 17/09. Resta non fatta la sola verifica che nessun automatismo può dare: **il test con un bambino**, che è la DoD della Fase 4 nel brief e non è mai stata soddisfatta.
+**Provato su telefono il 18/09/2026: il tutorial funziona e SALVA funziona.** Cadono i due punti che erano in sospeso dal 17/09.
+
+**Il test con un bambino è stato fatto ed è andato bene (23/09/2026): la Fase 4 è chiusa davvero.** Era l'ultima cosa che nessun automatismo poteva dare, e l'unica DoD del brief rimasta non soddisfatta.
+
+**Dal 23/09/2026 si lavora alla Fase 8**, l'integrazione in WordPress: la lavagna dentro una pagina con header, in un Container Elementor, via shortcode e in iframe. Piano e decisioni qui sotto.
 
 ## Piano attivo
 
-Obiettivo: la lavagna si apre dentro una pagina del sito WordPress della Fondazione, inserita da un **shortcode**, e continua a funzionare come funziona oggi sul telefono. È la **Fase 8** del brief; le fasi 5, 6 e 7 restano chiuse, quindi SALVA continuerà a scaricare e non a inviare.
+Obiettivo: la lavagna si apre dentro una pagina del sito WordPress della Fondazione — pagina **con header**, shortcode dentro un **Container Elementor alto quanto lo schermo meno l'header** — e sul telefono continua a funzionare come funziona oggi. È la **Fase 8** del brief; le fasi 5, 6 e 7 restano chiuse, quindi SALVA continuerà a scaricare e non a inviare.
 
-> ⚠️ **Numerazione corretta il 18/09/2026.** Fino a ieri questa fase era chiamata «Fase 7», che nel brief è invece il **backend** (inbox, CPT, REST, moderazione). L'errore aveva fatto sparire dall'elenco operativo la **Fase 9 del brief — hardening, legale, QA**: privacy policy, testo di consenso, anti-abuso, retention. Su un progetto che raccoglie disegni di bambini non è una fase che si può perdere. La numerazione del brief è l'unica valida: 7 backend, 8 integrazione WP, 9 hardening/legale, 10 gallery e go-live.
+> **Le tre decisioni bloccanti sono sciolte (21/09/2026).**
 >
-> Fare la 8 prima della 7 è una scelta, non un errore: SALVA scarica e basta, quindi l'integrazione non ha bisogno del backend. Ma **il plugin nasce una volta sola**: va progettato sapendo che dovrà ospitare anche CPT e REST, non solo uno shortcode.
+> 1. **Pagina normale con header, non Elementor Canvas.** Il brief prescriveva Canvas; Daniele ha deciso diversamente. Il rischio che quella prescrizione evitava — la strategia anti-scroll della Fase 1 — si sgonfia lo stesso perché **la pagina non scrolla**: il Container è alto `100dvh` meno l'header e sotto non c'è altro. Il `rect` cachato in `board.js` resta quindi valido, e `overflow:hidden` + `overscroll-behavior:none` sulla pagina fanno il lavoro che faceva `html, body { position: fixed }`.
+> 2. **Iframe.** Dentro un iframe la viewport **è** il Container: `height: 100dvh`, le media query a 700/1024/767 px, `#tut { position: fixed }` e i listener su `document` restano tutti corretti senza toccare una riga. La scelta non è più motivata dal rischio — con la pagina che non scrolla l'inline sarebbe praticabile — ma dal **costo**: iframe chiede due modifiche all'app, inline ne chiede cinque o sei sparse più una rivalidazione completa su device.
+> 3. **Si prova su staging SiteGround**, non in locale e non in produzione.
+>
+> Fare la 8 prima della 7 resta una scelta, non un errore: SALVA scarica e basta. Ma **il plugin nasce una volta sola** e va progettato sapendo che dovrà ospitare CPT e REST.
 
-**Tre decisioni da prendere prima di scrivere una riga.** Sono la ragione per cui questa fase non comincia dal codice:
+**Ambiente di destinazione, risposto il 23/09/2026.** WordPress 7.1, Elementor Pro 4.1.2, tema **Hello** — che è la notizia migliore dell'elenco: Hello non porta CSS proprio, quindi anche il rischio «il tema interferisce» è il minimo possibile. Il plugin **nasce separato**, non si innesta in niente di esistente. L'header è **sticky e non si contrae**, quindi il Container non cambia mai altezza: cade il rischio peggiore del piano, quello della grana che cambiava a metà di un tratto.
 
-1. **Pagina dedicata o lavagna dentro una pagina normale?** È la domanda che viene prima di iframe/inline, e il brief l'aveva già decisa: la Fase 8 prescrive il template **Elementor Canvas**, «niente header/footer che rubano altezza verticale». Su una pagina Canvas la lavagna è sola, `html, body { position: fixed }` torna applicabile quasi com'è, e il rischio principale si sgonfia.
+Credenziali dello staging in `~/.claude/.secrets/wp-staging-fondazione.env` — **non qui**: `.lavoro/` non è gitignorata e il repo è pubblico.
 
-   ⏳ **In attesa: Daniele lo chiede alla Fondazione** (18/09/2026). Finché non arriva la risposta, la Fase 8 non si apre — le decisioni 2 e 3 dipendono da questa.
-2. **Iframe o inline?** Dipende dalla 1. Con una pagina Canvas l'inline diventa praticabile e resta solo un problema di prefissi e specificità (CSS di Elementor su `button` e sulla tipografia, id generici `#hud`/`#tut`). Dentro una pagina normale, con header e footer, l'iframe è l'unica risposta sensata. Vedi «Il nodo dell'integrazione» sotto.
-3. **Dove si prova?** Installare un plugin non provato sul sito di produzione di una Fondazione non si fa. Serve sapere se esiste uno **staging** su SiteGround, o se si prova su un WordPress locale. Senza questa risposta il piano non ha un posto dove atterrare.
+**Misure prese dal sito vero il 23/09/2026**, non inventate: header alto **55px a 1920 e 65px a 390** (soglia 767, quella di Elementor), fondo del body **`#FF6000`**, viewport della pagina `width=device-width, initial-scale=1` — **senza `user-scalable=no`**, che la lavagna standalone si mette da sola e dentro WordPress non potrà più, perché il viewport è della pagina ospite e non dell'iframe.
 
-Criterio di finito (da confermare quando le due decisioni sono prese):
+⚠️ **Sul sito pubblico l'header risulta `position: static`, non sticky.** Su una pagina che non scrolla è indifferente, ma se sullo staging fosse davvero `position: fixed`, uscirebbe dal flusso: il Container a `calc(100dvh - 65px)` finirebbe **sotto** l'header invece che dopo, e si perderebbero 65px in fondo. Da verificare al passo 5, guardando la pagina vera.
 
-- Lo shortcode `[lavagna]` in una pagina Elementor apre la lavagna, e **sul telefono vale ancora la DoD della Fase 1**: si disegna a 60 fps, la pagina non scorre mentre si disegna, niente pull-to-refresh, niente zoom da doppio tap, il palmo appoggiato non disegna.
-- Il tutorial parte alla prima apertura **dentro la pagina** e non riparte alla seconda.
-- I font arrivano da Elementor e la lavagna non eredita stili del tema che ne cambino la mensola.
-- «Torna al sito» porta a una pagina del sito, non a una pagina bianca.
-- La pagina che ospita la lavagna scorre normalmente **fuori** dall'area di disegno.
+Criterio di finito:
+
+- Lo shortcode `[lavagna]` dentro un Container Elementor a `calc(100dvh - header)` apre la lavagna sullo **staging**, e sul telefono vale ancora la **DoD della Fase 1**: si disegna a 60 fps, la pagina non scorre mentre si disegna, niente pull-to-refresh, niente zoom da doppio tap né da pinch, il palmo appoggiato non disegna.
+- **SALVA porta il JPEG nel rullino o nei Download da dentro l'iframe**, su iPhone Safari e su Android Chrome. È la verifica che decide se l'iframe regge: `navigator.share` e `<a download>` dentro un frame non sono scontati.
+- Il tutorial parte alla prima apertura dentro la pagina, non riparte alla seconda, **e non riparte dopo un aggiornamento del plugin**.
+- La mensola non finisce sotto la home bar di iOS, e in alto non la mangia l'header.
+- Con il plugin attivo, **nessuna altra pagina del sito cambia aspetto o comportamento**, e la console è pulita.
+- La lavagna nera dentro la pagina vera è stata guardata, e si è deciso se serve una cornice sul fondo `#FF6000`.
 
 Fuori perimetro, e va detto se ci si avvicina:
 
-- **L'export completo** (Fase 6), **la persistenza locale** (Fase 5) e **il backend** (Fase 7). SALVA scarica, punto.
-- **Hardening e legale** (Fase 9), **gallery e go-live** (Fase 10).
-- Il logo nell'export: dipendenza esterna ancora aperta.
+- **Persistenza locale** (Fase 5), **export completo a tre risoluzioni** (Fase 6), **backend, CPT, REST, moderazione** (Fase 7), **hardening e legale** (Fase 9), **gallery e go-live** (Fase 10). SALVA scarica, punto.
+- **D1, il rapporto della lavagna**: resta come oggi, la lavagna riempie il Container (deciso il 21/09/2026). Il debito verso la gallery della Fase 10 **non è pagato** e resta aperto.
 - Qualunque modifica al motore del gesso. Se l'integrazione sembra chiederla, è il segno che la strada scelta è sbagliata.
+- Il **test con un bambino** (DoD della Fase 4): resta aperto, e questo piano non lo chiude. Vedi «Fronte sospeso».
 
 Passi:
 
-1. [ ] **Rispondere alle tre decisioni qui sopra.** Punto di fermata.
-2. [x] **Provare il prototipo attuale sul telefono** — fatto il 18/09/2026: tutorial e SALVA funzionano.
-3. [ ] **Il plugin minimo**: una cartella `lavagna/` con l'header del plugin e uno shortcode che stampa l'app. Nessuna opzione, nessuna pagina di amministrazione.
-4. [ ] **Far convivere l'app con la pagina**: scroll, altezza, safe area, e «Torna al sito» che deve portare da qualche parte di sensato.
-5. [ ] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì.
-6. [ ] **Guardare la lavagna nera dentro una pagina a fondo `#FF6000`** e decidere se serve una cornice. Finora nessuno l'ha vista.
+1. [~] **La finta pagina ospite, prima di qualunque PHP.** ✅ *Costruita e online il 23/09/2026: <https://issimissimo.com/temp/frmm-drawing-plugin-15/>* — sorgente in `.lavoro/prova-ospite/index.html`, caricata da `.lavoro/pubblica-file.sh`. Header finto alle misure vere (55/65px), fondo `#FF6000`, Container a `calc(100dvh - header)`, iframe con `allow="web-share"` e **senza `sandbox`**, che punta alla **-14 già online** invece che a una copia: il passo vuole la lavagna esattamente com'è stata validata, e una copia in più diverge il giorno che si corregge l'originale. Con `?vh` in coda usa `100vh` invece di `dvh`, per vedere il difetto sul telefono invece di doverci credere; con `?tutorial` lo passa alla lavagna.
+   **Verificato su Chrome desktop a 390x844**: la pagina non sfora (`scrollHeight - innerHeight = 0`), `.app` dentro l'iframe misura **779px = esattamente l'altezza dell'iframe** (è il punto centrale della scelta iframe, e ora è misurato), e un tratto tracciato col mouse finisce **sotto il puntatore, con zero sfasamento dai 65px dell'header**. `navigator.share` e `canShare` esistono dentro il frame — ma su Chrome desktop, che non è la prova che conta.
+   ⏳ **Manca la prova sul telefono**, che è tutta la ragione per cui questo passo esiste.
+2. [ ] **Le correzioni che il passo 1 rivela**, più le due già note. Lo screenshot del passo 1 ne ha già confermata una **guardandola, non deducendola**: sotto l'header della Fondazione, «Torna al sito» è un secondo tasto indietro a 10px dal primo, e la fascia scura che lo contiene mangia ~55px di lavagna per niente. **Togliere «Torna al sito»** (`#btn-back` in `index.html`, il cablaggio in `main.js`, e verificare che il tutorial non lo indichi in nessuno dei sette passi) e sistemare quel che il telefono avrà detto su safe area e altezza. Testabile: i 46 test passano, e il link del passo 1 ricaricato si comporta bene.
+3. [ ] **Il plugin minimo.** Cartella `frmm-lavagna/` con header del plugin, un solo shortcode `[lavagna]`, l'app sotto `app/`, **nessuna opzione e nessuna pagina di amministrazione**. Lo shortcode stampa un `<iframe>` same-origin con `allow="web-share"`, **senza `sandbox`**, largo e alto il 100% del Container, più un `min-height` di sicurezza per chi lo infilasse in un Container ad altezza automatica. Nessun JS e nessun CSS della lavagna vengono messi in coda nella pagina: con l'iframe gli enqueue condizionali del brief diventano **zero enqueue**, ed è il modo più solido di non avere conflitti col tema. L'URL dell'iframe porta `?v=<versione del plugin>`: batte la cache di SiteGround come facevano le cartelle numerate, **e non cambia `location.pathname`**, quindi il «già visto» del tutorial sopravvive agli aggiornamenti. Più un `README.md` dentro la cartella del plugin. Testabile: `php -l` su ogni file e l'attivazione su un WP qualsiasi.
+4. [ ] **Lo script di pacchetto.** Uno zip installabile che includa i **font**, che nel repo non ci sono e non ci possono stare. Senza questo passo il plugin è corretto e si installa sbagliato. Testabile: lo zip si installa e i font arrivano.
+5. [ ] **Installazione sullo staging** e pagina Elementor vera: Container a `100dvh` meno header — **in `dvh`, non in `vh`**, o su iOS il Container sfora e la pagina torna a scorrere. ⏳ *Richiede gli accessi allo staging.*
+6. [ ] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì, più la lavagna nera guardata dentro il fondo arancione del sito.
 
 Rischi aperti:
 
-- **La gestione dello scroll è la cosa più fragile che tocchiamo.** Tutta la tenuta su iOS della Fase 1 è costruita su `html, body { position: fixed }`. Quanto sia un rischio dipende dalla decisione 1: in una pagina **Elementor Canvas** quelle regole tornano applicabili quasi com'è, perché nella pagina non c'è altro da far scorrere; in una pagina normale con header e footer non si possono mettere, e andrebbe riscritta la strategia — che è la DoD della Fase 1.
-- **Il CSS di Elementor e del tema.** Inline, la mensola erediterebbe regole su `button`, `padding`, `box-sizing` e la tipografia globale. In iframe il problema non esiste.
-- **Il plugin va su un sito di terzi**, vivo, di una Fondazione. Ogni prova ha un pubblico.
-- **Un plugin è codice destinato a durare.** Fra sei mesi nessuno ricorderà com'è fatto: merita un README suo dentro la cartella del plugin.
+- **`navigator.share` dentro un iframe.** La permissions policy `web-share` ha come default `self`, che *dovrebbe* coprire un frame same-origin; `allow="web-share"` lo rende esplicito. Ma non è mai stato provato, e SALVA è tutto quello che l'utente porta a casa. **È il motivo per cui il passo 1 viene prima del PHP.**
+- **`env(safe-area-inset-*)` vale 0 dentro un iframe.** Il padding per notch e home bar deve darlo la pagina WordPress, non più l'app. Se nessuno lo fa, su iPhone la mensola finisce sotto la barra di sistema.
+- **`100vh` su iOS Safari non è l'altezza che si vede**: è quella a barra degli indirizzi collassata. Un Container a `calc(100vh - header)` sfora di ~60px e la pagina torna a scorrere proprio mentre un bambino disegna vicino al bordo.
+- ~~**L'header sticky, se lo è.**~~ **Caduto il 23/09/2026**: l'header non si contrae, quindi il Container non cambia mai altezza e il resize a metà tratto — che avrebbe cambiato la grana del gesso sotto gli occhi di chi disegna — non può avvenire. Resta il dubbio `static` / `fixed` descritto sopra, che è un'altra cosa e riguarda solo dove comincia il Container.
+- **Il plugin va su un sito vivo di terzi.** Anche con zero enqueue, un plugin attivo carica il suo PHP su tutto il sito.
+- **I font non sono nel repo** e il pacchetto deve portarli: è il passo 4, ed è il modo più facile di consegnare un plugin che sembra funzionare e ha la tipografia sbagliata.
+- **Un plugin è codice destinato a durare.** Fra sei mesi nessuno ricorderà com'è fatto: il README dentro la cartella non è un extra.
 
-Costo stimato: 6 passi, di cui due sono attese o prove su device. L'ordine di grandezza dipende tutto dalla decisione 1: in iframe è una sessione, inline sono diverse e con il rischio di rompere la Fase 1.
+Costo stimato: 6 passi. I passi 1–4 sono una sessione di lavoro e non dipendono da nessuno. I passi 5–6 dipendono dagli accessi allo staging e da una prova su telefono, quindi hanno un tempo di attesa, non di lavoro. Ordine di grandezza complessivo: contenuto, **a patto che il passo 1 non dica che lo share dentro l'iframe non funziona** — se lo dicesse, la scelta dell'iframe andrebbe rivista e il costo cambierebbe di categoria.
 
-### Il nodo dell'integrazione: iframe o inline
+### I buchi sono chiusi (23/09/2026)
 
-> **Il brief aveva già sciolto questo nodo, e la sessione del 17/09 non se n'era accorta.** La Fase 8 prescrive il template **Elementor Canvas**: senza header né footer, nella pagina non c'è altro da far scorrere e il punto qui sotto quasi decade. Quanto segue vale integralmente solo nell'ipotesi di una pagina normale.
+Tutti e quattro. Staging, versioni, plugin separato, header che non si contrae: vedi «Ambiente di destinazione» sopra. Non resta niente da indovinare nei passi 1–4.
 
-**Inline** (lo shortcode stampa l'HTML della lavagna nella pagina): i font arrivano gratis da Elementor e non c'è un iframe da dimensionare. Ma:
+### Il test con un bambino: fatto, e riuscito (23/09/2026)
 
-- l'app blocca lo scroll con `html, body { position: fixed; overflow: hidden }`, e in una pagina che ha header, contenuto e footer quelle regole non si possono applicare: andrebbe riscritta la strategia anti-scroll, che è **la Definition of Done della Fase 1** e l'unico vero rischio che il progetto aveva;
-- il CSS del tema interferisce con la mensola;
-- `#hud`, `#tut` e i canvas usano `position: fixed` e id generici, che in una pagina possono collidere.
+Era il fronte sospeso, ed è chiuso. **La DoD della Fase 4 del brief — «test con un utente reale sotto i 10 anni; se chiede *come faccio a…*, la UI è sbagliata» — è soddisfatta.** Era l'ultima verifica che nessun test automatico poteva dare, e l'unica ragione per cui la Fase 4 non si poteva dichiarare chiusa.
 
-**Iframe** (lo shortcode stampa un `<iframe>` che punta alla lavagna): l'app resta **esattamente** com'è, con il suo `html`/`body`, e tutto quello che è stato validato su device continua a valere. Il prezzo è tutto noto e piccolo:
+Vale la pena notare cosa significa: il tutorial è nato proprio perché la UI da sola non bastava, cioè dal sintomo che quella DoD descrive, e il test serviva a sapere se avesse risolto o solo coperto. Ha risolto.
 
-- i font vanno caricati dentro l'iframe — ma sullo stesso dominio della Fondazione sono same-origin, quindi bastano tre `@font-face`;
-- l'altezza va data all'iframe (`100dvh` meno l'header, o un'altezza fissa);
-- «Torna al sito» oggi fa `window.history.back()`, che dentro un iframe naviga l'iframe: va cambiato in `postMessage` al genitore, o in un link con `target="_parent"`;
-- `allow="..."` e `sandbox` vanno impostati in modo da non bloccare il download e `navigator.share`.
+*Da registrare quando c'è occasione, se è emerso*: le domande testuali del bambino sono l'informazione più preziosa di quella prova, e non sono state annotate qui. Non blocca niente.
+
+### Il nodo dell'integrazione: sciolto il 21/09/2026
+
+Iframe. Ma la ragione è cambiata rispetto a come il nodo era posto il 18/09, e vale la pena scriverlo perché chi rileggesse non tragga la conclusione sbagliata.
+
+Il 18/09 l'iframe sembrava obbligato perché in una pagina normale `html, body { position: fixed }` non è applicabile, e quelle regole erano tutta la tenuta anti-scroll della Fase 1. **Con l'informazione che la pagina non scrolla, quell'argomento cade**: `overflow:hidden` e `overscroll-behavior:none` sul documento ottengono lo stesso risultato, e il `rect` cachato in `board.js:31` — che allo scroll si sarebbe sfasato dal dito — resta valido.
+
+Quel che resta, e che basta a decidere, è il **costo misurato sul codice**. Inline chiederebbe: `.app` da `100dvh` all'altezza del Container; il velo del tutorial da `position: fixed; inset: 0` (`index.html:444`) ad absolute, con le misure di `tutorial.js:172` che oggi leggono `innerHeight`; gli id generici `#hud`, `#tut`, `#stage`, `#widths` da prefissare; il CSS di Elementor su `button`, `box-sizing` e tipografia da neutralizzare; i listener `gesturestart` / `gesturechange` / `dblclick` registrati su `document` (`input.js:152-155`), che inline spengono pinch e doppio click **su tutta la pagina della Fondazione**. Più una rivalidazione su device di tutto quanto.
+
+Iframe chiede: togliere «Torna al sito», e verificare share e download dentro un frame. Due cose, di cui una è una cancellazione.
+
+**Le media query non sono un argomento**, contrariamente a quanto si potrebbe pensare: il Container è largo quanto la finestra, quindi le soglie a 700/1024/767 px darebbero il risultato giusto anche inline. Cambia solo l'altezza, e l'altezza non è in nessuna media query.
 
 ## Decisioni prese e perché
 
@@ -152,18 +173,14 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Il test con un bambino** — scelto il 18/09/2026. È la DoD della Fase 4 nel brief, non è mai stata soddisfatta, costa un pomeriggio e zero righe di codice. Si fa su <https://issimissimo.com/temp/frmm-drawing-plugin-13/>, da un telefono, con qualcuno fra i 5 e i 12 anni che non ha mai visto l'app.
+**Provare la pagina ospite dal telefono**: <https://issimissimo.com/temp/frmm-drawing-plugin-15/>
 
-Cosa si guarda, e non è la stessa cosa che chiedere se gli è piaciuto:
+E' il passo 1 del piano, ed e' l'unico che puo' dire se la scelta dell'iframe regge. Su desktop e' gia' verificato (coordinate allineate, pagina che non sfora, `.app` alta quanto l'iframe), ma le tre cose che contano si vedono solo li':
 
-1. **Arriva in fondo al tutorial da solo**, o lo chiude al terzo passo? Se lo chiude, la domanda è se poi disegna lo stesso.
-2. **Quali domande fa.** Il brief è netto: «se chiede *come faccio a…*, la UI è sbagliata». Vanno annotate testualmente, non riassunte: la parola che usa per una cosa è più informativa dell'icona che stiamo usando noi.
-3. **Trova il cancellino?** È il tasto che ha già richiesto un intervento del cliente per leggibilità.
-4. **Cambia colore e spessore senza che glielo si dica?**
-5. **Cosa fa dopo aver finito**, se cerca un modo di tenere il disegno senza che nessuno gli indichi SALVA.
+1. **SALVA.** Il JPEG arriva nel rullino o nei Download **da dentro l'iframe**? E' la verifica che decide la fase: `navigator.share` dentro un frame non e' scontato, e SALVA e' tutto quello che l'utente porta a casa.
+2. **La DoD della Fase 1, ripetuta dentro la pagina**: 60 fps, niente scroll mentre si disegna, niente pull-to-refresh, niente zoom da doppio tap ne' da pinch, il palmo appoggiato che non disegna. Attenzione al pinch in particolare: la pagina ospite **non ha `user-scalable=no`**, perche' il sito vero non ce l'ha.
+3. **`?vh` contro `dvh`.** Aprire <https://issimissimo.com/temp/frmm-drawing-plugin-15/?vh> e guardare la diagnostica nell'header: se dice «sfora» piu' di 0, si vede da soli perche' il Container va in `dvh`.
 
-L'esito decide se la Fase 4 si chiude davvero o se ha un giro di correzioni — che è molto meglio scoprire prima di impacchettare tutto in un plugin WordPress.
+E gia' che il telefono e' in mano, una quarta cosa che non e' una verifica ma una decisione: **la lavagna nera dentro l'arancione**. E' la prima volta che si vede.
 
-Bloccato in attesa: **la Fase 8** non si apre finché la Fondazione non dice se la lavagna va in una pagina dedicata o dentro una pagina del sito.
-
-Aperto e non assegnato: **D1**, il rapporto della lavagna. Non urge finché non esistono gli invii, ma costa un'ora oggi e una riscrittura alla Fase 10.
+Aperto e non assegnato: **D1**, il rapporto della lavagna. Confermato il 21/09/2026 che resta libero, quindi il debito verso la gallery della Fase 10 non e' pagato.
