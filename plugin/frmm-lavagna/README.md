@@ -123,10 +123,37 @@ Se le due versioni divergono, **lo script si rifiuta di costruire lo zip**. Non 
 
 Cambia la query string e **non il percorso**, e anche questo e' voluto: il tutorial ricorda di essere stato visto in una chiave di `localStorage` che contiene `location.pathname`. Se cambiasse il percorso, ogni aggiornamento del plugin rimetterebbe il tutorial davanti a chi l'aveva gia' fatto.
 
+## L'invio dei disegni (dalla 1.3.0)
+
+`POST /wp-json/frmm-lavagna/v1/invio`, anonimo, `multipart/form-data`:
+
+| campo | cosa |
+|---|---|
+| `client_id` | UUID v4 generato dall'app (D5) |
+| `disegno` | il Drawing di D1, come stringa JSON |
+| `immagine` | JPEG largo **1600 px** e alto quanto `board.h` del disegno, **senza logo** |
+
+Risponde `201 {ok, id}` se il disegno e' in attesa, altrimenti `400` / `413` / `415` con un `code` (`frmm_client_id`, `frmm_disegno`, `frmm_disegno_vuoto`, `frmm_disegno_grande`, `frmm_immagine`, `frmm_immagine_tipo`, `frmm_immagine_misure`, `frmm_immagine_grande`). L'app sceglie la frase da mostrare dal codice, mai dal messaggio.
+
+Il codice sta in `includes/`:
+
+- `disegni.php` — il tipo di contenuto `frmm_disegno`: non pubblico, non in REST, senza URL. Visibile solo in bacheca, dove si modera. Il nome ha il prefisso, e non e' `disegno` come nel brief, perche' i tipi di WordPress condividono un solo spazio di nomi.
+- `invio.php` — l'endpoint. Scrive l'immagine in `uploads/frmm-lavagna/` con un **nome casuale a 128 bit**, crea il post `pending`, lo collega all'allegato e lo mette come immagine in evidenza. Se un pezzo fallisce, toglie i pezzi gia' scritti.
+- `validazione.php` — i controlli, **senza WordPress**, cosi' si provano in locale: `php -d extension=gd plugin/test/validazione.php`.
+
+Cose da non disfare per sbaglio:
+
+- **L'immagine si ricodifica, non si copia.** Un JPEG con del PHP appeso in coda passa ogni controllo sui byte e sulle misure: e' la ricodifica con GD che lo ripulisce. Provato sullo staging.
+- **Il tipo si legge dai byte**, mai dal MIME del multipart o dall'estensione, che sceglie chi manda.
+- **Il Drawing salvato e' ricostruito campo per campo**: in archivio non entra niente che non sia stato guardato.
+- **Niente nonce**, ed e' deciso: per un anonimo e' uguale per tutti, e una pagina in cache lo servirebbe scaduto.
+- **La risposta non contiene l'URL dell'immagine.** Il nome casuale protegge solo finche' nessuno lo dice.
+- **Il CPT resta `public => false` e `show_in_rest => false`** (D3). Verificato da anonimo il 23/09/2026: `?attachment_id=`, `?p=`, `/wp/v2/media` chiusi (404/401), cartella non elencabile (403), niente sitemap degli allegati in Yoast.
+
+Prove: `python .lavoro/prova-invio.py` contro lo staging (35 controlli; lascia due disegni in attesa a ogni giro).
+
 ## Cosa non fa (ancora)
 
-**Non invia niente a nessuno.** Il tasto SALVA scarica il JPEG sul dispositivo e finisce li'. Non c'e' backend, non c'e' un custom post type, non c'e' una coda di moderazione e non c'e' la gallery: sono la Fase 7 e la Fase 10 del progetto, e quando arriveranno vivranno **qui dentro**, non altrove.
+L'app non chiama ancora l'endpoint: SALVA scarica e basta. Mancano l'email all'amministratore, la miniatura e i tasti Approva/Rifiuta in bacheca, il rate limit, la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
 
-Quando succedera', l'app parlera' col plugin via `postMessage` — dall'iframe non puo' fare altrimenti. E' anche il motivo per cui l'iframe e' same-origin e senza sandbox.
-
-Finche' il plugin fa una cosa sola resta **un file solo**, che si legge meglio di quattro file da dieci righe. Si spacchettera' in `includes/` quando arrivera' il backend, non prima.
+L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.

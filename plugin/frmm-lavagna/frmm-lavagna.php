@@ -3,7 +3,7 @@
  * Plugin Name:       FRMM Lavagna
  * Plugin URI:        https://github.com/issimissimo/frrm-drawing-plugin
  * Description:       La lavagna a gessetti della Fondazione. Si inserisce in una pagina con lo shortcode [lavagna], dentro un Container Elementor a cui si sia data un'altezza.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Daniele Suppo
@@ -35,16 +35,20 @@
  * Il conto e' stato fatto sul codice, non a intuito: il dettaglio sta nel
  * README qui accanto.
  *
- * DOVE CRESCERA'
+ * DOVE STA IL RESTO
  *
- * Alla Fase 7 del progetto questo plugin ospitera' anche l'invio dei disegni:
- * un CPT per le submission, una rotta REST che riceve il PNG, e la coda di
- * moderazione in bacheca. Finche' fa una cosa sola resta un file solo, che e'
- * piu' facile da leggere di quattro file da dieci righe. Quando arrivera' il
- * backend si spacchettera' in includes/, non prima.
+ * Dalla 1.3.0 il plugin riceve anche i disegni (Fasi 6-7 del brief), e il
+ * codice si e' spacchettato in includes/:
  *
- * L'app parlera' col plugin via postMessage, perche' dall'iframe non puo' fare
- * altrimenti. E' il motivo per cui l'iframe e' same-origin e non ha sandbox.
+ *   includes/disegni.php      il tipo di contenuto, cioe' la casella di posta
+ *   includes/invio.php        POST /wp-json/frmm-lavagna/v1/invio
+ *   includes/validazione.php  i controlli su quel che arriva, senza WordPress
+ *
+ * Qui resta lo shortcode, che e' quel che il plugin era prima e che non
+ * dipende da niente di quanto sopra.
+ *
+ * L'iframe e' same-origin e non ha sandbox: l'app chiama l'endpoint
+ * direttamente, come qualunque pagina del sito.
  */
 
 // Nessun accesso diretto: e' la prima riga di qualunque file PHP di un plugin,
@@ -52,6 +56,10 @@
 if (!defined('ABSPATH')) {
     exit;
 }
+
+require_once __DIR__ . '/includes/validazione.php';
+require_once __DIR__ . '/includes/disegni.php';
+require_once __DIR__ . '/includes/invio.php';
 
 /**
  * Versione, usata per due cose diverse: WordPress la mostra in bacheca, e noi
@@ -62,7 +70,7 @@ if (!defined('ABSPATH')) {
  * due divergono, cosi' la dimenticanza la trova una macchina e non un bambino
  * con la cache vecchia.
  */
-define('FRMM_LAVAGNA_VER', '1.2.0');
+define('FRMM_LAVAGNA_VER', '1.3.0');
 
 /**
  * Altezza minima del contenitore.

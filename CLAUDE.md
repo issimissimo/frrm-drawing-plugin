@@ -37,7 +37,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Il plugin WordPress — `plugin/frmm-lavagna/`
 
-**Un file PHP e un README.** Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. Installato e attivo sullo **staging** alla 1.2.0, provato il 23/09/2026.
+Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. **Dalla 1.3.0** (23/09/2026, solo staging) riceve anche i disegni: `POST /wp-json/frmm-lavagna/v1/invio`, codice in `includes/`, regole da non disfare nel README del plugin. Si installa sullo staging con `python .lavoro/installa-staging.py`, che legge le credenziali da sé.
 
 Lo zip si costruisce con `python .lavoro/pacchetto.py`. Credenziali dello staging in `~/.claude/.secrets/wp-staging-fondazione.env` — **mai in `.lavoro/`**, che non è gitignorata mentre il repo è pubblico.
 

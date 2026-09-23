@@ -22,3 +22,6 @@ prototipo/font/
 
 # Zip del plugin: si ricostruisce con .lavoro/pacchetto.py
 .lavoro/dist/
+
+# Cache di Python degli script in .lavoro/
+__pycache__/

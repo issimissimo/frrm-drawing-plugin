@@ -1,25 +1,25 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 23/09/2026
-Versione corrente: plugin `frmm-lavagna` **1.2.0** (installato solo sullo staging). Il prototipo non ha numero.
+Ultimo aggiornamento: 23/09/2026 (sera)
+Versione corrente: plugin `frmm-lavagna` **1.3.0** (installato solo sullo staging, con l'endpoint di invio). Il prototipo non ha numero.
 
 ## Dove siamo
 
 La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione, via `[lavagna altezza="schermo"]` in un iframe: provata su iPhone/Safari e Android/Chrome, funziona. SALVA scarica il JPEG col logo; **non invia niente a nessuno**.
-In produzione il plugin non c'è. 49 test (`node prototipo/test/run.js`), zip con `python .lavoro/pacchetto.py`.
+In produzione il plugin non c'è. 49 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 35 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
 
-## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, nessun passo iniziato)
+## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passo 1 fatto)
 
 Obiettivo: un bambino **sceglie** di mandare il disegno; arriva in bacheca, un adulto lo approva o lo rifiuta dalla miniatura, gli approvati vanno in una galleria. Tutto sullo staging.
 
 Decisioni d'apertura: SALVA scarica e **poi chiede** «Vuoi mandarlo alla Fondazione?» (INVIA / NO GRAZIE) · **D1 chiuso**: la galleria accetta proporzioni miste · una sola risoluzione, **1600px** · niente Turnstile · niente nonce sull'endpoint anonimo · immagini in attesa con **nome casuale a 128 bit** (confermato da Daniele: non la cartella protetta).
-Assunzioni non contestate, da riconfermare in una riga all'apertura: JPEG senza logo · email ad `admin_email` · rifiutati nel cestino, via dopo 30 giorni **con l'immagine** · testi legali in bozza da Claude · plugin resta `frmm-lavagna`.
+Assunzioni **confermate da Daniele il 23/09/2026**: JPEG senza logo · email ad `admin_email` · rifiutati nel cestino, via dopo 30 giorni **con l'immagine** · testi legali in bozza da Claude · plugin resta `frmm-lavagna`.
 
 Criterio di finito (sullo staging): dal telefono SALVA → finestra → INVIA → conferma per bambini, e con NO GRAZIE sul server non arriva niente · l'email arriva con la miniatura · in bacheca miniatura e Approva/Rifiuta in due click · l'approvato compare in galleria, il rifiutato mai e sparisce dal server immagine compresa · lo script di abuso (500 invii, 50 MB, non-immagine, immagine estranea, JSON rotto) fallisce tutto · nessuna immagine in attesa a un URL indovinabile · bozze legali consegnate.
 
 Fuori perimetro: go-live in produzione · Fase 5 (unica eccezione: il `client_id`, scritto con la chiave che userà la 5) · alta risoluzione · Turnstile · nickname · approvazione dei testi legali (è della Fondazione).
 
 Passi:
-1. [ ] Endpoint senza l'app: `includes/`, CPT `disegno` pending, `POST /wp-json/frmm-lavagna/v1/invio` con validazione (MIME dai byte, dimensioni, struttura JSON), allegato con nome casuale. Provato con uno script dal PC.
+1. [x] Endpoint senza l'app — **fatto il 23/09/2026, plugin 1.3.0**. CPT `frmm_disegno` (prefissato: i tipi WP condividono lo spazio di nomi), `POST /wp-json/frmm-lavagna/v1/invio` multipart (`client_id`, `disegno` JSON, `immagine` JPEG). Tipo dai byte, JPEG 1600 × `board.h` ±1, Drawing ricostruito campo per campo, **immagine ricodificata con GD** (toglie qualunque coda: provato con un poliglotta JPEG+PHP). File in `uploads/frmm-lavagna/<128 bit>.jpg`. Da anonimo verificati chiusi `?attachment_id=`, `?p=`, `/wp/v2/media` (404/401), cartella 403, Yoast senza sitemap degli allegati. Il plugin di sicurezza SiteGround **non** blocca i POST anonimi.
 2. [ ] Invio dall'app: `client_id`, export 1600 senza logo, finestra dopo SALVA, conferma ed errore per bambini, URL dell'endpoint passato dallo shortcode all'iframe. Richiede solo se il disegno è cambiato. Provato dal telefono.
 3. [ ] Bacheca: colonna miniatura, Approva/Rifiuta, email con miniatura.
 4. [ ] Anti-abuso con script ripetibile: rate limit per IP **in hash** e per `client_id`, limiti prima di leggere il corpo, honeypot.
@@ -29,7 +29,7 @@ Passi:
 8. [ ] Galleria sullo staging, solo approvati, senza leggere l'inbox (D3).
 9. [ ] QA su device veri, flusso intero.
 
-Rischi: il nome casuale rende l'URL non indovinabile, non segreto · l'email dallo staging può non partire · il plugin di sicurezza di SiteGround può bloccare i POST REST anonimi (si scopre al passo 1) · SiteGround Optimizer, se sposta o differisce gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i rifiutati occupano la Media Library per 30 giorni · i testi legali sono una dipendenza esterna.
+Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collegato, mescolati ai media della Fondazione: qualcuno potrebbe inserirne uno in una pagina per sbaglio — da nascondere al passo 3 (`ajax_query_attachments_args`) · il nome casuale rende l'URL non indovinabile, non segreto · l'email dallo staging può non partire · il plugin di sicurezza di SiteGround può bloccare i POST REST anonimi (si scopre al passo 1) · SiteGround Optimizer, se sposta o differisce gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i rifiutati occupano la Media Library per 30 giorni · i testi legali sono una dipendenza esterna.
 
 ## Decisioni prese e perché
 
@@ -78,4 +78,4 @@ Rischi: il nome casuale rende l'URL non indovinabile, non segreto · l'email dal
 
 ## Prossimo passo
 
-**Passo 1 del piano: l'endpoint `POST /wp-json/frmm-lavagna/v1/invio` sullo staging, provato con uno script dal PC prima di toccare l'app** — dopo aver riconfermato in una riga le cinque assunzioni.
+**Passo 2 del piano: l'invio dall'app.** Da decidere all'apertura: se arrotondare i `pts` a 2 decimali prima di mandarli (oggi sono float pieni, ~18 caratteri l'uno; il server accetta fino a 3 MB di JSON). E va misurato il peso vero di un JPEG 1600 × ~2500 pieno di gesso contro il limite di 5 MB.

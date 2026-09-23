@@ -69,10 +69,14 @@ def main():
         shutil.rmtree(staging)
     (staging / "app").mkdir(parents=True)
 
-    # Il PHP e il README del plugin.
+    # Il PHP, il README e includes/. Tutto quel che sta nella cartella del
+    # plugin, sottocartelle comprese: dalla 1.3.0 il PHP non e' piu' un file
+    # solo, e un include dimenticato qui sarebbe un errore fatale in bacheca.
     for f in PLUGIN.iterdir():
         if f.is_file():
             shutil.copy2(f, staging / f.name)
+        elif f.is_dir():
+            shutil.copytree(f, staging / f.name)
 
     # L'app, dalla sua unica fonte.
     mancanti = []
