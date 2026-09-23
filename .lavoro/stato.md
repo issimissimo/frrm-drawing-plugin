@@ -23,7 +23,7 @@ Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuor
 8. [ ] Galleria sullo staging, solo approvati, senza leggere l'inbox (D3).
 9. [ ] QA su device veri, flusso intero.
 
-Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per i genitori** finché non si chiudono i passi 4 e 6 — per questo il 4 va fatto per primo e installato anche lì · il nome casuale rende l'URL non indovinabile, non segreto · SiteGround Optimizer, se sposta gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i testi legali sono una dipendenza esterna · in produzione `admin_email` sarà la Fondazione: le prove non vanno fatte lì.
+Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per i genitori** finché non si chiudono i passi 4 e 6 — per questo il 4 va fatto per primo e installato anche lì · il nome casuale rende l'URL non indovinabile, non segreto · SiteGround Optimizer, se sposta gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i testi legali sono una dipendenza esterna · le prove d'invio non vanno fatte in produzione: ogni disegno di prova resta nella bacheca del sito ufficiale.
 
 ## Decisioni prese e perché
 - **Plugin installato in produzione con l'invio acceso** (Daniele, 23/09/2026), contro il consiglio di Claude, che proponeva un interruttore per tenerlo spento fino ai passi 4-6. Aggiornamenti: `installa-staging.py <v> --produzione`.
