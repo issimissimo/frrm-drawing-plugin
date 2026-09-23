@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 23/09/2026
-Versione corrente: plugin `frmm-lavagna` **1.6.1**, sullo staging **e in produzione** (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
+Versione corrente: plugin `frmm-lavagna` **1.6.2**, sullo staging **e in produzione** (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
 
 ## Dove siamo
 Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin 1.6.1 è installato e attivo con l'invio acceso**, prima dei passi 4-6; nessuna pagina lo usa ancora. `admin_email` lì è `d.suppo@issimissimo.com`.
