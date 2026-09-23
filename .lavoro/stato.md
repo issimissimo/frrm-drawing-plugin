@@ -54,13 +54,13 @@ Fuori perimetro, e va detto se ci si avvicina:
 
 Passi:
 
-1. [~] **La finta pagina ospite, prima di qualunque PHP.** ✅ *Costruita e online il 23/09/2026: <https://issimissimo.com/temp/frmm-drawing-plugin-15/>* — sorgente in `.lavoro/prova-ospite/index.html`, caricata da `.lavoro/pubblica-file.sh`. Header finto alle misure vere (55/65px), fondo `#FF6000`, Container a `calc(100dvh - header)`, iframe con `allow="web-share"` e **senza `sandbox`**, che punta alla **-14 già online** invece che a una copia: il passo vuole la lavagna esattamente com'è stata validata, e una copia in più diverge il giorno che si corregge l'originale. Con `?vh` in coda usa `100vh` invece di `dvh`, per vedere il difetto sul telefono invece di doverci credere; con `?tutorial` lo passa alla lavagna.
+1. [x] **La finta pagina ospite, prima di qualunque PHP.** ✅ *Costruita e online il 23/09/2026: <https://issimissimo.com/temp/frmm-drawing-plugin-15/>* — sorgente in `.lavoro/prova-ospite/index.html`, caricata da `.lavoro/pubblica-file.sh`. Header finto alle misure vere (55/65px), fondo `#FF6000`, Container a `calc(100dvh - header)`, iframe con `allow="web-share"` e **senza `sandbox`**, che punta alla **-14 già online** invece che a una copia: il passo vuole la lavagna esattamente com'è stata validata, e una copia in più diverge il giorno che si corregge l'originale. Con `?vh` in coda usa `100vh` invece di `dvh`, per vedere il difetto sul telefono invece di doverci credere; con `?tutorial` lo passa alla lavagna.
    **Verificato su Chrome desktop a 390x844**: la pagina non sfora (`scrollHeight - innerHeight = 0`), `.app` dentro l'iframe misura **779px = esattamente l'altezza dell'iframe** (è il punto centrale della scelta iframe, e ora è misurato), e un tratto tracciato col mouse finisce **sotto il puntatore, con zero sfasamento dai 65px dell'header**. `navigator.share` e `canShare` esistono dentro il frame — ma su Chrome desktop, che non è la prova che conta.
-   ⏳ **Manca la prova sul telefono**, che è tutta la ragione per cui questo passo esiste.
-2. [ ] **Le correzioni che il passo 1 rivela**, più le due già note. Lo screenshot del passo 1 ne ha già confermata una **guardandola, non deducendola**: sotto l'header della Fondazione, «Torna al sito» è un secondo tasto indietro a 10px dal primo, e la fascia scura che lo contiene mangia ~55px di lavagna per niente. **Togliere «Torna al sito»** (`#btn-back` in `index.html`, il cablaggio in `main.js`, e verificare che il tutorial non lo indichi in nessuno dei sette passi) e sistemare quel che il telefono avrà detto su safe area e altezza. Testabile: i 46 test passano, e il link del passo 1 ricaricato si comporta bene.
-3. [ ] **Il plugin minimo.** Cartella `frmm-lavagna/` con header del plugin, un solo shortcode `[lavagna]`, l'app sotto `app/`, **nessuna opzione e nessuna pagina di amministrazione**. Lo shortcode stampa un `<iframe>` same-origin con `allow="web-share"`, **senza `sandbox`**, largo e alto il 100% del Container, più un `min-height` di sicurezza per chi lo infilasse in un Container ad altezza automatica. Nessun JS e nessun CSS della lavagna vengono messi in coda nella pagina: con l'iframe gli enqueue condizionali del brief diventano **zero enqueue**, ed è il modo più solido di non avere conflitti col tema. L'URL dell'iframe porta `?v=<versione del plugin>`: batte la cache di SiteGround come facevano le cartelle numerate, **e non cambia `location.pathname`**, quindi il «già visto» del tutorial sopravvive agli aggiornamenti. Più un `README.md` dentro la cartella del plugin. Testabile: `php -l` su ogni file e l'attivazione su un WP qualsiasi.
-4. [ ] **Lo script di pacchetto.** Uno zip installabile che includa i **font**, che nel repo non ci sono e non ci possono stare. Senza questo passo il plugin è corretto e si installa sbagliato. Testabile: lo zip si installa e i font arrivano.
-5. [ ] **Installazione sullo staging** e pagina Elementor vera: Container a `100dvh` meno header — **in `dvh`, non in `vh`**, o su iOS il Container sfora e la pagina torna a scorrere. ⏳ *Richiede gli accessi allo staging.*
+   ✅ **Provata sul telefono il 23/09/2026: tutto ok, SALVA compreso.** La scelta dell'iframe regge, ed era il rischio che poteva far cambiare strada alla fase.
+2. [x] **Le correzioni che il passo 1 rivela**, più le due già note. Lo screenshot del passo 1 ne ha già confermata una **guardandola, non deducendola**: sotto l'header della Fondazione, «Torna al sito» è un secondo tasto indietro a 10px dal primo, e la fascia scura che lo contiene mangia ~55px di lavagna per niente. **Togliere «Torna al sito»** (`#btn-back` in `index.html`, il cablaggio in `main.js`, e verificare che il tutorial non lo indichi in nessuno dei sette passi) e sistemare quel che il telefono avrà detto su safe area e altezza. Testabile: i 46 test passano, e il link del passo 1 ricaricato si comporta bene.
+3. [x] **Il plugin minimo.** Cartella `frmm-lavagna/` con header del plugin, un solo shortcode `[lavagna]`, l'app sotto `app/`, **nessuna opzione e nessuna pagina di amministrazione**. Lo shortcode stampa un `<iframe>` same-origin con `allow="web-share"`, **senza `sandbox`**, largo e alto il 100% del Container, più un `min-height` di sicurezza per chi lo infilasse in un Container ad altezza automatica. Nessun JS e nessun CSS della lavagna vengono messi in coda nella pagina: con l'iframe gli enqueue condizionali del brief diventano **zero enqueue**, ed è il modo più solido di non avere conflitti col tema. L'URL dell'iframe porta `?v=<versione del plugin>`: batte la cache di SiteGround come facevano le cartelle numerate, **e non cambia `location.pathname`**, quindi il «già visto» del tutorial sopravvive agli aggiornamenti. Più un `README.md` dentro la cartella del plugin. Testabile: `php -l` su ogni file e l'attivazione su un WP qualsiasi.
+4. [x] **Lo script di pacchetto.** Uno zip installabile che includa i **font**, che nel repo non ci sono e non ci possono stare. Senza questo passo il plugin è corretto e si installa sbagliato. Testabile: lo zip si installa e i font arrivano.
+5. [~] **Installazione sullo staging** e pagina Elementor vera: Container a `100dvh` meno header — **in `dvh`, non in `vh`**, o su iOS il Container sfora e la pagina torna a scorrere. ⏳ *Richiede gli accessi allo staging.*
 6. [ ] **Prova su device dentro la pagina vera**, con la DoD della Fase 1 ripetuta lì, più la lavagna nera guardata dentro il fondo arancione del sito.
 
 Rischi aperti:
@@ -74,6 +74,38 @@ Rischi aperti:
 - **Un plugin è codice destinato a durare.** Fra sei mesi nessuno ricorderà com'è fatto: il README dentro la cartella non è un extra.
 
 Costo stimato: 6 passi. I passi 1–4 sono una sessione di lavoro e non dipendono da nessuno. I passi 5–6 dipendono dagli accessi allo staging e da una prova su telefono, quindi hanno un tempo di attesa, non di lavoro. Ordine di grandezza complessivo: contenuto, **a patto che il passo 1 non dica che lo share dentro l'iframe non funziona** — se lo dicesse, la scelta dell'iframe andrebbe rivista e il costo cambierebbe di categoria.
+
+### Il plugin esiste ed e' installato sullo staging (23/09/2026)
+
+`plugin/frmm-lavagna/` — **un file PHP e un README, niente altro**. L'app NON e' duplicata li' dentro: resta in `prototipo/`, e `.lavoro/pacchetto.py` ce la copia dentro `app/` solo al momento di costruire lo zip. Due copie della stessa app diventano diverse al primo fix fatto nella copia sbagliata.
+
+Lo zip si costruisce con `python .lavoro/pacchetto.py` e lo script fa due controlli che valgono piu' di un promemoria: **rifiuta di costruire** se l'header `Version:` e la costante `FRMM_LAVAGNA_VER` divergono, e **rifiuta** se `index.html` carica un modulo che nel pacchetto non c'e'. Avvisa, senza fermarsi, se mancano i font o il logo.
+
+**Installato e attivo sullo staging**, versione 1.1.0. Nessun errore PHP, nessun conflitto. Pagina di prova: <https://staging2.fondazione-riccardo-marina-mantovani.org/lavagna-prova-plugin/> (id 11551, fatta con l'editor classico — **non e' una pagina Elementor**, serviva solo a provare il plugin).
+
+Verificato li' sopra: l'iframe carica da `wp-content/plugins/frmm-lavagna/app/index.html?v=1.1.0`, il CSS viene stampato, **i font SebinoSoft arrivano dentro il frame**, «Torna al sito» non c'e' piu', e il tutorial parte.
+
+#### Le tre misure che hanno cambiato il plugin
+
+Il `calc(100dvh - 65px)` del piano **era sbagliato, e si e' visto solo provandolo**: sulla pagina vera la lavagna cominciava a **166px** dal bordo, non a 65. Sopra c'erano tre cose, non una:
+
+- **la barra di amministrazione, 46px** — e questa e' la trappola vera, perche' **la vede solo chi e' collegato**, cioe' esattamente chi costruisce la pagina. Si prova, sembra giusto, si pubblica, e il primo visitatore vede una pagina diversa;
+- **l'header, che non ha un'altezza sola**: 65px su telefono, **55 su desktop**;
+- **il titolo della pagina, 55px**, che il tema stampa da solo.
+
+Da qui `[lavagna altezza="schermo"]`, aggiunto nella 1.1.0: la lavagna si misura da sola dal punto dove comincia al fondo della finestra, e si ricalcola al resize. Verificato sullo staging: **fondo della lavagna a 844 esatti su una finestra di 844**.
+
+⚠️ **E' l'unico JavaScript che il plugin mette nella pagina ospite**, dodici righe, e contraddice in parte il «zero JS nella pagina» scritto sopra. Per questo e' **opt-in**: senza `altezza="schermo"` non viene stampato affatto.
+
+#### Due cose viste guardando lo schermo, che nessun numero diceva
+
+- **Il titolo della pagina** compare in arancione sopra la lavagna e ruba 55px. Nella pagina vera va tolto.
+- **Un widget flottante blu** di un plugin del sito sta in basso a destra, **sovrapposto alla lavagna**, proprio dove c'e' SALVA. Va nascosto in quella pagina.
+- Il banner cookie di Complianz copre tutto al primo accesso. Non e' un difetto — ma **e' la prima cosa che un bambino di cinque anni vede**, e il tema torna alla Fase 9.
+
+#### ⚠️ Elementor Pro sullo staging ha la licenza non valida
+
+«La chiave di licenza non corrisponde al dominio corrente». Normale su una copia di staging, e per il nostro shortcode non cambia niente — ma **i widget Pro potrebbero non funzionare li'**, quindi se qualcosa nella pagina di prova si comporta male, prima di indagare si guarda se e' roba Pro.
 
 ### I buchi sono chiusi (23/09/2026)
 
@@ -173,14 +205,14 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Provare la pagina ospite dal telefono**: <https://issimissimo.com/temp/frmm-drawing-plugin-15/>
+**Costruire la pagina vera in Elementor, sullo staging, e provarla dal telefono.** E' il passo 6, l'ultimo del piano, e la parte che conta la deve fare un dito su un vetro.
 
-E' il passo 1 del piano, ed e' l'unico che puo' dire se la scelta dell'iframe regge. Su desktop e' gia' verificato (coordinate allineate, pagina che non sfora, `.app` alta quanto l'iframe), ma le tre cose che contano si vedono solo li':
+La pagina, in Elementor:
 
-1. **SALVA.** Il JPEG arriva nel rullino o nei Download **da dentro l'iframe**? E' la verifica che decide la fase: `navigator.share` dentro un frame non e' scontato, e SALVA e' tutto quello che l'utente porta a casa.
-2. **La DoD della Fase 1, ripetuta dentro la pagina**: 60 fps, niente scroll mentre si disegna, niente pull-to-refresh, niente zoom da doppio tap ne' da pinch, il palmo appoggiato che non disegna. Attenzione al pinch in particolare: la pagina ospite **non ha `user-scalable=no`**, perche' il sito vero non ce l'ha.
-3. **`?vh` contro `dvh`.** Aprire <https://issimissimo.com/temp/frmm-drawing-plugin-15/?vh> e guardare la diagnostica nell'header: se dice «sfora» piu' di 0, si vede da soli perche' il Container va in `dvh`.
+1. **Niente titolo e niente footer.** Sono le due cose che nella pagina di prova facevano scorrere la pagina, e lo scroll e' il nemico dichiarato di questa fase.
+2. Un **Container** a tutta larghezza, senza padding, con dentro il widget Shortcode e `[lavagna altezza="schermo"]` — oppure `[lavagna]` se al Container si da' un'altezza `calc(100dvh - 55px)` a mano, ricordando che **dvh e non vh**, che sono 55 su desktop e 65 su telefono, e che la barra di amministrazione ne aggiunge altri 46 a chi e' collegato. Il motivo per cui esiste `altezza="schermo"` e' esattamente non dover pensare a questa riga.
+3. **Nascondere il widget flottante** in basso a destra, che copre SALVA.
 
-E gia' che il telefono e' in mano, una quarta cosa che non e' una verifica ma una decisione: **la lavagna nera dentro l'arancione**. E' la prima volta che si vede.
+Poi, dal telefono, la DoD della Fase 1 ripetuta li' dentro: 60 fps, niente scroll mentre si disegna, niente pull-to-refresh, niente zoom, il palmo che non disegna, e SALVA che porta il JPEG nel rullino.
 
 Aperto e non assegnato: **D1**, il rapporto della lavagna. Confermato il 21/09/2026 che resta libero, quindi il debito verso la gallery della Fase 10 non e' pagato.

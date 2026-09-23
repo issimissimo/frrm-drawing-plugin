@@ -302,12 +302,10 @@ btnSave?.addEventListener('click', () => {
     .finally(syncButtons);
 });
 
-/* La pagina di Elementor che ospitera' la lavagna non ha header: senza questo
-   pulsante non si torna indietro. window.history, non history: qui history e'
-   la pila di undo. */
-document.getElementById('btn-back').addEventListener('click', () => {
-  if (window.history.length > 1) window.history.back();
-});
+/* Qui c'era il cablaggio di "Torna al sito", tolto il 23/09/2026 insieme al
+   pulsante: la pagina che ospita la lavagna ha l'header del sito, quindi il
+   menu c'e' gia'. Il dettaglio da ricordare se un giorno servisse di nuovo:
+   dentro un iframe window.history.back() naviga l'iframe, non la pagina. */
 
 // Niente Ctrl+Y ne' Ctrl+Shift+Z: tolto il pulsante rifai (18/09/2026), una
 // scorciatoia che lo fa lo stesso sarebbe una via nascosta che contraddice

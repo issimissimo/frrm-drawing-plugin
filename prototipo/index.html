@@ -142,27 +142,18 @@
     cursor: crosshair;
   }
 
-  /* ---------- uscita ----------
-     Sta nell'angolo piu' lontano dagli strumenti e porta un'etichetta: la
-     sola freccia verrebbe letta come "annulla". */
-  #btn-back {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 44px;
-    padding: 0 14px 0 10px;
-    background: none;
-    border: 0;
-    color: var(--dim);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
-  #btn-back:hover { color: var(--ink); }
+  /* ---------- uscita: non c'e' piu' ----------
+     C'era un "Torna al sito" in alto a sinistra, e il commento in main.js
+     diceva perche': «la pagina di Elementor che ospitera' la lavagna non ha
+     header». Ora ce l'ha (deciso il 21/09/2026), quindi il menu del sito e'
+     sempre a schermo e quel tasto era un secondo indietro a dieci pixel dal
+     primo — per giunta sovrapposto all'angolo alto-sinistra della lavagna,
+     che e' dove nell'immagine scaricata va il logo della Fondazione.
+
+     Tolto il 23/09/2026. Chi lo rimettesse, in un contesto dove la lavagna
+     tornasse a stare da sola, si ricordi che dentro un iframe
+     window.history.back() naviga l'IFRAME, non la pagina: serve un link con
+     target="_parent". */
 
   /* ---------- mensola ---------- */
 
@@ -300,7 +291,7 @@
   .chalks-idle .stick { opacity: 1; }
 
   .chalk:focus-visible, .eraser:focus-visible,
-  .cmd:focus-visible, #btn-back:focus-visible {
+  .cmd:focus-visible {
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
@@ -664,13 +655,6 @@
       <canvas id="overlay"></canvas>
     </div>
 
-    <button type="button" id="btn-back">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M14 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8"/>
-        <path d="M10 12h11"/><path d="M14 8l-4 4 4 4"/>
-      </svg>
-      <span>Torna al sito</span>
-    </button>
   </div>
 
   <div class="ledge">

@@ -19,3 +19,6 @@ design-fase-4/lavagna-ui-fase-4.html
 # accanto ai blocchi @font-face che li usano.
 design-tutorial/font/
 prototipo/font/
+
+# Zip del plugin: si ricostruisce con .lavoro/pacchetto.py
+.lavoro/dist/

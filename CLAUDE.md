@@ -22,11 +22,13 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 >
 > **Provato su telefono il 18/09/2026**: il tutorial funziona e SALVA funziona, compreso il ramo `navigator.share` che fino a quel giorno era verificato solo con uno stub. I due punti in sospeso sono chiusi.
 >
-> **Prossima fase concordata: l'integrazione in una pagina Elementor tramite shortcode — che è la Fase 8 del brief, non la 7.** Il piano è in `.lavoro/stato.md` e **comincia con tre decisioni, non col codice**: pagina dedicata o integrata, iframe o inline, e dove si prova. Le fasi 5, 6, 7, 9, 10 restano fuori perimetro: SALVA continuerà a scaricare e non a inviare.
+> **Fase 8 in corso dal 23/09/2026: il plugin WordPress esiste ed è installato sullo staging.** Le tre decisioni che la aprivano sono sciolte: **pagina normale con header** (non Canvas), **iframe** (non inline), **staging SiteGround**. Le fasi 5, 6, 7, 9, 10 restano fuori perimetro: SALVA continua a scaricare e non a inviare.
+>
+> **La DoD della Fase 4 è soddisfatta**: il test con un bambino è stato fatto il 23/09/2026 ed è andato bene. Era l'ultima verifica del brief rimasta scoperta.
 >
 > ⚠️ **La numerazione era sbagliata, corretta il 18/09/2026.** Il brief numera: 7 backend (inbox, CPT, REST, moderazione), 8 integrazione WP/Elementor, 9 hardening/legale/QA, 10 gallery e go-live. Qui era scalata di uno da 7 in poi, e l'effetto era che **la Fase 9 spariva**: privacy policy, testo di consenso, anti-abuso, retention. Su disegni di bambini non è una fase che si perde per una trascrizione. Vale la numerazione del brief.
 >
-> ⚠️ **Il nodo iframe/inline era mal posto.** La Fase 8 del brief prescrive il template **Elementor Canvas**, senza header né footer: lì `html, body { position: fixed }` torna applicabile quasi com'è e il rischio anti-scroll si sgonfia. La domanda che viene prima è se la lavagna sta in una pagina dedicata o dentro una pagina normale. Dettaglio nello stato.
+> ⚠️ **Il nodo iframe/inline è chiuso: iframe.** E la ragione non è quella che sembrava. Il brief prescriveva **Elementor Canvas** per non perdere `html, body { position: fixed }`; il cliente ha scelto una pagina normale con header, ma **la pagina non scrolla** (Container a `100dvh` meno header, niente sotto), quindi quell'argomento cade — `overflow:hidden` più `overscroll-behavior:none` fanno lo stesso lavoro. Quel che decide è il **costo misurato**: in iframe la viewport *è* il Container, e `100dvh`, le media query, `#tut{position:fixed}` e i listener su `document` continuano a voler dire quello che volevano dire. Inline sarebbero cinque o sei modifiche sparse più una rivalidazione su device, e i listener su `document` spegnerebbero pinch e doppio tap su tutto il sito della Fondazione.
 >
 > ⚠️ **Due scostamenti dal brief da non dimenticare**: **D1 (aspect 4:3 fisso) è stato violato** in Fase 4 — la lavagna si adatta alla finestra e la motivazione di D1 era «gallery coerente», conto da pagare prima della Fase 6 — e la **Fase 5 (persistenza locale) è in scope v1 del brief**, non un extra. Censimento completo nello stato.
 >
@@ -34,6 +36,22 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 >
 > Dettaglio in `.lavoro/stato.md`.
 
+
+## Il plugin WordPress — `plugin/frmm-lavagna/`
+
+**Un file PHP e un README.** Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. Installato e attivo sullo **staging** alla 1.1.0, provato il 23/09/2026.
+
+Lo zip si costruisce con `python .lavoro/pacchetto.py`. Credenziali dello staging in `~/.claude/.secrets/wp-staging-fondazione.env` — **mai in `.lavoro/`**, che non è gitignorata mentre il repo è pubblico.
+
+Cose da non disfare per sbaglio, anche qui:
+
+- **L'app NON è duplicata dentro il plugin.** `plugin/frmm-lavagna/` contiene solo il PHP; `pacchetto.py` ci copia `prototipo/` dentro `app/` al momento dello zip. Chi committasse una copia dell'app là dentro creerebbe due sorgenti che divergono al primo fix fatto nella copia sbagliata.
+- **La versione sta in due punti dello stesso file** (`Version:` nell'header e `FRMM_LAVAGNA_VER`) e vanno cambiate insieme. Non è un promemoria: `pacchetto.py` **rifiuta di costruire lo zip** se divergono. Finisce in coda all'URL dell'iframe come cache buster — SiteGround ha già fatto perdere tempo a questo progetto.
+- **Il cache buster cambia la query string, non il percorso**, ed è deliberato: il tutorial ricorda di essere stato visto in una chiave di `localStorage` che contiene `location.pathname`. Chi mettesse la versione nel percorso rimetterebbe il tutorial davanti a tutti a ogni aggiornamento.
+- **L'iframe non ha `sandbox`, ed è voluto.** Un `sandbox` senza `allow-downloads` spegne il salvataggio dell'immagine, che è tutto quello che il bambino porta a casa. È same-origin e carica codice nostro: non c'è niente da isolare.
+- **`dvh`, non `vh`**, per l'altezza del Container. Su iOS `100vh` è l'altezza a barra degli indirizzi collassata: con `vh` la pagina sfora di ~60px e torna a scorrere mentre un bambino disegna sul bordo.
+- **`[lavagna altezza="schermo"]` è l'unico JavaScript che il plugin mette nella pagina**, dodici righe, ed è **opt-in**. Esiste perché il conto a mano è sbagliato: misurato sullo staging, la lavagna cominciava a **166px** dal bordo e non a 65 — barra di amministrazione 46 (**che vede solo chi è collegato**, cioè chi costruisce la pagina), header 65 su telefono ma **55 su desktop**, titolo della pagina 55.
+- **La pagina che ospita la lavagna non deve avere titolo né footer.** Sono le due cose che nella prova la facevano scorrere.
 
 **Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche.
 
