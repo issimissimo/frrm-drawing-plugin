@@ -1,9 +1,9 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 23/09/2026
-Versione corrente: plugin `frmm-lavagna` **1.6.1**, solo sullo staging. Prototipo online: `temp/frmm-drawing-plugin-18/`.
+Versione corrente: plugin `frmm-lavagna` **1.6.1**, sullo staging **e in produzione** (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
 
 ## Dove siamo
-Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. In produzione niente.
+Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin 1.6.1 è installato e attivo con l'invio acceso**, prima dei passi 4-6; nessuna pagina lo usa ancora. `admin_email` lì è `d.suppo@issimissimo.com`.
 Verifiche: `node prototipo/test/run.js` (68) · `php -d extension=gd plugin/test/validazione.php` (48) · `python .lavoro/prova-invio.py` (40, staging) · `python .lavoro/prova-bacheca.py` (14, staging, consuma 2 disegni in attesa). Zip: `python .lavoro/pacchetto.py`; installazione: `python .lavoro/installa-staging.py`.
 
 ## Piano attivo — Fasi 6, 7, 9, 10 sullo staging (approvato 23/09/2026)
@@ -11,7 +11,7 @@ Obiettivo: un bambino **sceglie** di mandare il disegno; arriva in bacheca, un a
 
 Criterio di finito (sullo staging): dal telefono SALVA → «SALVA E INVIA» → il disegno è in bacheca, con «SOLO SALVA» sul server non arriva niente ✅ · email con miniatura ✅ · bacheca con miniatura e Approva/Rifiuta ✅ · l'approvato compare in galleria, il rifiutato mai e sparisce dal server immagine compresa · lo script di abuso (500 invii, 50 MB, non-immagine, immagine estranea, JSON rotto) fallisce tutto · nessuna immagine in attesa a un URL indovinabile ✅ · bozze legali consegnate.
 
-Fuori perimetro: go-live in produzione · Fase 5 (eccezione: `client_id`) · alta risoluzione · Turnstile · nickname · approvazione dei testi legali (della Fondazione).
+Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuori piano) · Fase 5 (eccezione: `client_id`) · alta risoluzione · Turnstile · nickname · approvazione dei testi legali (della Fondazione).
 
 1. [x] Endpoint `POST /wp-json/frmm-lavagna/v1/invio` (1.3.0).
 2. [x] Invio dall'app (1.5.1): domanda PRIMA di salvare, invio in parallelo alla condivisione con ripresa, `invio_id` contro i doppioni, `tentativo` registrato.
@@ -23,9 +23,10 @@ Fuori perimetro: go-live in produzione · Fase 5 (eccezione: `client_id`) · alt
 8. [ ] Galleria sullo staging, solo approvati, senza leggere l'inbox (D3).
 9. [ ] QA su device veri, flusso intero.
 
-Rischi: il nome casuale rende l'URL non indovinabile, non segreto · SiteGround Optimizer, se sposta gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i testi legali sono una dipendenza esterna · in produzione `admin_email` sarà la Fondazione: le prove non vanno fatte lì.
+Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per i genitori** finché non si chiudono i passi 4 e 6 — per questo il 4 va fatto per primo e installato anche lì · il nome casuale rende l'URL non indovinabile, non segreto · SiteGround Optimizer, se sposta gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i testi legali sono una dipendenza esterna · in produzione `admin_email` sarà la Fondazione: le prove non vanno fatte lì.
 
 ## Decisioni prese e perché
+- **Plugin installato in produzione con l'invio acceso** (Daniele, 23/09/2026), contro il consiglio di Claude, che proponeva un interruttore per tenerlo spento fino ai passi 4-6. Aggiornamenti: `installa-staging.py <v> --produzione`.
 - **La domanda d'invio sta PRIMA di salvare** (Daniele, dopo la prova della 1.4.1): chi condivide su WhatsApp non torna nel browser a rispondere. Il tocco sulla risposta dà l'attivazione al foglio di condivisione.
 - **Invio in parallelo alla condivisione, con ripresa** (strada B, Daniele): aspettare l'upload prima di condividere non si può (Safari rifiuta `navigator.share` dopo un'attesa di rete). Si riprova al ritorno nel browser, al ritorno della rete e a tempo. La colonna Tentativo dice se basta; se no, strada A (un tocco in più).
 - **`invio_id` uguale a ogni tentativo**: la ripresa di un invio arrivato con la risposta persa non crea doppioni né seconde email.
@@ -65,4 +66,4 @@ Rischi: il nome casuale rende l'URL non indovinabile, non segreto · SiteGround 
 - Il `.md` del brief ha il markdown escapato: voluto.
 
 ## Prossimo passo
-Passo 4, anti-abuso: prima di scrivere codice, far decidere a Daniele (o alla Fondazione) quanti invii al giorno per dispositivo.
+Passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.

@@ -4,12 +4,14 @@ Installa (o aggiorna) lo zip del plugin sullo STAGING della Fondazione.
 
     python .lavoro/installa-staging.py            # l'ultima versione in dist/
     python .lavoro/installa-staging.py 1.3.0
+    python .lavoro/installa-staging.py 1.6.1 --produzione   # il sito ufficiale
 
 Fa quel che si farebbe a mano da Plugin > Aggiungi nuovo > Carica plugin, e
 se il plugin c'e' gia' sceglie "Sostituisci l'attuale con quello caricato".
 L'aggiornamento conserva lo stato di attivazione.
 
-Solo staging e credenziali mai stampate: vedi staging.py.
+Staging per default, sito ufficiale solo con --produzione; credenziali mai
+stampate: vedi staging.py.
 """
 
 import html
@@ -23,9 +25,14 @@ import staging  # noqa: E402
 DIST = Path(__file__).resolve().parent / "dist"
 
 
+ARGOMENTI = [a for a in sys.argv[1:] if not a.startswith("--")]
+if "--produzione" in sys.argv:
+    staging.usa_produzione()
+
+
 def zip_da_installare():
-    if len(sys.argv) > 1:
-        z = DIST / f"frmm-lavagna-{sys.argv[1]}.zip"
+    if ARGOMENTI:
+        z = DIST / f"frmm-lavagna-{ARGOMENTI[0]}.zip"
     else:
         tutti = sorted(DIST.glob("frmm-lavagna-*.zip"), key=lambda p: [int(x) for x in re.findall(r"\d+", p.stem)])
         z = tutti[-1] if tutti else None
@@ -64,8 +71,18 @@ def main():
             url = admin + url.lstrip("/")
         r = s.get(url, timeout=180)
 
-    print(f"  {z.name}")
+    print(f"  {z.name} -> {admin}")
     print("  " + staging.testo(r.text)[:900])
+
+    # Prima installazione: WordPress installa ma non attiva, e offre il link.
+    # Un aggiornamento invece conserva lo stato, e il link non c'e'.
+    attiva = re.search(r'href="([^"]*plugins\.php\?action=activate[^"]*plugin=frmm-lavagna[^"]*)"', r.text)
+    if attiva:
+        url = html.unescape(attiva.group(1))
+        if not url.startswith("http"):
+            url = admin + url.lstrip("/")
+        s.get(url, timeout=60)
+        print("  attivato")
 
     # L'ultima parola non e' il messaggio, e' lo stato del plugin in elenco.
     r = s.get(admin + "plugins.php", timeout=30)

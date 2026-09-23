@@ -4,8 +4,10 @@ Accesso allo STAGING della Fondazione, in comune fra gli script di .lavoro/.
 Le credenziali si leggono da ~/.claude/.secrets/ e non si stampano mai.
 Questo file sta in un repo PUBBLICO: nessun segreto va scritto qui.
 
-⚠️ SOLO STAGING: se l'URL nelle credenziali non contiene "staging", ci si
-ferma. Il sito di produzione non si tocca da questi script.
+⚠️ STAGING PER DEFAULT. Il sito ufficiale si raggiunge solo chiamando
+usa_produzione(), che gli script fanno solo con l'opzione esplicita
+--produzione. Stesse credenziali dello staging (lo staging e' una copia
+del sito): cosi' ha detto Daniele il 23/09/2026.
 """
 
 import html
@@ -16,6 +18,14 @@ from pathlib import Path
 import requests
 
 SEGRETI = Path.home() / ".claude" / ".secrets" / "wp-staging-fondazione.env"
+PRODUZIONE = "https://fondazione-riccardo-marina-mantovani.org/wp-admin/"
+_produzione = False
+
+
+def usa_produzione():
+    """Da qui in poi credenziali() punta al sito ufficiale."""
+    global _produzione
+    _produzione = True
 
 
 def credenziali():
@@ -27,6 +37,8 @@ def credenziali():
     admin = env["WP_STAGING_URL"].rstrip("/") + "/"
     if "staging" not in admin:
         sys.exit("L'URL nelle credenziali non e' uno staging: mi fermo.")
+    if _produzione:
+        admin = PRODUZIONE
     return admin, env["WP_STAGING_USER"], env["WP_STAGING_PASS"]
 
 
