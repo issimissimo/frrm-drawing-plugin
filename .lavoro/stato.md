@@ -240,6 +240,10 @@ Cosa guardare, nell'ordine:
 3. **L'iframe compare gia' al posto giusto**, senza il salto di un istante.
 4. Poi la DoD della Fase 1 per intero, e SALVA.
 
-⚠️ **Da chiarire con Daniele**: la sua pagina usa `[lavagna altezza="schermo"]` o `[lavagna]` con l'altezza data al Container? Ha aggiunto un `margin-top` di 55/65px «per lasciare libero l'header», e un margin-top serve solo se l'header e' **fuori dal flusso** (`position: fixed`), il che contraddice la misura presa sul sito pubblico, dove risultava `static`. Con `altezza="schermo"` il conto viene giusto comunque, perche' il margine e' compreso nel punto in cui la lavagna comincia. Con l'altezza data a mano al Container, invece, il margin-top va sottratto anche li' — e **in `dvh`, non in `vh`**.
+**Chiarito il 23/09/2026**: la pagina usa `[lavagna altezza="schermo"]`, e l'header e' **`position: fixed`** — il margin-top sul Container non e' un ripiego, serve perche' un header fuori dal flusso non occupa spazio e la lavagna gli finirebbe sotto.
+
+La divisione delle responsabilita' e' quella giusta e si tiene: **il margine dice dove comincia la lavagna, lo script dice quanto e' alta**, e il margine entra gia' nel conto dello script perche' e' compreso nel punto di partenza. L'alternativa — `[lavagna]` con l'altezza data al Container — obbligherebbe a tenere sincronizzati due numeri per breakpoint.
+
+⚠️ **L'altezza dell'header non e' una sola**, misurata sul sito: **55px da 1200 in su, 65px da 1024 in giu'**, con il salto esattamente sul breakpoint tablet di Elementor. Il margine va quindi impostato su **tutti e tre i dispositivi**: lasciarlo a 55 manda la lavagna 10px sotto l'header su tablet e telefono, cioe' dove la usano i bambini.
 
 Aperto e non assegnato: **D1**, il rapporto della lavagna. Confermato il 21/09/2026 che resta libero, quindi il debito verso la gallery della Fase 10 non e' pagato.

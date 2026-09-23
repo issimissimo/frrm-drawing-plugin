@@ -72,7 +72,24 @@ Se il Container non ha altezza e lo shortcode nemmeno, entra in gioco un `min-he
 
 ## La pagina che ospita la lavagna
 
-Due cose che non dipendono dal plugin ma decidono se funziona:
+### L'header del sito e' `position: fixed`, quindi serve un margine
+
+Un header fuori dal flusso non occupa spazio: senza un margine, la lavagna gli finisce **sotto**. Al Container va dato un `margin-top` pari all'altezza dell'header — e quell'altezza **non e' una sola**. Misurata sul sito il 23/09/2026:
+
+| Larghezza | Header | Breakpoint Elementor |
+|---|---|---|
+| 1200 e oltre | **55px** | Desktop |
+| 1024 e sotto | **65px** | Tablet e Mobile |
+
+Il salto cade fra 1200 e 1024, cioe' esattamente sul breakpoint tablet. **Il margine va impostato su tutti e tre i dispositivi**, non solo su desktop: lasciarlo a 55 significa mandare la lavagna 10px sotto l'header su tablet e su telefono, che e' dove la usano i bambini.
+
+**Il margine e' l'unica cosa da impostare a mano.** L'altezza no: con `altezza="schermo"` la calcola lo script, e il margine e' gia' compreso nel conto, perche' entra nel punto in cui la lavagna comincia. E' la ragione per cui conviene `altezza="schermo"` invece di dare l'altezza al Container: con quella si terrebbero due numeri sincronizzati (`margin-top: 55px` e `height: calc(100dvh - 55px)`) per ogni breakpoint, e il giorno che l'header cambia altezza se ne sbaglia uno.
+
+> **Nota sull'editor di Elementor**: li' dentro la misura non e' attendibile, perche' lo script legge l'altezza del frame di anteprima e non quella della finestra. Si guarda in anteprima o sulla pagina pubblicata.
+
+### Altre due cose
+
+Non dipendono dal plugin, ma decidono se funziona:
 
 - **Niente footer e niente titolo della pagina.** Sono contenuto sotto o sopra la lavagna, e la pagina torna a scorrere. La lavagna vuole essere l'unica cosa sotto l'header.
 - **La pagina non deve scorrere.** E' il presupposto su cui poggia tutto: se scorre, scorre mentre un bambino disegna. Se serve, `overflow:hidden` e `overscroll-behavior:none` sul documento lo garantiscono.
