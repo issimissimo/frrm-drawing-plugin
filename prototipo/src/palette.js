@@ -28,12 +28,38 @@ let boardFrozen = false;
 
 export const boardHeight = () => boardH;
 
-/** Chiamata una volta sola, dal primo layout. Le successive non fanno nulla. */
+/** Chiamata dal primo layout. Le successive non fanno nulla, finche' e' congelato. */
 export function freezeBoardHeight(aspect) {
   if (boardFrozen || !(aspect > 0)) return boardH;
   boardFrozen = true;
   boardH = Math.round(BOARD_W / aspect);
   return boardH;
+}
+
+/**
+ * Riapre il congelamento. La chiama main.js al relayout, ma SOLO se sulla
+ * lavagna non c'e' ancora niente.
+ *
+ * Il congelamento esiste per proteggere un disegno gia' fatto: cambiare il
+ * rapporto sotto ai tratti li deformerebbe. Se di tratti non ce n'e' nessuno,
+ * non c'e' niente da proteggere, e tenersi un rapporto misurato male e' solo
+ * un danno.
+ *
+ * Perche' e' servito (23/09/2026, Chrome su Android): dentro WordPress il
+ * contenitore della lavagna prende la sua altezza definitiva da uno script,
+ * e c'era una CORSA fra quello script e il primo layout dell'app dentro
+ * l'iframe. Dove vinceva l'app, il rapporto restava congelato su un'altezza
+ * di 65px piu' del vero — per sempre, con bande nere ai lati per tutta la
+ * sessione. Su Chrome desktop e su Safari vinceva lo script e non si vedeva
+ * niente: il classico difetto che esiste solo sul device di qualcun altro.
+ *
+ * La corsa e' stata chiusa anche dall'altro lato, nel plugin. Questa e' la
+ * difesa in profondita': se un domani qualcosa ridimensionasse il contenitore
+ * dopo l'avvio — un header che si contrae, un banner cookie che si chiude —
+ * la lavagna vuota si riadatta invece di restare storta.
+ */
+export function unfreezeBoardHeight() {
+  boardFrozen = false;
 }
 
 /** Oltre 2 il costo di fill rate non ripaga: un iPhone a DPR 3 perde frame. */

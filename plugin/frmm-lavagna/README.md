@@ -54,6 +54,12 @@ La barra di amministrazione merita una riga a parte, perche' e' una trappola di 
 
 **Il prezzo, dichiarato**: questo e' l'unico JavaScript che il plugin mette nella pagina ospite, dodici righe. E' **opt-in**: senza `altezza="schermo"` non viene stampato affatto.
 
+> ⚠️ **Lo `<script>` esce DOPO il `<div>`, e gira subito.** Non spostarlo e non rimandarlo a `DOMContentLoaded`.
+>
+> Nella 1.1.0 stava prima, e doveva aspettare che il DOM fosse pronto. In quella finestra si apriva una **corsa** con l'app dentro l'iframe, che al primo layout congela il rapporto della lavagna per non deformare i tratti quando si ruota il telefono. Dove l'app arrivava prima — **Chrome su Android** — il rapporto restava congelato su un'altezza di 65px piu' del vero, e la lavagna teneva bande nere ai lati per tutta la sessione, col tratto sfalsato dal dito. Su Chrome desktop e su Safari arrivava prima lo script e non si vedeva niente: il difetto che esiste solo sul telefono di qualcun altro.
+>
+> La corsa e' chiusa da entrambi i lati: qui, e nell'app, dove **a lavagna vuota il rapporto si puo' ancora ricongelare** (`unfreezeBoardHeight`). Se c'e' anche un solo tratto, invece, il rapporto non si tocca piu': li' c'e' un disegno da proteggere.
+
 ### Altri valori
 
 ```

@@ -28,8 +28,15 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
 
   /**
    * Rect in coordinate viewport. Rileggerlo a ogni pointermove costerebbe un
-   * reflow; la pagina non scrolla mai (body e' fixed), quindi basta
-   * invalidarlo al resize.
+   * reflow, quindi si tiene in cache — ma si rilegge all'inizio di OGNI
+   * gesto, con refreshRect() qui sotto.
+   *
+   * Il commento che stava qui diceva: «la pagina non scrolla mai (body e'
+   * fixed), quindi basta invalidarlo al resize». Era vero finche' la lavagna
+   * era una pagina a se'. Dal 23/09/2026 vive in un iframe dentro una pagina
+   * WordPress, e li' il canvas puo' SPOSTARSI senza CAMBIARE DIMENSIONE:
+   * basta che la barra degli indirizzi di Chrome Android si ritragga. Nessun
+   * resize, nessun ResizeObserver — e il tratto esce sfalsato dal dito.
    */
   let rect = null;
   let scale = 1;
@@ -64,6 +71,17 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
     scale = pxW / BOARD_W;
     rect = baseCanvas.getBoundingClientRect();
     return { cssW, cssH, dpr, scale };
+  }
+
+  /**
+   * Rilegge la posizione del canvas. Si chiama a ogni pointerdown, cioe' una
+   * volta per gesto e non una volta per campione: il reflow e' pagato una
+   * volta ogni tratto, dove non si vede, invece che cinquanta volte al
+   * secondo, dove si vedrebbe.
+   */
+  function refreshRect() {
+    rect = baseCanvas.getBoundingClientRect();
+    return rect;
   }
 
   /** Schermo -> lavagna. L'unico punto del programma dove avviene. */
@@ -114,6 +132,7 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
     overlay,
     canvas: baseCanvas,
     layout,
+    refreshRect,
     toBoard,
     clearBase,
     clearOverlay,

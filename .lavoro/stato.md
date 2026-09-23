@@ -107,6 +107,32 @@ Da qui `[lavagna altezza="schermo"]`, aggiunto nella 1.1.0: la lavagna si misura
 
 «La chiave di licenza non corrisponde al dominio corrente». Normale su una copia di staging, e per il nostro shortcode non cambia niente — ma **i widget Pro potrebbero non funzionare li'**, quindi se qualcosa nella pagina di prova si comporta male, prima di indagare si guarda se e' roba Pro.
 
+### Tre difetti su Chrome Android, e la corsa che li causava (23/09/2026)
+
+Provata la pagina vera con l'header, **Chrome su Android** mostrava tre cose che su iPhone/Safari e su Chrome desktop non si vedevano:
+
+a) l'iframe compariva piu' in basso e si sistemava dopo un istante;
+b) l'area di disegno non copriva tutta la larghezza;
+c) il tratto non seguiva il dito, sfalsato in orizzontale e in verticale.
+
+**(a) e (b) erano lo stesso difetto**, e la diagnosi e' venuta dai numeri prima che dal codice: la lavagna nello screenshot era 327x500, rapporto **0,654**, che e' esattamente 398/608 — cioe' lo stage calcolato su un'altezza di 65px piu' del vero.
+
+La causa e' una **corsa**, non una lentezza. Lo `<script>` del plugin usciva PRIMA del `<div>`, quindi doveva aspettare `DOMContentLoaded` per calcolare l'altezza; l'app dentro l'iframe, al primo layout, chiama `freezeBoardHeight()` e **congela il rapporto della lavagna per sempre**. Dove l'app arrivava prima, il rapporto restava quello sbagliato per tutta la sessione. Su Chrome desktop e su Safari vinceva lo script, e non si vedeva niente — il difetto che esiste solo sul device di qualcun altro.
+
+**(c) e' il `rect` cachato in `board.js`**, quello archiviato il 21/09 con la motivazione «tanto la pagina non scrolla». Dentro un iframe il canvas puo' **spostarsi senza cambiare dimensione** — la barra di Chrome Android che si ritrae basta — e li' non scatta ne' `resize` ne' `ResizeObserver`.
+
+**Tre correzioni, versione 1.2.0 del plugin:**
+
+1. **Plugin**: lo `<script>` esce dopo il `<div>` e gira subito, senza aspettare niente. La corsa e' chiusa dal lato giusto — quando l'app fa il suo primo layout, l'altezza e' gia' definitiva.
+2. **App, difesa in profondita'**: `unfreezeBoardHeight()` in `palette.js`, chiamata dal `relayout()` di `main.js` **solo a lavagna vuota**. Il congelamento serve a proteggere i tratti gia' fatti: se non ce n'e' nessuno, non c'e' niente da proteggere e tenersi un rapporto misurato male e' solo un danno.
+3. **App**: `board.refreshRect()`, chiamata da `input.js` a ogni `pointerdown`. Un reflow per gesto, non per campione.
+
+**Verificato sullo staging**: script dopo il div, altezza giusta gia' al primo istante (733px), zero bande. Poi il caso patologico riprodotto a mano — contenitore ingrandito a 900px e ristretto a 733 dopo l'avvio: la lavagna vuota si riadatta e torna a 390x501 senza bande. E il comportamento che NON deve cambiare: **con un tratto sopra**, restringere il contenitore da' 287x368 con 52px di bande e **lo stesso rapporto 0,78** — il disegno e' protetto.
+
+**49 test** (tre nuovi sul rapporto: si congela, si ricongela a lavagna vuota, ignora un aspect non positivo).
+
+⏳ **Resta da riprovare su Chrome Android**, che e' l'unico posto dove il difetto si vedeva.
+
 ### I buchi sono chiusi (23/09/2026)
 
 Tutti e quattro. Staging, versioni, plugin separato, header che non si contrae: vedi «Ambiente di destinazione» sopra. Non resta niente da indovinare nei passi 1–4.
@@ -205,14 +231,15 @@ Il brief è la fonte di verità, ma il lavoro se n'è discostato in cinque punti
 
 ## Prossimo passo
 
-**Costruire la pagina vera in Elementor, sullo staging, e provarla dal telefono.** E' il passo 6, l'ultimo del piano, e la parte che conta la deve fare un dito su un vetro.
+**Riprovare la pagina su Chrome Android**, dove i tre difetti si vedevano. Il plugin sullo staging e' gia' alla 1.2.0, quindi basta ricaricare la pagina — se resta qualcosa di vecchio, e' cache: l'URL dell'iframe porta `?v=1.2.0` e cambia a ogni versione.
 
-La pagina, in Elementor:
+Cosa guardare, nell'ordine:
 
-1. **Niente titolo e niente footer.** Sono le due cose che nella pagina di prova facevano scorrere la pagina, e lo scroll e' il nemico dichiarato di questa fase.
-2. Un **Container** a tutta larghezza, senza padding, con dentro il widget Shortcode e `[lavagna altezza="schermo"]` — oppure `[lavagna]` se al Container si da' un'altezza `calc(100dvh - 55px)` a mano, ricordando che **dvh e non vh**, che sono 55 su desktop e 65 su telefono, e che la barra di amministrazione ne aggiunge altri 46 a chi e' collegato. Il motivo per cui esiste `altezza="schermo"` e' esattamente non dover pensare a questa riga.
-3. **Nascondere il widget flottante** in basso a destra, che copre SALVA.
+1. **L'area di disegno copre tutta la larghezza?** Se restano bande nere ai lati a lavagna vuota, la corsa non e' chiusa e la diagnosi va rifatta.
+2. **Il tratto segue il dito?** Anche dopo aver scrollato, ruotato, o aperto e chiuso la tastiera.
+3. **L'iframe compare gia' al posto giusto**, senza il salto di un istante.
+4. Poi la DoD della Fase 1 per intero, e SALVA.
 
-Poi, dal telefono, la DoD della Fase 1 ripetuta li' dentro: 60 fps, niente scroll mentre si disegna, niente pull-to-refresh, niente zoom, il palmo che non disegna, e SALVA che porta il JPEG nel rullino.
+⚠️ **Da chiarire con Daniele**: la sua pagina usa `[lavagna altezza="schermo"]` o `[lavagna]` con l'altezza data al Container? Ha aggiunto un `margin-top` di 55/65px «per lasciare libero l'header», e un margin-top serve solo se l'header e' **fuori dal flusso** (`position: fixed`), il che contraddice la misura presa sul sito pubblico, dove risultava `static`. Con `altezza="schermo"` il conto viene giusto comunque, perche' il margine e' compreso nel punto in cui la lavagna comincia. Con l'altezza data a mano al Container, invece, il margin-top va sottratto anche li' — e **in `dvh`, non in `vh`**.
 
 Aperto e non assegnato: **D1**, il rapporto della lavagna. Confermato il 21/09/2026 che resta libero, quindi il debito verso la gallery della Fase 10 non e' pagato.

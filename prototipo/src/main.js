@@ -19,7 +19,8 @@
  */
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
-         SMOOTHING, DEFAULT_SMOOTHING, SOGLIA_STRETTA } from './palette.js';
+         SMOOTHING, DEFAULT_SMOOTHING, SOGLIA_STRETTA,
+         unfreezeBoardHeight } from './palette.js';
 import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
@@ -318,6 +319,11 @@ document.addEventListener('keydown', (e) => {
 /* ---------- layout ---------- */
 
 function relayout() {
+  // Finche' la lavagna e' vuota il rapporto puo' ancora cambiare: non c'e'
+  // nessun tratto da deformare. Serve dentro WordPress, dove il contenitore
+  // prende l'altezza definitiva un istante dopo l'avvio e il primo layout
+  // rischia di congelare un rapporto sbagliato. Vedi unfreezeBoardHeight().
+  if (!history.count) unfreezeBoardHeight();
   lastLayout = board.layout();
   // I canvas sovrapposti hanno la stessa taglia: il contenitore la eredita.
   layers.style.width = `${lastLayout.cssW}px`;

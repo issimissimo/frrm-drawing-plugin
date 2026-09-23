@@ -3,7 +3,7 @@
  * Plugin Name:       FRMM Lavagna
  * Plugin URI:        https://github.com/issimissimo/frrm-drawing-plugin
  * Description:       La lavagna a gessetti della Fondazione. Si inserisce in una pagina con lo shortcode [lavagna], dentro un Container Elementor a cui si sia data un'altezza.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Daniele Suppo
@@ -62,7 +62,7 @@ if (!defined('ABSPATH')) {
  * due divergono, cosi' la dimenticanza la trova una macchina e non un bambino
  * con la cache vecchia.
  */
-define('FRMM_LAVAGNA_VER', '1.1.0');
+define('FRMM_LAVAGNA_VER', '1.2.0');
 
 /**
  * Altezza minima del contenitore.
@@ -136,13 +136,12 @@ function frmm_lavagna_shortcode($atts = [])
     $schermo = ($atts['altezza'] === 'schermo');
 
     if ($schermo) {
-        // L'altezza la scrive il JS. Finche' non gira, 100dvh e' la stima piu'
-        // vicina al vero: sbaglia per eccesso di quel che c'e' sopra, quindi
-        // al massimo si vede un momento di pagina troppo alta, non una
-        // lavagna schiacciata a zero.
+        // L'altezza definitiva la scrive lo script, che sta subito DOPO il div
+        // (vedi in fondo a questa funzione) e gira prima che l'iframe abbia
+        // finito di caricare. 100dvh e' solo il valore di partenza, per i
+        // pochi millisecondi in cui lo script non ha ancora girato.
         $classi .= ' frmm-lavagna--schermo';
         $stile  .= 'height:100dvh;';
-        frmm_lavagna_script();
     } elseif ($atts['altezza'] !== '') {
         // esc_attr non basterebbe a impedire un valore CSS assurdo, ma questo
         // shortcode lo scrive chi amministra il sito, non un visitatore.
@@ -151,13 +150,34 @@ function frmm_lavagna_shortcode($atts = [])
 
     frmm_lavagna_stile();
 
-    return sprintf(
+    $html = sprintf(
         '<div class="%s" style="%s"><iframe class="frmm-lavagna__frame" src="%s" title="%s" allow="web-share"></iframe></div>',
         esc_attr($classi),
         $stile,
         esc_url($src),
         esc_attr($atts['titolo'])
     );
+
+    // ⚠️ LO SCRIPT VA DOPO IL DIV, e non e' una questione di stile.
+    //
+    // Prima stava prima, stampato con echo, e girava quando il div non
+    // esisteva ancora: doveva aspettare DOMContentLoaded per fare il suo
+    // conto. In quella finestra si apriva una CORSA con l'app dentro
+    // l'iframe, che al suo primo layout congela il rapporto della lavagna
+    // (freezeBoardHeight) per non deformare i tratti quando si ruota il
+    // telefono. Dove l'app arrivava prima — Chrome su Android — il rapporto
+    // restava congelato su un'altezza di 65px piu' del vero, e la lavagna
+    // teneva bande nere ai lati per tutta la sessione. Su Chrome desktop e
+    // su Safari arrivava prima lo script, e non si vedeva niente.
+    //
+    // Messo qui, gira col div gia' nel DOM e prima che l'iframe abbia finito
+    // di caricare: quando l'app fa il suo primo layout, l'altezza e' gia'
+    // quella definitiva e non c'e' piu' nessuna corsa da vincere.
+    if ($schermo) {
+        $html .= frmm_lavagna_script();
+    }
+
+    return $html;
 }
 add_shortcode('lavagna', 'frmm_lavagna_shortcode');
 
@@ -219,18 +239,25 @@ function frmm_lavagna_script()
 {
     static $fatto = false;
     if ($fatto) {
-        return;
+        return '';
     }
     $fatto = true;
 
-    echo "<script id='frmm-lavagna-js'>(function(){"
+    return "<script id='frmm-lavagna-js'>(function(){"
         . "function a(){"
         . "var n=document.querySelectorAll('.frmm-lavagna--schermo'),i,e,t;"
         . "for(i=0;i<n.length;i++){e=n[i];t=e.getBoundingClientRect().top+window.scrollY;"
         . "e.style.height=Math.max(240,Math.round(window.innerHeight-t))+'px';}}"
         . "var p=0;function r(){if(p)return;p=requestAnimationFrame(function(){p=0;a();});}"
         . "window.addEventListener('resize',r);window.addEventListener('orientationchange',r);"
-        . "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',a);else a();"
+        // SUBITO, senza aspettare DOMContentLoaded: lo script sta dopo il div,
+        // quindi il div c'e' gia'. E' tutto il punto — aspettare riaprirebbe
+        // la corsa con il primo layout dell'app dentro l'iframe.
+        . "a();"
+        // E poi di nuovo, perche' quel che sta SOPRA la lavagna puo' ancora
+        // cambiare altezza: un font che arriva, un'immagine dell'header che
+        // si dimensiona, un banner che compare.
+        . "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',a);"
         . "window.addEventListener('load',a);"
         . "})();</script>";
 }

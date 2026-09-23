@@ -90,6 +90,12 @@ export function createInput(canvas, board, handlers) {
     // dal canvas: senza, uno stroke che sconfina resta aperto per sempre.
     try { canvas.setPointerCapture(e.pointerId); } catch { /* iOS puo' rifiutare */ }
 
+    // Dove si trova il canvas, adesso. Dentro un iframe in una pagina
+    // WordPress puo' essersi spostato senza che nessun evento lo dicesse —
+    // la barra di Chrome Android che si ritrae basta e avanza. Un reflow per
+    // gesto e' il prezzo per non disegnare sfalsati dal dito.
+    board.refreshRect();
+
     const p = board.toBoard(e.clientX, e.clientY);
     onStart({ ...p, pressure: e.pressure, pointerType: e.pointerType, t: stamp(e) });
     stats.points++;

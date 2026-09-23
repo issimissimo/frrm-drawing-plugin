@@ -8,7 +8,8 @@
 
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
-         PRESSURE_ALPHA_MIN } from '../src/palette.js';
+         PRESSURE_ALPHA_MIN, BOARD_W, boardHeight, freezeBoardHeight,
+         unfreezeBoardHeight } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
@@ -595,6 +596,47 @@ test('tutorial: due versioni pubblicate non si rubano il "gia visto"', () => {
 
   assert(chiaveVisto(v3) !== chiaveVisto(v4), 'due percorsi, due chiavi');
   assert(chiaveVisto(v3).startsWith(CHIAVE_VISTO), 'il prefisso deve restare riconoscibile');
+});
+
+
+/* ---------------- il rapporto della lavagna ---------------- */
+
+test('lavagna: il rapporto si congela al primo layout e non cambia piu', () => {
+  freezeBoardHeight(BOARD_W / 1200);     // riporta a 4:3 se qualcuno l'ha mosso
+  unfreezeBoardHeight();
+  freezeBoardHeight(16 / 10);
+  const primo = boardHeight();
+  freezeBoardHeight(1 / 1);              // un secondo tentativo non deve passare
+  assert(boardHeight() === primo, 'il rapporto congelato non si tocca: deformerebbe i tratti');
+});
+
+test('lavagna: a lavagna vuota il rapporto si puo ricongelare', () => {
+  // E' il caso di WordPress: il contenitore prende l'altezza definitiva un
+  // istante dopo l'avvio, e il primo layout rischia di congelare un rapporto
+  // sbagliato. Finche' non c'e' un tratto, non c'e' niente da proteggere.
+  unfreezeBoardHeight();
+  freezeBoardHeight(390 / 608);          // l'altezza sbagliata, coi 65px di troppo
+  const storto = boardHeight();
+  unfreezeBoardHeight();
+  freezeBoardHeight(390 / 501);          // quella vera
+  assert(boardHeight() !== storto, 'dopo unfreeze il rapporto deve poter cambiare');
+
+  const atteso = Math.round(BOARD_W / (390 / 501));
+  assert(boardHeight() === atteso, `atteso ${atteso}, trovato ${boardHeight()}`);
+
+  unfreezeBoardHeight();
+  freezeBoardHeight(BOARD_W / 1200);     // gli altri test ripartono dal 4:3
+});
+
+test('lavagna: un rapporto assurdo non viene accettato', () => {
+  unfreezeBoardHeight();
+  freezeBoardHeight(BOARD_W / 1200);
+  const buono = boardHeight();
+  unfreezeBoardHeight();
+  freezeBoardHeight(0);                  // capita: contenitore ad altezza zero
+  assert(boardHeight() === buono, 'un aspect non positivo si ignora, non azzera la lavagna');
+  unfreezeBoardHeight();
+  freezeBoardHeight(BOARD_W / 1200);
 });
 
 /* ---------------- esito ---------------- */

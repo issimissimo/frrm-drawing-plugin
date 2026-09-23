@@ -32,14 +32,12 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 >
 > ⚠️ **Due scostamenti dal brief da non dimenticare**: **D1 (aspect 4:3 fisso) è stato violato** in Fase 4 — la lavagna si adatta alla finestra e la motivazione di D1 era «gallery coerente», conto da pagare prima della Fase 6 — e la **Fase 5 (persistenza locale) è in scope v1 del brief**, non un extra. Censimento completo nello stato.
 >
-> **La DoD della Fase 4 non è mai stata soddisfatta**: il brief chiede il test con un utente sotto i 10 anni. Il tutorial è nato perché la UI da sola non bastava, che è il sintomo che quella DoD descrive.
->
 > Dettaglio in `.lavoro/stato.md`.
 
 
 ## Il plugin WordPress — `plugin/frmm-lavagna/`
 
-**Un file PHP e un README.** Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. Installato e attivo sullo **staging** alla 1.1.0, provato il 23/09/2026.
+**Un file PHP e un README.** Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. Installato e attivo sullo **staging** alla 1.2.0, provato il 23/09/2026.
 
 Lo zip si costruisce con `python .lavoro/pacchetto.py`. Credenziali dello staging in `~/.claude/.secrets/wp-staging-fondazione.env` — **mai in `.lavoro/`**, che non è gitignorata mentre il repo è pubblico.
 
@@ -52,6 +50,9 @@ Cose da non disfare per sbaglio, anche qui:
 - **`dvh`, non `vh`**, per l'altezza del Container. Su iOS `100vh` è l'altezza a barra degli indirizzi collassata: con `vh` la pagina sfora di ~60px e torna a scorrere mentre un bambino disegna sul bordo.
 - **`[lavagna altezza="schermo"]` è l'unico JavaScript che il plugin mette nella pagina**, dodici righe, ed è **opt-in**. Esiste perché il conto a mano è sbagliato: misurato sullo staging, la lavagna cominciava a **166px** dal bordo e non a 65 — barra di amministrazione 46 (**che vede solo chi è collegato**, cioè chi costruisce la pagina), header 65 su telefono ma **55 su desktop**, titolo della pagina 55.
 - **La pagina che ospita la lavagna non deve avere titolo né footer.** Sono le due cose che nella prova la facevano scorrere.
+- **Lo `<script>` di `altezza="schermo"` esce DOPO il `<div>` e gira subito.** Nella 1.1.0 usciva prima e aspettava `DOMContentLoaded`: si apriva una **corsa** con il primo layout dell'app dentro l'iframe, che congela il rapporto della lavagna. Dove vinceva l'app — **Chrome su Android, non desktop e non Safari** — il rapporto restava congelato su 65px di troppo: bande nere ai lati per tutta la sessione e tratto sfalsato dal dito. Chi lo rimettesse prima, o lo rimandasse a `DOMContentLoaded`, riaprirebbe quel difetto — e non lo vedrebbe sulla propria macchina.
+- **Il `rect` del canvas si rilegge a ogni `pointerdown`** (`board.refreshRect()`, chiamata da `input.js`). Il commento che diceva «la pagina non scrolla mai, basta invalidarlo al resize» valeva quando la lavagna era una pagina a sé. Dentro un iframe in WordPress il canvas può **spostarsi senza cambiare dimensione** — basta la barra di Chrome Android che si ritrae — e nessun `resize` né `ResizeObserver` se ne accorge. Costa un reflow per gesto, non per campione.
+- **`unfreezeBoardHeight()` si chiama solo a lavagna vuota**, dal `relayout()` di `main.js`. Il congelamento esiste per non deformare i tratti già fatti: se ce n'è anche uno solo, il rapporto non si tocca più. Verificato: con un tratto sopra, restringere il contenitore produce le bande e **non** cambia il rapporto.
 
 **Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche.
 
