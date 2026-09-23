@@ -1,28 +1,33 @@
 /**
  * Mandare il disegno alla Fondazione (Fase 6, passo 2 del piano).
  *
- * SALVA scarica il disegno e POI chiede se mandarlo: INVIA / NO GRAZIE.
- * L'invio e' una scelta del bambino, mai una conseguenza del salvataggio.
+ * SALVA chiede PRIMA: «SALVA E INVIA» / «SOLO SALVA». Il tocco su uno dei due
+ * fa partire il salvataggio — e, se si e' scelto di inviare, nello stesso
+ * tocco parte anche l'invio.
  *
- * Il server e' l'endpoint del plugin (plugin/frmm-lavagna/includes/invio.php).
- * Il suo indirizzo arriva dallo shortcode, in coda all'URL dell'iframe
- * (?invio=...): fuori da WordPress — il prototipo sotto temp/, o aperto in
- * locale — il parametro non c'e' e la domanda non compare. SALVA resta il
- * download di sempre.
+ * Perche' prima e non dopo (cambiato il 23/09/2026, dopo la prova sul
+ * telefono): la prima versione chiedeva DOPO la condivisione, ma chi
+ * condivide su WhatsApp resta in WhatsApp. La domanda aspettava nel browser
+ * un bambino che non ci sarebbe tornato.
  *
- * Tre scelte non ovvie:
+ * Perche' in parallelo e non «prima l'invio, poi la condivisione»: il foglio
+ * di condivisione si apre solo in risposta IMMEDIATA a un tocco. Aspettare la
+ * rete in mezzo lo fa rifiutare a Safari, in silenzio (export.js, nota 3). La
+ * certezza costerebbe un tocco in piu' a ogni salvataggio. Si e' scelto
+ * invece: l'invio parte subito, e se non arriva — la pagina sospesa da iOS
+ * mentre il bambino e' in WhatsApp, la rete che cade — si riprova da soli,
+ * quando il browser torna in primo piano o torna la rete. La coda sotto.
  *
- *  1. L'indirizzo si accetta solo se e' della STESSA ORIGINE della pagina.
- *     Altrimenti bastava un link alla lavagna con ?invio=https://altrove per
- *     farle spedire i disegni a chiunque.
+ * Il server (plugin/frmm-lavagna/includes/invio.php) riceve anche:
+ *   invio_id   lo stesso a ogni tentativo dello stesso invio: la ripresa di
+ *              un invio arrivato ma con la risposta persa non crea doppioni;
+ *   tentativo  per misurare quanto spesso la ripresa serve davvero.
  *
- *  2. La domanda si rifa' solo se il disegno e' cambiato dall'ultima
- *     risposta — INVIA andato a buon fine o NO GRAZIE. Salvare due volte lo
- *     stesso disegno non deve chiedere due volte la stessa cosa. Un invio
- *     fallito invece non e' una risposta: al SALVA dopo, si richiede.
+ * L'indirizzo dell'endpoint arriva dallo shortcode (?invio=...). Fuori da
+ * WordPress non c'e', e SALVA resta il download di sempre, senza domanda.
  *
- *  3. L'immagine che parte NON ha il logo (fase-0 §7.2): esportaJpeg() senza
- *     il terzo argomento. E' il default di export.js, e il verso giusto.
+ * L'immagine che parte NON ha il logo (fase-0 §7.2): esportaJpeg() senza il
+ * terzo argomento, che e' il default di export.js.
  */
 
 import { esportaJpeg, EXPORT_W } from './export.js';
@@ -42,7 +47,7 @@ export const CHIAVE_CLIENT = 'frmm-lavagna:client_id';
 
 let clientInMemoria = null;
 
-function nuovoUuid(c = globalThis.crypto) {
+export function nuovoUuid(c = globalThis.crypto) {
   if (c && typeof c.randomUUID === 'function') return c.randomUUID();
   const b = c.getRandomValues(new Uint8Array(16));
   b[6] = (b[6] & 0x0f) | 0x40;           // versione 4
@@ -71,7 +76,13 @@ export function clientId(store = globalThis.localStorage, c = globalThis.crypto)
   }
 }
 
-/** L'indirizzo dell'endpoint, o null: vedi la scelta 1 in testa al file. */
+/**
+ * L'indirizzo dell'endpoint, o null.
+ *
+ * Si accetta solo se e' della STESSA ORIGINE della pagina: altrimenti bastava
+ * un link alla lavagna con ?invio=https://altrove per farle spedire i disegni
+ * a chiunque.
+ */
 export function endpointInvio(search = globalThis.location?.search ?? '', origin = globalThis.location?.origin ?? '') {
   const v = new URLSearchParams(search).get('invio');
   if (!v) return null;
@@ -111,7 +122,7 @@ export function payloadDisegno(drawing) {
 }
 
 /**
- * Un'impronta del disegno, per sapere se e' cambiato (scelta 2).
+ * Un'impronta del disegno, per non rifare la domanda sullo stesso disegno.
  *
  * Numero di tratti e id dell'ultimo: gli id crescono e non si riusano, quindi
  * un tratto nuovo cambia l'impronta anche dopo un annulla che aveva riportato
@@ -122,41 +133,45 @@ export function firma(drawing) {
   return `${n}:${n ? drawing.strokes[n - 1].id : 0}`;
 }
 
-/* --- l'invio ------------------------------------------------------------------ */
+/* --- un invio ----------------------------------------------------------------- */
 
 /**
- * Come e' andata, in un motivo solo. I codici del server servono a chi legge i
- * log; al bambino serve sapere se riprovare, aspettare o lasciar perdere.
+ * Come e' andata. Conta una cosa sola: se vale la pena riprovare.
+ *
+ *   fatto      201, o 200 se il server l'aveva gia' (ripresa di un arrivato)
+ *   rete       non si sa se e' arrivato: si riprova
+ *   server     5xx, un guasto di passaggio: si riprova
+ *   grande     413: riprovare non cambierebbe niente
+ *   troppi     429: il rate limit, si lascia perdere
+ *   rifiutato  qualunque altro 4xx: un difetto dell'app, non della rete
  */
 export function motivoDaStatus(status) {
-  if (status === 201) return 'fatto';
+  if (status === 201 || status === 200) return 'fatto';
   if (status === 413) return 'grande';
   if (status === 429) return 'troppi';
   if (!status) return 'rete';
-  return 'server';
+  if (status >= 500) return 'server';
+  return 'rifiutato';
 }
 
+export const DA_RIPROVARE = new Set(['rete', 'server']);
+
 /**
- * Manda il disegno. Non lancia mai: risolve sempre con un motivo.
+ * Manda una voce della coda. Non lancia mai: risolve sempre con un motivo.
  *
- * Il JPEG si fa qui, al tocco di INVIA, e non al tocco di SALVA: chi
- * risponde NO GRAZIE non deve pagare una seconda codifica.
+ * 45 secondi di attesa: un JPEG da un paio di MB su una rete da telefono
+ * scarsa. Oltre, meglio considerarlo non partito e riprovare dopo.
  */
-export async function invia(url, drawing, cid, {
-  jpeg = () => esportaJpeg(drawing, EXPORT_W),
-  fetchImpl = globalThis.fetch,
-  attesa = 45000,
-} = {}) {
+export async function inviaVoce(url, voce, { fetchImpl = globalThis.fetch, attesa = 45000 } = {}) {
   if (globalThis.navigator && navigator.onLine === false) return 'rete';
 
   const corpo = new FormData();
-  corpo.append('client_id', cid);
-  corpo.append('disegno', JSON.stringify(payloadDisegno(drawing)));
-  corpo.append('immagine', jpeg(), 'disegno.jpg');
+  corpo.append('client_id', voce.cid);
+  corpo.append('invio_id', voce.invioId);
+  corpo.append('tentativo', String(voce.tentativo));
+  corpo.append('disegno', voce.disegno);
+  corpo.append('immagine', voce.jpeg, 'disegno.jpg');
 
-  // 45 secondi: un JPEG da un paio di MB su una rete da telefono scarsa. Oltre,
-  // meglio dire che non e' partito che lasciare un bambino davanti a "sto
-  // mandando..." per sempre.
   const stop = new AbortController();
   const timer = setTimeout(() => stop.abort(), attesa);
   try {
@@ -172,121 +187,151 @@ export async function invia(url, drawing, cid, {
   }
 }
 
-/* --- la finestra ---------------------------------------------------------------
+/* --- la coda ------------------------------------------------------------------
+
+   Gli invii partiti e non ancora arrivati. Vive in memoria: se iOS chiude la
+   scheda mentre il bambino e' in WhatsApp, si perde con la scheda — ma con
+   la scheda si perde anche il disegno sullo schermo, e nessun ordine delle
+   operazioni lo salverebbe. Tenerla in localStorage vorrebbe dire metterci
+   JPEG da centinaia di KB: e' la Fase 5, che e' fuori perimetro.
+
+   Si riprova in tre occasioni: la pagina torna visibile (il bambino rientra
+   nel browser), torna la rete, e a tempo, con attese crescenti, per chi e'
+   rimasto nella pagina. Dopo MAX_TENTATIVI si lascia perdere. */
+
+export const ATTESE = [10000, 30000, 120000, 300000, 600000];
+export const MAX_TENTATIVI = 6;
+export const MAX_CODA = 5;
+
+/**
+ * @param {object} o
+ * @param {string} o.url
+ * @param {Function} [o.invia]      (url, voce) => Promise<motivo>; di default inviaVoce
+ * @param {Function} [o.pianifica]  (fn, ms) => annulla; di default setTimeout
+ * @param {object} [o.finestra]     dove ascoltare 'online'; di default window
+ * @param {object} [o.documento]    dove ascoltare 'visibilitychange'
+ */
+export function createCoda({
+  url,
+  invia = (u, v) => inviaVoce(u, v),
+  pianifica = (fn, ms) => { const t = setTimeout(fn, ms); return () => clearTimeout(t); },
+  finestra = globalThis.window,
+  documento = globalThis.document,
+  cid = () => clientId(),
+} = {}) {
+  const voci = [];
+  let inCorso = false;
+  let annullaTimer = null;
+
+  async function svuota() {
+    if (inCorso) return;
+    inCorso = true;
+    annullaTimer?.();
+    annullaTimer = null;
+    try {
+      while (voci.length) {
+        const v = voci[0];
+        v.tentativo++;
+        const esito = await invia(url, v);
+        if (esito === 'fatto') { voci.shift(); continue; }
+        if (!DA_RIPROVARE.has(esito) || v.tentativo >= MAX_TENTATIVI) {
+          console.warn(`[invio] lasciato perdere dopo ${v.tentativo} tentativi: ${esito}`);
+          voci.shift();
+          continue;
+        }
+        // Si ferma qui: se non passa questo, non passeranno nemmeno gli altri.
+        const ms = ATTESE[Math.min(v.tentativo - 1, ATTESE.length - 1)];
+        annullaTimer = pianifica(() => { annullaTimer = null; svuota(); }, ms);
+        break;
+      }
+    } finally {
+      inCorso = false;
+    }
+  }
+
+  // Il bambino torna nel browser dopo WhatsApp: e' IL momento in cui un invio
+  // sospeso da iOS ha la sua occasione.
+  documento?.addEventListener?.('visibilitychange', () => {
+    if (documento.visibilityState === 'visible' && voci.length) svuota();
+  });
+  finestra?.addEventListener?.('online', () => { if (voci.length) svuota(); });
+
+  return {
+    /**
+     * Mette in coda il disegno COM'E' ORA e lo manda. La fotografia si fa qui
+     * — JSON e JPEG — cosi' se il bambino continua a disegnare mentre la
+     * ripresa aspetta, parte quello che ha scelto di mandare, non quello dopo.
+     */
+    aggiungi(drawing, jpeg = () => esportaJpeg(drawing, EXPORT_W)) {
+      voci.push({
+        cid: cid(),
+        invioId: nuovoUuid(),
+        tentativo: 0,
+        disegno: JSON.stringify(payloadDisegno(drawing)),
+        jpeg: jpeg(),
+      });
+      // Un tetto, perche' ogni voce tiene un JPEG in memoria. Oltre cinque
+      // disegni in attesa di rete, il piu' vecchio si lascia andare.
+      if (voci.length > MAX_CODA) {
+        voci.shift();
+        console.warn('[invio] coda piena: lasciato andare l\'invio piu\' vecchio');
+      }
+      return svuota();
+    },
+    get lunghezza() { return voci.length; },
+  };
+}
+
+/* --- la domanda ----------------------------------------------------------------
 
    Stessa grammatica del tutorial: velo, finestra senza bordo, tasti del sito.
-   I testi sono per un bambino di cinque anni che se li fa leggere da un
-   adulto, quindi corti e senza parole tecniche. */
+   Una domanda sola e due risposte, nessuno stato dopo: la finestra si chiude
+   al tocco, perche' quel tocco deve aprire la condivisione. */
 
 export const TESTI = {
-  domanda: {
-    t: 'Vuoi mandare il tuo disegno alla Fondazione?',
-    s: 'Prima lo guarda un adulto. Se va bene, lo mettiamo nella galleria!',
-    si: 'INVIA', no: 'NO GRAZIE',
-  },
-  invio: { t: 'Sto mandando il tuo disegno…', s: '' },
-  fatto: {
-    t: 'Arrivato! Grazie per il tuo disegno.',
-    s: 'Se va bene, presto lo vedrai nella galleria.',
-    si: 'OK',
-  },
-  rete: {
-    t: 'Il disegno non è partito.',
-    s: 'Sembra che manchi internet. Riprova tra un momento.',
-    si: 'RIPROVA', no: 'CHIUDI',
-  },
-  server: {
-    t: 'Il disegno non è partito.',
-    s: 'Qualcosa non ha funzionato. Riprova tra un momento.',
-    si: 'RIPROVA', no: 'CHIUDI',
-  },
-  grande: {
-    t: 'Questo disegno è troppo grande per essere mandato.',
-    s: 'Puoi sempre tenerlo: è già salvato.',
-    no: 'CHIUDI',
-  },
-  troppi: {
-    t: 'Per oggi hai mandato tanti disegni!',
-    s: 'Puoi mandarne altri domani.',
-    no: 'CHIUDI',
-  },
+  t: 'Vuoi mandare il tuo disegno anche alla Fondazione?',
+  s: 'Prima lo guarda un adulto. Se va bene, lo mettiamo nella galleria!',
+  si: 'SALVA E INVIA',
+  no: 'SOLO SALVA',
 };
 
 /**
  * @param {object} o
- * @param {HTMLElement} o.el          il contenitore #inv
- * @param {object} o.drawing
- * @param {string} o.url              l'endpoint, da endpointInvio()
- * @param {Function} [o.onRisposta]   chiamata con la firma del disegno quando
- *   c'e' una risposta che vale (inviato, o NO GRAZIE)
+ * @param {HTMLElement} o.el     il contenitore #inv
+ * @param {Function} o.onScelta  (invia: boolean) => void, chiamata DENTRO il
+ *   gestore del tocco: e' li' che il salvataggio deve partire.
  */
-export function createInvio({ el, drawing, url, onRisposta = () => {} }) {
-  const t = el.querySelector('#inv-t');
-  const s = el.querySelector('#inv-s');
+export function createDomanda({ el, onScelta }) {
   const si = el.querySelector('#inv-si');
   const no = el.querySelector('#inv-no');
-  let stato = null;
-  let firmaAperta = null;
+  el.querySelector('#inv-t').textContent = TESTI.t;
+  el.querySelector('#inv-s').textContent = TESTI.s;
+  si.querySelector('span').textContent = TESTI.si;
+  no.textContent = TESTI.no;
   let focoPrima = null;
-
-  function mostra(nuovo) {
-    stato = nuovo;
-    const x = TESTI[nuovo];
-    t.textContent = x.t;
-    s.textContent = x.s;
-    s.hidden = !x.s;
-    si.querySelector('span').textContent = x.si || '';
-    si.hidden = !x.si;
-    // L'aeroplanino solo su INVIA: e' lo stesso segno di SALVA, e dice
-    // "questo parte". Su OK o RIPROVA direbbe una cosa falsa.
-    si.dataset.ico = nuovo === 'domanda' ? 'invia' : '';
-    no.textContent = x.no || '';
-    no.hidden = !x.no;
-    el.setAttribute('aria-busy', nuovo === 'invio' ? 'true' : 'false');
-    (x.si ? si : x.no ? no : null)?.focus();
-  }
 
   function chiudi() {
     el.hidden = true;
-    stato = null;
     focoPrima?.focus?.();
   }
 
-  async function manda() {
-    mostra('invio');
-    const esito = await invia(url, drawing, clientId());
-    if (esito === 'fatto') onRisposta(firmaAperta);
-    mostra(esito);
-  }
+  // Prima si chiude, poi si sceglie: onScelta apre il foglio di
+  // condivisione, che deve trovare la finestra gia' tolta di mezzo.
+  si.addEventListener('click', () => { chiudi(); onScelta(true); });
+  no.addEventListener('click', () => { chiudi(); onScelta(false); });
 
-  si.addEventListener('click', () => {
-    if (stato === 'domanda' || stato === 'rete' || stato === 'server') manda();
-    else chiudi();
-  });
-
-  no.addEventListener('click', () => {
-    if (stato === 'domanda') onRisposta(firmaAperta);
+  // Esc chiude senza salvare: e' "ci ho ripensato", non una delle due scelte.
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
     chiudi();
   });
 
-  // Esc vale come il tasto secondario, tranne mentre parte: un invio a meta'
-  // non si interrompe chiudendo la finestra.
-  el.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || stato === 'invio') return;
-    e.preventDefault();
-    (no.hidden ? si : no).click();
-  });
-
   return {
-    /** Apre la domanda, se il disegno e' cambiato dall'ultima risposta. */
-    chiedi(ultimaFirma) {
-      const f = firma(drawing);
-      if (f === ultimaFirma) return false;
-      firmaAperta = f;
+    apri() {
       focoPrima = document.activeElement;
       el.hidden = false;
-      mostra('domanda');
-      return true;
+      si.focus();
     },
     get aperta() { return !el.hidden; },
   };

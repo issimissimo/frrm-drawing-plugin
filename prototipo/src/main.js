@@ -30,7 +30,7 @@ import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
-import { createInvio, endpointInvio } from './invio.js';
+import { createDomanda, createCoda, endpointInvio, firma } from './invio.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -281,18 +281,22 @@ btnClear.addEventListener('click', () => {
 /**
  * SALVA.
  *
- * Un tasto solo al posto di SCARICA + INVIA (17/09/2026). Oggi scarica e, sul
- * dito, apre il foglio di condivisione; l'invio al backend si innestera' qui,
- * in Fase 6, senza toccare la mensola.
+ * Un tasto solo al posto di SCARICA + INVIA (17/09/2026). Scarica e, sul
+ * dito, apre il foglio di condivisione. Dentro WordPress, prima chiede se
+ * mandare il disegno anche alla Fondazione (invio.js): la domanda viene
+ * PRIMA, perche' chi condivide su WhatsApp non torna nel browser a
+ * rispondere a una domanda fatta dopo.
  *
- * scarica() va chiamata senza nulla davanti: il foglio di condivisione, su
- * telefono, si apre solo finche' l'attivazione del tocco e' valida (export.js).
+ * salva() va chiamata senza nulla davanti, dentro il gestore del tocco: il
+ * foglio di condivisione, su telefono, si apre solo finche' l'attivazione del
+ * tocco e' valida (export.js). Quando c'e' la domanda, il tocco che conta e'
+ * quello sulla risposta, non quello su SALVA.
+ *
  * Il pulsante si spegne durante l'operazione perche' su un disegno pieno la
  * codifica JPEG blocca il thread per qualche decina di millisecondi, e due
  * tocchi rapidi genererebbero due file.
  */
-btnSave?.addEventListener('click', () => {
-  if (btnSave.disabled) return;
+function salva() {
   btnSave.disabled = true;
   scarica(drawing, LOGO_W)
     .catch((e) => {
@@ -301,24 +305,45 @@ btnSave?.addEventListener('click', () => {
       console.error(e);
       window.alert('Non e riuscito a salvare il disegno.');
     })
-    // DOPO il download, mai prima: scarica() deve partire con l'attivazione
-    // del tocco ancora valida, e una finestra davanti la farebbe scadere.
-    // Anche se il bambino ha annullato la condivisione: la domanda e' un'altra.
-    .then(() => finestraInvio?.chiedi(ultimaRisposta))
     .finally(syncButtons);
-});
+}
 
 /**
- * L'invio alla Fondazione (invio.js). Esiste solo dentro WordPress, dove lo
- * shortcode passa l'indirizzo dell'endpoint: altrove SALVA e' il download e
- * basta. Puo' mancare anche #inv, per la stessa ragione di btnSave sopra.
+ * L'invio alla Fondazione. Esiste solo dentro WordPress, dove lo shortcode
+ * passa l'indirizzo dell'endpoint: altrove SALVA e' il download e basta, senza
+ * domanda. Puo' mancare anche #inv, per la stessa ragione di btnSave sopra.
+ *
+ * La domanda si fa una volta per disegno: salvare di nuovo lo stesso disegno
+ * rifa' quel che si era scelto la prima volta, senza chiedere. Un tratto in
+ * piu' e il disegno e' un altro.
  */
 const urlInvio = endpointInvio();
 const elInvio = document.getElementById('inv');
-let ultimaRisposta = null;
-const finestraInvio = urlInvio && elInvio
-  ? createInvio({ el: elInvio, drawing, url: urlInvio, onRisposta: (f) => { ultimaRisposta = f; } })
+const coda = urlInvio && elInvio ? createCoda({ url: urlInvio }) : null;
+let firmaScelta = null;           // il disegno su cui si e' gia' risposto
+const domanda = coda
+  ? createDomanda({
+    el: elInvio,
+    onScelta(invia) {
+      firmaScelta = firma(drawing);
+      // Prima la condivisione, poi l'invio: la condivisione deve partire
+      // mentre il tocco e' fresco, l'invio puo' permettersi qualche ms dopo.
+      salva();
+      if (invia) coda.aggiungi(drawing);
+    },
+  })
   : null;
+
+btnSave?.addEventListener('click', () => {
+  if (btnSave.disabled) return;
+  if (domanda && firmaScelta !== firma(drawing)) {
+    domanda.apri();
+    return;
+  }
+  // Stesso disegno di prima: gia' scelto. Se era "invia", e' gia' partito —
+  // mandarlo di nuovo sarebbe un doppione in bacheca.
+  salva();
+});
 
 /* Qui c'era il cablaggio di "Torna al sito", tolto il 23/09/2026 insieme al
    pulsante: la pagina che ospita la lavagna ha l'header del sito, quindi il

@@ -13,9 +13,24 @@
  *   client_id   UUID v4 (D5)
  *   disegno     il Drawing di D1, come stringa JSON
  *   immagine    JPEG 1600 px di larghezza, SENZA il logo (fase-0 §7.2)
+ *   invio_id    UUID v4 di QUESTO invio, facoltativo: vedi sotto
+ *   tentativo   1, 2, 3...: quante volte l'app ha provato, facoltativo
  *
- * Risposte: 201 se e' in attesa; 400 / 413 / 415 con un codice d'errore
- * leggibile da una macchina (l'app lo trasforma in una frase per bambini).
+ * Risposte: 201 se e' in attesa, 200 se lo era gia' (lo stesso invio_id);
+ * 400 / 413 / 415 con un codice d'errore leggibile da una macchina.
+ *
+ * PERCHE' invio_id (1.5.0). L'app manda il disegno nello stesso tocco che
+ * apre la condivisione, e se il bambino passa a WhatsApp iOS puo' sospendere
+ * la pagina a invio in corso. Al ritorno l'app riprova. Ma il caso piu'
+ * probabile non e' l'invio perso: e' l'invio ARRIVATO con la risposta persa.
+ * Senza un identificativo, la ripresa lo archivierebbe due volte. Con,
+ * il secondo arrivo trova il primo e risponde 200 senza scrivere niente.
+ *
+ * PERCHE' tentativo. E' la misura promessa quando si e' scelta la ripresa
+ * invece dell'attesa: dopo un periodo di prova si conta quanti disegni sono
+ * arrivati al primo colpo (meta _frmm_tentativo). Se la ripresa servisse
+ * spesso, l'ordine andrebbe rovesciato — prima l'invio, poi la condivisione
+ * con un tocco in piu'.
  *
  * ⚠️ ENDPOINT ANONIMO, SENZA NONCE, ed e' deciso (piano del 23/09/2026). Un
  * nonce di WordPress per un visitatore non collegato e' uguale per tutti e
@@ -76,6 +91,22 @@ function frmm_lavagna_invio($req)
         return frmm_lavagna_errore($disegno);
     }
 
+    // Facoltativo, ma se c'e' dev'essere giusto: un invio_id storto non si
+    // ignora, perche' la deduplica ci si appoggia.
+    $invio_id = null;
+    if ($req->get_param('invio_id') !== null) {
+        $invio_id = frmm_lavagna_valida_client_id($req->get_param('invio_id'));
+        if ($invio_id === null) {
+            return frmm_lavagna_errore('invio_id');
+        }
+        $gia = frmm_lavagna_cerca_invio($invio_id);
+        if ($gia) {
+            return new WP_REST_Response(['ok' => true, 'id' => $gia, 'doppio' => true], 200);
+        }
+    }
+    $tentativo = (int) $req->get_param('tentativo');
+    $tentativo = ($tentativo >= 1 && $tentativo <= 99) ? $tentativo : 0;
+
     $file = $req->get_file_params();
     $file = isset($file['immagine']) ? $file['immagine'] : null;
     if (!$file || !isset($file['error'])) {
@@ -95,7 +126,7 @@ function frmm_lavagna_invio($req)
         return frmm_lavagna_errore($misure);
     }
 
-    $id = frmm_lavagna_archivia($client_id, $disegno, $file['tmp_name']);
+    $id = frmm_lavagna_archivia($client_id, $disegno, $file['tmp_name'], $invio_id, $tentativo);
     if (is_wp_error($id)) {
         return $id;
     }
@@ -111,7 +142,7 @@ function frmm_lavagna_invio($req)
  * l'allegato collegato. O tutto o niente — se un pezzo fallisce, i pezzi gia'
  * scritti si tolgono, e in bacheca non restano disegni senza immagine.
  */
-function frmm_lavagna_archivia($client_id, $disegno, $tmp)
+function frmm_lavagna_archivia($client_id, $disegno, $tmp, $invio_id = null, $tentativo = 0)
 {
     $up = wp_upload_dir();
     if (!empty($up['error'])) {
@@ -155,6 +186,12 @@ function frmm_lavagna_archivia($client_id, $disegno, $tmp)
     // backslash — un colore no, ma una stringa con le virgolette si'.
     add_post_meta($post_id, '_frmm_client_id', $client_id, true);
     add_post_meta($post_id, '_frmm_disegno', wp_slash(wp_json_encode($disegno)), true);
+    if ($invio_id) {
+        add_post_meta($post_id, '_frmm_invio_id', $invio_id, true);
+    }
+    if ($tentativo) {
+        add_post_meta($post_id, '_frmm_tentativo', $tentativo, true);
+    }
 
     $att_id = wp_insert_attachment([
         'post_mime_type' => 'image/jpeg',
@@ -175,6 +212,38 @@ function frmm_lavagna_archivia($client_id, $disegno, $tmp)
     set_post_thumbnail($post_id, $att_id);
 
     return $post_id;
+}
+
+/**
+ * Il disegno gia' arrivato con questo invio_id, in qualunque stato — anche
+ * approvato o nel cestino: un doppione di un disegno rifiutato non deve
+ * tornare in bacheca dalla porta di servizio.
+ */
+function frmm_lavagna_cerca_invio($invio_id)
+{
+    $q = get_posts([
+        'post_type'        => FRMM_LAVAGNA_CPT,
+        'post_status'      => 'any',
+        'meta_key'         => '_frmm_invio_id',
+        'meta_value'       => $invio_id,
+        'fields'           => 'ids',
+        'numberposts'      => 1,
+        'suppress_filters' => true,
+    ]);
+    if ($q) {
+        return (int) $q[0];
+    }
+    // 'any' esclude il cestino: va chiesto a parte.
+    $q = get_posts([
+        'post_type'        => FRMM_LAVAGNA_CPT,
+        'post_status'      => 'trash',
+        'meta_key'         => '_frmm_invio_id',
+        'meta_value'       => $invio_id,
+        'fields'           => 'ids',
+        'numberposts'      => 1,
+        'suppress_filters' => true,
+    ]);
+    return $q ? (int) $q[0] : 0;
 }
 
 /**
@@ -225,6 +294,7 @@ function frmm_lavagna_errore($codice)
 {
     $tabella = [
         'client_id'       => [400, 'client_id mancante o non valido'],
+        'invio_id'        => [400, 'invio_id non valido'],
         'disegno'         => [400, 'disegno mancante o malformato'],
         'disegno_vuoto'   => [400, 'il disegno non contiene tratti di gesso'],
         'disegno_grande'  => [413, 'disegno troppo grande'],

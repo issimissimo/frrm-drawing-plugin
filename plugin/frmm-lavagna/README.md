@@ -132,6 +132,8 @@ Cambia la query string e **non il percorso**, e anche questo e' voluto: il tutor
 | `client_id` | UUID v4 generato dall'app (D5) |
 | `disegno` | il Drawing di D1, come stringa JSON |
 | `immagine` | JPEG largo **1600 px** e alto quanto `board.h` del disegno, **senza logo** |
+| `invio_id` | facoltativo, UUID v4 dell'invio, **uguale a ogni tentativo**: il secondo arrivo risponde `200 {doppio: true}` e non scrive niente (dalla 1.5.0) |
+| `tentativo` | facoltativo, 1, 2, 3...: si salva in `_frmm_tentativo`, e serve a misurare quanto spesso la ripresa dell'app e' servita |
 
 Risponde `201 {ok, id}` se il disegno e' in attesa, altrimenti `400` / `413` / `415` con un `code` (`frmm_client_id`, `frmm_disegno`, `frmm_disegno_vuoto`, `frmm_disegno_grande`, `frmm_immagine`, `frmm_immagine_tipo`, `frmm_immagine_misure`, `frmm_immagine_grande`). L'app sceglie la frase da mostrare dal codice, mai dal messaggio.
 
@@ -152,7 +154,9 @@ Cose da non disfare per sbaglio:
 
 Prove: `python .lavoro/prova-invio.py` contro lo staging (35 controlli; lascia due disegni in attesa a ogni giro).
 
-### Dall'app (dalla 1.4.0)
+### Dall'app (dalla 1.4.0; domanda prima di salvare dalla 1.5.0)
+
+SALVA chiede **prima** «SALVA E INVIA» / «SOLO SALVA». Dopo sarebbe inutile: chi condivide su WhatsApp resta in WhatsApp. L'invio parte nello stesso tocco che apre la condivisione, e se non arriva l'app riprova da sola. Aspettarlo prima di condividere non si puo', perche' Safari rifiuta `navigator.share` dopo un'attesa di rete. Da qui `invio_id`: la ripresa di un invio arrivato, di cui si e' persa la risposta, non deve creare un doppione.
 
 Lo shortcode passa l'indirizzo dell'endpoint all'iframe in `?invio=`, codificato. L'app (`app/src/invio.js`) lo accetta **solo se ha la sua stessa origine**. Senza il parametro, SALVA resta un download e basta: e' il caso del prototipo fuori da WordPress. Se un giorno `home_url` e `site_url` divergessero, per esempio `www` da una parte sola, la domanda dopo SALVA sparirebbe e lo direbbe solo un avviso nella console.
 

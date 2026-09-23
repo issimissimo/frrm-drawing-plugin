@@ -583,8 +583,8 @@
   #btn-avanti[data-ico="check"] .ico-check { display: block; }
 
   /* ---------- invio alla Fondazione ----------
-     La stessa finestra del tutorial, senza il buco nel velo: qui non c'e'
-     niente da indicare, c'e' una domanda. Centrata, perche' non deve lasciar
+     La domanda prima di SALVA. La stessa finestra del tutorial, senza il buco
+     nel velo: qui non c'e' niente da indicare, c'e' una domanda. Centrata, perche' non deve lasciar
      vedere nessuna area in particolare. Le misure della finestra sono quelle
      di #panel e stanno scritte una volta sola: vedi la regola comune sopra. */
   #inv {
@@ -608,17 +608,23 @@
     line-height: 1.4;
     color: var(--ink);
   }
-  #inv-s[hidden] { display: none; }
   #inv .row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+  #inv .btn { white-space: nowrap; }
+  /* Sul telefono i due tasti uno sopra l'altro, a tutta larghezza. Affiancati
+     non ci stanno: a 390px «SALVA E INVIA» andava a capo dentro il tasto, e a
+     360 — il Galaxy S10 — il secondo scendeva comunque sotto, piu' stretto e
+     storto. Impilati sono anche bersagli piu' grandi per un dito piccolo. Il
+     primario resta sopra: e' la stessa lettura di prima, dall'alto. */
+  @media (max-width: 480px) {
+    #inv .row { flex-direction: column; align-items: stretch; gap: 8px; }
+  }
   /* Come RIPETI nel tutorial: bianco su fondo trasparente. Il .secondario di
-     base (--dim su fondo pieno) qui sembrava un tasto spento, e NO GRAZIE non
-     puo' sembrare meno disponibile di INVIA: per un bambino mandare il disegno
-     dev'essere una scelta, non la strada in discesa. La gerarchia la tiene il
-     contenitore, che INVIA ha e questo no. */
+     base (--dim su fondo pieno) qui sembrava un tasto spento, e SOLO SALVA
+     non puo' sembrare meno disponibile di SALVA E INVIA: per un bambino
+     mandare il disegno dev'essere una scelta, non la strada in discesa. La
+     gerarchia la tiene il contenitore, che SALVA E INVIA ha e questo no. */
   #inv-no { color: #FAF8F3; background: transparent; }
   #inv-no:hover { color: #FFFFFF; }
-  /* L'aeroplanino solo su INVIA: su OK e RIPROVA direbbe "parte", e non e'. */
-  #inv-si:not([data-ico="invia"]) svg { display: none; }
 
   /* ---------- i tasti spenti, durante il tutorial ----------
      Alla prima apertura non c'e' ancora un disegno, quindi annulla, rifai e
@@ -789,9 +795,9 @@
   </div>
 </div>
 
-<!-- L'invio alla Fondazione (invio.js). Compare dopo SALVA, e solo dentro
-     WordPress: fuori manca l'indirizzo dell'endpoint e resta nascosta per
-     sempre. I testi li scrive invio.js, stato per stato. -->
+<!-- L'invio alla Fondazione (invio.js). Compare al tocco di SALVA, PRIMA
+     del salvataggio, e solo dentro WordPress: fuori manca l'indirizzo
+     dell'endpoint e resta nascosta per sempre. I testi li scrive invio.js. -->
 <div id="inv" hidden>
   <div id="inv-panel" role="dialog" aria-modal="true" aria-labelledby="inv-t" aria-describedby="inv-s">
     <p id="inv-t"></p>

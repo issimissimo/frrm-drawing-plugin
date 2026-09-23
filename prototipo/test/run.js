@@ -16,7 +16,7 @@ import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
 import { clientId, CHIAVE_CLIENT, endpointInvio, payloadDisegno, firma,
-         motivoDaStatus, invia } from '../src/invio.js';
+         motivoDaStatus, inviaVoce, createCoda, MAX_TENTATIVI, MAX_CODA } from '../src/invio.js';
 import { createDrawing, adattaLavagna } from '../src/model.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
          giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
@@ -711,40 +711,122 @@ test('invio: la firma cambia con un tratto nuovo anche dopo un annulla', () => {
   assert(firma({ strokes: [] }) === '0:0', 'lavagna vuota');
 });
 
-test('invio: gli status diventano motivi per il bambino', () => {
-  const m = [[201, 'fatto'], [413, 'grande'], [429, 'troppi'], [0, 'rete'], [400, 'server'], [500, 'server']];
+test('invio: gli status dicono se riprovare', () => {
+  const m = [[201, 'fatto'], [200, 'fatto'], [413, 'grande'], [429, 'troppi'], [0, 'rete'],
+             [400, 'rifiutato'], [415, 'rifiutato'], [500, 'server'], [503, 'server']];
   for (const [st, atteso] of m) assert(motivoDaStatus(st) === atteso, `${st} -> ${motivoDaStatus(st)}`);
 });
 
-const disegnoProva = { version: 1, board: { w: 1600, h: 1200 },
-  strokes: [{ id: 1, tool: 'chalk', color: '#FAF8F3', width: 27, seed: 1, pts: [1, 2, 1] }] };
+const disegnoProva = () => ({ version: 1, board: { w: 1600, h: 1200 },
+  strokes: [{ id: 1, tool: 'chalk', color: '#FAF8F3', width: 27, seed: 1, pts: [1, 2, 1] }] });
+const voceProva = { cid: 'c', invioId: 'i', tentativo: 2, disegno: '{}', jpeg: new Blob(['jpg'], { type: 'image/jpeg' }) };
 
-test('invio: manda i tre campi, anonimo, e riconosce il 201', async () => {
+test('invio: una voce parte con i cinque campi, anonima', async () => {
   let visto = null;
-  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
-    jpeg: () => new Blob(['jpg'], { type: 'image/jpeg' }),
+  const esito = await inviaVoce('https://sito.org/x', voceProva, {
     fetchImpl: async (url, o) => { visto = o; return { status: 201 }; },
   });
   assert(esito === 'fatto', esito);
   assert(visto.method === 'POST' && visto.credentials === 'omit', 'POST senza cookie');
-  assert(visto.body.get('client_id') === 'id', 'client_id');
-  assert(JSON.parse(visto.body.get('disegno')).board.h === 1200, 'disegno');
-  assert(visto.body.get('immagine').name === 'disegno.jpg', 'immagine');
+  const b = visto.body;
+  assert(b.get('client_id') === 'c' && b.get('invio_id') === 'i' && b.get('tentativo') === '2', 'campi');
+  assert(b.get('immagine').name === 'disegno.jpg', 'immagine');
 });
 
 test('invio: una fetch che fallisce e "rete", non una eccezione', async () => {
-  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
-    jpeg: () => new Blob(['x']), fetchImpl: async () => { throw new TypeError('offline'); },
-  });
+  const esito = await inviaVoce('x', voceProva, { fetchImpl: async () => { throw new TypeError('offline'); } });
   assert(esito === 'rete', esito);
 });
 
 test('invio: una risposta che non arriva scade', async () => {
-  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
-    jpeg: () => new Blob(['x']), attesa: 20,
+  const esito = await inviaVoce('x', voceProva, {
+    attesa: 20,
     fetchImpl: (u, o) => new Promise((_, no) => o.signal.addEventListener('abort', () => no(new Error('abort')))),
   });
   assert(esito === 'rete', esito);
+});
+
+/** Una coda con rete, timer ed eventi finti: si comanda tutto a mano. */
+function codaProva(esiti) {
+  const inviati = [];
+  const timer = [];
+  const doc = new EventTarget(); doc.visibilityState = 'hidden';
+  const win = new EventTarget();
+  const coda = createCoda({
+    url: 'x',
+    cid: () => 'c',
+    invia: async (u, v) => { inviati.push({ ...v }); return esiti.shift() ?? 'fatto'; },
+    pianifica: (fn, ms) => { const t = { fn, ms, vivo: true }; timer.push(t); return () => { t.vivo = false; }; },
+    documento: doc, finestra: win,
+  });
+  const torna = async () => { doc.visibilityState = 'visible'; doc.dispatchEvent(new Event('visibilitychange')); await tick(); };
+  return { coda, inviati, timer, doc, win, torna };
+}
+const tick = () => new Promise((r) => setTimeout(r, 0));
+
+// La coda avvisa in console quando lascia perdere un invio: nei test e' il
+// comportamento atteso, non rumore da leggere. I test asincroni girano in
+// parallelo, quindi la console si zittisce una volta per tutti e torna alla
+// fine (vedi in fondo), non test per test.
+const warnOriginale = console.warn;
+console.warn = () => {};
+
+test('coda: un invio riuscito esce dalla coda', async () => {
+  const c = codaProva(['fatto']);
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  assert(c.inviati.length === 1 && c.coda.lunghezza === 0, `${c.inviati.length} / ${c.coda.lunghezza}`);
+  assert(c.inviati[0].tentativo === 1, 'primo tentativo = 1');
+});
+
+test('coda: se la rete manca si riprova al ritorno nel browser, con lo stesso invio_id', async () => {
+  const c = codaProva(['rete', 'fatto']);
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  assert(c.coda.lunghezza === 1, 'resta in coda');
+  assert(c.timer.length === 1 && c.timer[0].vivo, 'e c\'e\' una ripresa a tempo');
+  await c.torna();
+  assert(c.inviati.length === 2 && c.coda.lunghezza === 0, `${c.inviati.length} / ${c.coda.lunghezza}`);
+  assert(c.inviati[1].invioId === c.inviati[0].invioId, 'stesso invio_id: il server riconosce il doppione');
+  assert(c.inviati[1].tentativo === 2, 'tentativo 2');
+  assert(!c.timer[0].vivo, 'la ripresa a tempo si annulla');
+});
+
+test('coda: si riprova anche quando torna la rete, e a tempo', async () => {
+  const c = codaProva(['rete', 'server', 'fatto']);
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  c.win.dispatchEvent(new Event('online')); await tick();
+  assert(c.inviati.length === 2, 'online');
+  c.timer[c.timer.length - 1].fn(); await tick();
+  assert(c.inviati.length === 3 && c.coda.lunghezza === 0, 'a tempo');
+  assert(c.timer[1].ms > c.timer[0].ms, 'attese crescenti');
+});
+
+test('coda: 413 e 429 non si riprovano', async () => {
+  const c = codaProva(['troppi', 'grande']);
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  assert(c.inviati.length === 2 && c.coda.lunghezza === 0 && c.timer.length === 0, 'lasciati perdere');
+});
+
+test('coda: dopo MAX_TENTATIVI si lascia perdere', async () => {
+  const c = codaProva(Array(20).fill('rete'));
+  await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  for (let i = 0; i < 10; i++) { c.doc.visibilityState = 'hidden'; await c.torna(); }
+  assert(c.inviati.length === MAX_TENTATIVI && c.coda.lunghezza === 0, `${c.inviati.length} tentativi`);
+});
+
+test('coda: la fotografia del disegno si fa al tocco', async () => {
+  const c = codaProva(['rete', 'fatto']);
+  const d = disegnoProva();
+  await c.coda.aggiungi(d, () => new Blob(['j']));
+  d.strokes.push({ id: 2, tool: 'chalk', color: '#FAF8F3', width: 27, seed: 2, pts: [5, 5, 1] });
+  await c.torna();
+  assert(JSON.parse(c.inviati[1].disegno).strokes.length === 1, 'parte quel che si era scelto, non il dopo');
+});
+
+test('coda: oltre il tetto il piu vecchio si lascia andare', async () => {
+  const c = codaProva(Array(20).fill('rete'));
+  for (let i = 0; i < MAX_CODA + 2; i++) await c.coda.aggiungi(disegnoProva(), () => new Blob(['j']));
+  assert(c.coda.lunghezza === MAX_CODA, `${c.coda.lunghezza}`);
 });
 
 test('lavagna: il Drawing vuoto segue il rapporto nuovo, quello pieno no', () => {
@@ -762,6 +844,7 @@ test('lavagna: il Drawing vuoto segue il rapporto nuovo, quello pieno no', () =>
 /* ---------------- esito ---------------- */
 
 await Promise.all(inSospeso);
+console.warn = warnOriginale;
 
 const w = Math.max(...results.map((r) => r[1].length));
 for (const [esito, nome, msg] of results) {

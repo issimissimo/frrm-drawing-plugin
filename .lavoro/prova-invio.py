@@ -15,8 +15,8 @@ Passo 1 del piano delle Fasi 6-10. Tre gruppi di prove:
      strade che WordPress apre da solo — ?attachment_id=, ?p=, la REST API
      dei media, quella dei post.
 
-⚠️ Ogni esecuzione lascia sullo staging due disegni in attesa (il valido e
-il poliglotta). E' lo staging e sono il materiale del passo 3 (la bacheca).
+⚠️ Ogni esecuzione lascia sullo staging tre disegni in attesa (il valido,
+quello col doppione e il poliglotta). E' lo staging e sono il materiale del passo 3 (la bacheca).
 
 Non e' ancora lo script di abuso del passo 4 (500 invii, 50 MB): qui si
 guarda che ogni singolo controllo faccia il suo lavoro.
@@ -76,6 +76,14 @@ def jpeg(w=1600, h=1200, fmt="JPEG", coda=b""):
     return buf.getvalue() + coda
 
 
+def in_attesa(adm):
+    """Quanti disegni in attesa conta la bacheca."""
+    import re
+    r = adm.get(staging.credenziali()[0] + "edit.php", params={"post_type": "frmm_disegno"}, timeout=30)
+    m = re.search(r"""class=['"]pending['"].*?<span class="count">\((\d+)\)</span>""", r.text, re.S)
+    return int(m.group(1)) if m else -1
+
+
 def invia(campi, immagine=None, nomefile="disegno.jpg", tipo="image/jpeg"):
     files = {"immagine": (nomefile, immagine, tipo)} if immagine is not None else None
     r = staging.anonima().post(URL, data=campi, files=files, timeout=120)
@@ -122,12 +130,24 @@ def main():
            {"client_id": cid, "disegno": buono}, b"\xff\xd8\xff" + random.randbytes(6 * 1024 * 1024))
     esito(f"{'GET al posto di POST':44s}", staging.anonima().get(URL, timeout=30).status_code == 404)
 
+    # La ripresa dell'app: lo stesso invio_id due volte e' UN disegno.
+    adm = staging.collegata()
+    prima = in_attesa(adm)
+    iid = str(uuid.uuid4())
+    campi = {"client_id": cid, "disegno": buono, "invio_id": iid, "tentativo": "1"}
+    st1, c1 = attesa("con invio_id, primo arrivo", 201, None, campi, img)
+    campi["tentativo"] = "2"
+    st2, c2 = attesa("stesso invio_id, secondo arrivo", 200, None, campi, img)
+    esito("il doppione rimanda allo stesso disegno", c1.get("id") and c1.get("id") == c2.get("id") and c2.get("doppio") is True,
+          f"{c1} / {c2}")
+    esito("in bacheca un disegno in piu', non due", in_attesa(adm) == prima + 1, f"{prima} -> {in_attesa(adm)}")
+    attesa("invio_id non UUID", 400, "frmm_invio_id", {"client_id": cid, "disegno": buono, "invio_id": "abc"}, img)
+
     st, corpo = attesa("JPEG con PHP in coda (poliglotta)", 201, None,
                        {"client_id": cid, "disegno": buono}, jpeg(coda=b"<?php system($_GET['c']); ?>"))
     poli_id = corpo.get("id") if st == 201 else None
 
     print("\n  -- 2. da amministratore\n")
-    adm = staging.collegata()
     rest = BASE + "wp-json/wp/v2/"
     att = {}
     for nome, pid in (("valido", valido_id), ("poliglotta", poli_id)):

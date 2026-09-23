@@ -1,15 +1,15 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 23/09/2026 (notte)
-Versione corrente: plugin `frmm-lavagna` **1.4.1** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
+Versione corrente: plugin `frmm-lavagna` **1.5.1** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
 
 ## Dove siamo
 
-La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA scarica il JPEG col logo e **poi chiede se mandarlo**: INVIA porta il disegno in bacheca, in attesa. Provato da Playwright sullo staging, **non ancora dal telefono**.
-In produzione il plugin non c'è. 61 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 35 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
+La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA **chiede prima** «SALVA E INVIA» / «SOLO SALVA», poi scarica o condivide; con INVIA, nello stesso tocco, il disegno parte per la bacheca. La 1.4.1 (domanda *dopo*) è stata provata sul telefono il 23/09/2026 e ha funzionato; la 1.5.1 solo da Playwright sullo staging.
+In produzione il plugin non c'è. 68 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 40 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
 
 ## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passi 1–2 fatti)
 
-Obiettivo: un bambino **sceglie** di mandare il disegno; arriva in bacheca, un adulto lo approva o lo rifiuta dalla miniatura, gli approvati vanno in una galleria. Tutto sullo staging.
+Obiettivo: un bambino **sceglie** di mandare il disegno (la domanda sta PRIMA del salvataggio, dal 23/09/2026); arriva in bacheca, un adulto lo approva o lo rifiuta dalla miniatura, gli approvati vanno in una galleria. Tutto sullo staging.
 
 Decisioni d'apertura: SALVA scarica e **poi chiede** «Vuoi mandarlo alla Fondazione?» (INVIA / NO GRAZIE) · **D1 chiuso**: la galleria accetta proporzioni miste · una sola risoluzione, **1600px** · niente Turnstile · niente nonce sull'endpoint anonimo · immagini in attesa con **nome casuale a 128 bit** (confermato da Daniele: non la cartella protetta).
 Assunzioni **confermate da Daniele il 23/09/2026**: JPEG senza logo · email ad `admin_email` · rifiutati nel cestino, via dopo 30 giorni **con l'immagine** · testi legali in bozza da Claude · plugin resta `frmm-lavagna`.
@@ -20,7 +20,12 @@ Fuori perimetro: go-live in produzione · Fase 5 (unica eccezione: il `client_id
 
 Passi:
 1. [x] Endpoint senza l'app — **fatto il 23/09/2026, plugin 1.3.0**. CPT `frmm_disegno` (prefissato: i tipi WP condividono lo spazio di nomi), `POST /wp-json/frmm-lavagna/v1/invio` multipart (`client_id`, `disegno` JSON, `immagine` JPEG). Tipo dai byte, JPEG 1600 × `board.h` ±1, Drawing ricostruito campo per campo, **immagine ricodificata con GD** (toglie qualunque coda: provato con un poliglotta JPEG+PHP). File in `uploads/frmm-lavagna/<128 bit>.jpg`. Da anonimo verificati chiusi `?attachment_id=`, `?p=`, `/wp/v2/media` (404/401), cartella 403, Yoast senza sitemap degli allegati. Il plugin di sicurezza SiteGround **non** blocca i POST anonimi.
-2. [x] Invio dall'app — **fatto il 23/09/2026, plugin 1.4.1**, manca solo la prova dal telefono. `src/invio.js`: finestra dopo SALVA (INVIA / NO GRAZIE), stati per bambini (invio, fatto, rete, server, grande, troppi), `client_id` in `frmm-lavagna:client_id` (chiave **senza** percorso: identifica il dispositivo), punti arrotondati al centesimo nella copia che parte, JPEG senza logo (verificato sul file arrivato). L'indirizzo arriva dallo shortcode in `?invio=` e si accetta **solo della stessa origine**. Si richiede solo se il disegno è cambiato dall'ultima risposta; un invio fallito non è una risposta. NO GRAZIE **bianco su trasparente** come RIPETI: col `.secondario` di base sembrava spento, e il no deve essere disponibile quanto il sì. Peso misurato: disegno fitto 1600×2248, 180 tratti → JPEG 368 KB + JSON 83 KB, lontano dai limiti (5 MB / 3 MB).
+2. [x] Invio dall'app — **plugin 1.5.1, 23/09/2026**, da riprovare sul telefono. `src/invio.js`.
+   - **La domanda sta PRIMA di salvare** (Daniele, dopo la prova sul telefono della 1.4.1): chi condivide su WhatsApp resta in WhatsApp e non torna a rispondere a una domanda fatta dopo. SALVA → «SALVA E INVIA» / «SOLO SALVA»; il tocco sulla risposta fa partire il salvataggio, ed è quel tocco che dà l'attivazione al foglio di condivisione. Una domanda per disegno: salvare di nuovo lo stesso disegno rifà la scelta di prima senza chiedere. Esc chiude senza salvare.
+   - **Invio e condivisione in parallelo, con ripresa** (scelta B, Daniele). Aspettare l'upload prima di aprire la condivisione non si può: Safari rifiuta `navigator.share` dopo un'attesa di rete, in silenzio. L'invio parte nello stesso tocco; se non arriva si riprova quando la pagina torna visibile, quando torna la rete, e a tempo (10 s → 10 min, 6 tentativi). La coda è in memoria (max 5): se iOS chiude la scheda si perde, ma con lei si perde anche il disegno.
+   - **Niente doppioni**: ogni invio porta un `invio_id`, uguale a ogni tentativo; il server risponde 200 e non scrive se l'ha già (anche nel cestino). Verificato sullo staging: due arrivi, un disegno in bacheca.
+   - **Misura della ripresa**: ogni disegno registra `_frmm_tentativo`. Dopo un periodo di prova si conta quanti sono arrivati al primo colpo; se la ripresa servisse spesso, si passa alla strada A (prima l'invio, poi un tocco in più per condividere).
+   - Resta valido dalla 1.4.x: `client_id` in `frmm-lavagna:client_id` (senza percorso), punti arrotondati al centesimo nella copia che parte, JPEG senza logo, endpoint accettato solo same-origin. Tasti impilati a tutta larghezza sotto i 480px (affiancati «SALVA E INVIA» andava a capo); SOLO SALVA bianco su trasparente, perché il no sia disponibile quanto il sì. Peso: disegno fitto 1600×2248 → JPEG 368 KB + JSON 83 KB.
 3. [ ] Bacheca: colonna miniatura, Approva/Rifiuta, email con miniatura.
 4. [ ] Anti-abuso con script ripetibile: rate limit per IP **in hash** e per `client_id`, limiti prima di leggere il corpo, honeypot.
 5. [ ] Retention: Rifiuta = cestino, 30 giorni, hook che cancella l'allegato.
@@ -81,4 +86,4 @@ Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collega
 
 ## Prossimo passo
 
-**Prova dal telefono del passo 2** (iPhone e Android, `/lavagna-prova-plugin/` sullo staging): SALVA → foglio di condivisione → poi la domanda → INVIA → «Arrivato!». Su iPhone è il primo punto da guardare: la domanda compare dopo che il foglio di condivisione si chiude. Poi **passo 3: la bacheca**.
+**Prova dal telefono della 1.5.1** (iPhone e Android, `/lavagna-prova-plugin/`): SALVA → domanda → SALVA E INVIA → condivisione su WhatsApp → il disegno è in bacheca. Poi **passo 3: la bacheca** — dove conviene mostrare anche `_frmm_tentativo`, che è la misura della ripresa.

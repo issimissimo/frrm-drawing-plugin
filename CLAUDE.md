@@ -37,7 +37,7 @@ Chi lo riaprisse non ricominci ritarando le due costanti: è la strada già perc
 
 ## Il plugin WordPress — `plugin/frmm-lavagna/`
 
-Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. **Dalla 1.3.0** (23/09/2026, solo staging) riceve anche i disegni: `POST /wp-json/frmm-lavagna/v1/invio`, codice in `includes/`, regole da non disfare nel README del plugin. **Dalla 1.4.x** l'app li manda: SALVA scarica e poi chiede (`prototipo/src/invio.js`), l'indirizzo arriva dallo shortcode in `?invio=`. Si installa sullo staging con `python .lavoro/installa-staging.py`, che legge le credenziali da sé.
+Registra lo shortcode `[lavagna]`, che stampa un `<iframe>` verso l'app. Nella pagina ospite non finisce niente della lavagna: né JS, né CSS, né font. **Dalla 1.3.0** (23/09/2026, solo staging) riceve anche i disegni: `POST /wp-json/frmm-lavagna/v1/invio`, codice in `includes/`, regole da non disfare nel README del plugin. **Dalla 1.5.x** l'app li manda: SALVA chiede **prima** «SALVA E INVIA» / «SOLO SALVA» — dopo, chi è finito in WhatsApp non risponde — e l'invio parte nello stesso tocco della condivisione, con ripresa automatica e `invio_id` contro i doppioni (`prototipo/src/invio.js`). L'indirizzo arriva dallo shortcode in `?invio=`. Si installa sullo staging con `python .lavoro/installa-staging.py`, che legge le credenziali da sé.
 
 Lo zip si costruisce con `python .lavoro/pacchetto.py`. Credenziali dello staging in `~/.claude/.secrets/wp-staging-fondazione.env` — **mai in `.lavoro/`**, che non è gitignorata mentre il repo è pubblico.
 
@@ -168,7 +168,7 @@ Chi trovasse la discrepanza **non la "corregga" rimettendo `frrm` sull'FTP**: il
 
 ## Pubblicazione
 
-**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-16/> — con `?tutorial` in coda il tutorial parte comunque. Fuori da WordPress la domanda d'invio non compare (manca `?invio=`): la -16 è la -14 più la correzione di `adattaLavagna()`. La **-15** è la pagina ospite di prova della Fase 8. La **-13** è la -14 **senza il logo** sull'immagine scaricata.
+**Online:** <https://issimissimo.com/temp/frmm-drawing-plugin-17/> — con `?tutorial` in coda il tutorial parte comunque. Fuori da WordPress la domanda d'invio non compare (manca `?invio=`): la -17 è la -14 più la correzione di `adattaLavagna()` (la -16 è la stessa cosa col codice della domanda *dopo*, inattivo fuori da WordPress). La **-15** è la pagina ospite di prova della Fase 8. La **-13** è la -14 **senza il logo** sull'immagine scaricata.
 
 ⚠️ Le precedenti hanno **difetti noti** e non vanno date a nessuno: nella `-02` RIPETI si vede a ogni passo, nella `-03` i tasti spenti sono illeggibili nei passi che li spiegano, nella `-04` il tutorial non parte a chi ha già visto una versione precedente. La `-05` non ha difetti — è solo priva delle correzioni del 18/09/2026 (AVANTI, riquadro degli spessori, tratteggio animato in arancione, corpi più grandi) e serve da confronto. La `-06` è **il giro intermedio con i tasti arancioni**, rientrato poche ore dopo: non va data al cliente, perché mostra una scelta che è stata annullata. La `-07` è buona ma precede lo spostamento del `?` e il fondo spento di SALVA.
 
