@@ -31,6 +31,27 @@ export function createDrawing() {
   };
 }
 
+/**
+ * Riallinea l'altezza del Drawing a quella della lavagna, ma solo se e' vuoto.
+ *
+ * Serve dal giorno in cui la lavagna vuota puo' cambiare rapporto dopo
+ * l'avvio (unfreezeBoardHeight, 23/09/2026): il rapporto cambiava, il
+ * Drawing no, e si teneva l'altezza del primo layout. I tratti finivano in
+ * coordinate della lavagna nuova e l'immagine salvata aveva le misure della
+ * vecchia — tagliata in fondo o con una banda, proprio sul Chrome Android
+ * della corsa col plugin. Trovato il 23/09/2026 scrivendo l'invio, perche'
+ * il server confronta proprio quell'altezza con quella del JPEG.
+ *
+ * Con un tratto sopra non si tocca: e' la stessa regola del congelamento.
+ */
+export function adattaLavagna(drawing) {
+  if (drawing.strokes.length) return false;
+  const h = boardHeight();
+  if (drawing.board.h === h) return false;
+  drawing.board.h = h;
+  return true;
+}
+
 /** Seed a 32 bit, generato una volta sola e mai piu' toccato (vedi D1). */
 export const makeSeed = () => (Math.random() * 0x100000000) >>> 0;
 

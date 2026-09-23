@@ -486,10 +486,7 @@
   }
 
   /* Nessun bordo: si stacca dal velo con la sola ombra. */
-  #panel {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+  #panel, #inv-panel {
     width: min(430px, calc(100vw - 32px));
     box-sizing: border-box;
     /* 26 in testa e non 22: il tasto di chiusura arriva a 44px dal bordo, e
@@ -497,6 +494,11 @@
     padding: 26px 24px 18px;
     background: #272C31;
     box-shadow: 0 30px 70px -18px rgba(0, 0, 0, 0.92);
+  }
+  #panel {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     transition: top .34s cubic-bezier(.4, 0, .2, 1);
   }
 
@@ -544,7 +546,7 @@
     text-transform: uppercase;
     color: var(--arancio);
   }
-  #step-t {
+  #step-t, #inv-t {
     margin: 0 0 20px;
     font-size: 19px;
     line-height: 1.34;
@@ -579,6 +581,44 @@
   #btn-avanti .ico-check,
   #btn-avanti[data-ico="check"] .ico-avanti { display: none; }
   #btn-avanti[data-ico="check"] .ico-check { display: block; }
+
+  /* ---------- invio alla Fondazione ----------
+     La stessa finestra del tutorial, senza il buco nel velo: qui non c'e'
+     niente da indicare, c'e' una domanda. Centrata, perche' non deve lasciar
+     vedere nessuna area in particolare. Le misure della finestra sono quelle
+     di #panel e stanno scritte una volta sola: vedi la regola comune sopra. */
+  #inv {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 9, 11, 0.78);
+  }
+  #inv[hidden] { display: none; }
+  /* 22 in testa e non 26: qui non c'e' la X da scavalcare. */
+  #inv-panel { padding-top: 22px; }
+  /* Titolo e riga sotto sono una frase sola: piu' vicini fra loro che al
+     tasto. */
+  #inv-t { margin-bottom: 12px; }
+  #inv-s {
+    margin: 0 0 20px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  #inv-s[hidden] { display: none; }
+  #inv .row { display: flex; align-items: center; justify-content: flex-start; gap: 10px; }
+  /* Come RIPETI nel tutorial: bianco su fondo trasparente. Il .secondario di
+     base (--dim su fondo pieno) qui sembrava un tasto spento, e NO GRAZIE non
+     puo' sembrare meno disponibile di INVIA: per un bambino mandare il disegno
+     dev'essere una scelta, non la strada in discesa. La gerarchia la tiene il
+     contenitore, che INVIA ha e questo no. */
+  #inv-no { color: #FAF8F3; background: transparent; }
+  #inv-no:hover { color: #FFFFFF; }
+  /* L'aeroplanino solo su INVIA: su OK e RIPROVA direbbe "parte", e non e'. */
+  #inv-si:not([data-ico="invia"]) svg { display: none; }
 
   /* ---------- i tasti spenti, durante il tutorial ----------
      Alla prima apertura non c'e' ancora un disegno, quindi annulla, rifai e
@@ -745,6 +785,25 @@
         </svg>
       </button>
       <button type="button" id="btn-ripeti" class="btn secondario" hidden>RIPETI</button>
+    </div>
+  </div>
+</div>
+
+<!-- L'invio alla Fondazione (invio.js). Compare dopo SALVA, e solo dentro
+     WordPress: fuori manca l'indirizzo dell'endpoint e resta nascosta per
+     sempre. I testi li scrive invio.js, stato per stato. -->
+<div id="inv" hidden>
+  <div id="inv-panel" role="dialog" aria-modal="true" aria-labelledby="inv-t" aria-describedby="inv-s">
+    <p id="inv-t"></p>
+    <p id="inv-s"></p>
+    <div class="row">
+      <button type="button" id="inv-si" class="btn primario">
+        <span></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>
+        </svg>
+      </button>
+      <button type="button" id="inv-no" class="btn secondario"></button>
     </div>
   </div>
 </div>

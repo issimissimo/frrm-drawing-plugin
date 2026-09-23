@@ -13,9 +13,9 @@
  * I comandi (annulla, rifai, cestino, invia) stanno nel registro opposto:
  * icone di linea, monocrome, all'estremita' lontana.
  *
- * Il download del disegno (export.js) e' una fetta anticipata della Fase 6:
- * resta tutto sul device, nessun backend. Deliberatamente assenti:
- * persistenza, invio, cursore custom. Fase 5 e oltre.
+ * SALVA scarica il disegno (export.js) e, dentro WordPress, chiede poi se
+ * mandarlo alla Fondazione (invio.js). Deliberatamente assenti: persistenza
+ * e cursore custom.
  */
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
@@ -24,12 +24,13 @@ import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
 import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
-import { createDrawing, createHistory } from './model.js';
+import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry } from './render.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
+import { createInvio, endpointInvio } from './invio.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -300,8 +301,24 @@ btnSave?.addEventListener('click', () => {
       console.error(e);
       window.alert('Non e riuscito a salvare il disegno.');
     })
+    // DOPO il download, mai prima: scarica() deve partire con l'attivazione
+    // del tocco ancora valida, e una finestra davanti la farebbe scadere.
+    // Anche se il bambino ha annullato la condivisione: la domanda e' un'altra.
+    .then(() => finestraInvio?.chiedi(ultimaRisposta))
     .finally(syncButtons);
 });
+
+/**
+ * L'invio alla Fondazione (invio.js). Esiste solo dentro WordPress, dove lo
+ * shortcode passa l'indirizzo dell'endpoint: altrove SALVA e' il download e
+ * basta. Puo' mancare anche #inv, per la stessa ragione di btnSave sopra.
+ */
+const urlInvio = endpointInvio();
+const elInvio = document.getElementById('inv');
+let ultimaRisposta = null;
+const finestraInvio = urlInvio && elInvio
+  ? createInvio({ el: elInvio, drawing, url: urlInvio, onRisposta: (f) => { ultimaRisposta = f; } })
+  : null;
 
 /* Qui c'era il cablaggio di "Torna al sito", tolto il 23/09/2026 insieme al
    pulsante: la pagina che ospita la lavagna ha l'header del sito, quindi il
@@ -325,6 +342,9 @@ function relayout() {
   // rischia di congelare un rapporto sbagliato. Vedi unfreezeBoardHeight().
   if (!history.count) unfreezeBoardHeight();
   lastLayout = board.layout();
+  // E il Drawing segue: senza, l'immagine salvata avrebbe le misure del primo
+  // layout e non di quel che si vede. Vedi adattaLavagna().
+  adattaLavagna(drawing);
   // I canvas sovrapposti hanno la stessa taglia: il contenitore la eredita.
   layers.style.width = `${lastLayout.cssW}px`;
   layers.style.height = `${lastLayout.cssH}px`;

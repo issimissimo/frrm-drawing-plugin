@@ -1,13 +1,13 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 23/09/2026 (sera)
-Versione corrente: plugin `frmm-lavagna` **1.3.0** (installato solo sullo staging, con l'endpoint di invio). Il prototipo non ha numero.
+Ultimo aggiornamento: 23/09/2026 (notte)
+Versione corrente: plugin `frmm-lavagna` **1.4.1** (installato solo sullo staging: endpoint di invio e invio dall'app). Il prototipo non ha numero.
 
 ## Dove siamo
 
-La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione, via `[lavagna altezza="schermo"]` in un iframe: provata su iPhone/Safari e Android/Chrome, funziona. SALVA scarica il JPEG col logo; **non invia niente a nessuno**.
-In produzione il plugin non c'è. 49 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 35 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
+La lavagna (fasi 0–4b, tutorial compreso, test con un bambino superato) vive in una pagina Elementor dello **staging** della Fondazione (`/lavagna-prova-plugin/`), via `[lavagna altezza="schermo"]` in un iframe. SALVA scarica il JPEG col logo e **poi chiede se mandarlo**: INVIA porta il disegno in bacheca, in attesa. Provato da Playwright sullo staging, **non ancora dal telefono**.
+In produzione il plugin non c'è. 61 test JS (`node prototipo/test/run.js`), 48 PHP (`php -d extension=gd plugin/test/validazione.php`), 35 sullo staging (`python .lavoro/prova-invio.py`). Zip con `python .lavoro/pacchetto.py`, installazione sullo staging con `python .lavoro/installa-staging.py` (credenziali lette dallo script, mai stampate).
 
-## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passo 1 fatto)
+## Piano attivo — Fasi 6, 7, 9, 10 (approvato il 23/09/2026, passi 1–2 fatti)
 
 Obiettivo: un bambino **sceglie** di mandare il disegno; arriva in bacheca, un adulto lo approva o lo rifiuta dalla miniatura, gli approvati vanno in una galleria. Tutto sullo staging.
 
@@ -20,7 +20,7 @@ Fuori perimetro: go-live in produzione · Fase 5 (unica eccezione: il `client_id
 
 Passi:
 1. [x] Endpoint senza l'app — **fatto il 23/09/2026, plugin 1.3.0**. CPT `frmm_disegno` (prefissato: i tipi WP condividono lo spazio di nomi), `POST /wp-json/frmm-lavagna/v1/invio` multipart (`client_id`, `disegno` JSON, `immagine` JPEG). Tipo dai byte, JPEG 1600 × `board.h` ±1, Drawing ricostruito campo per campo, **immagine ricodificata con GD** (toglie qualunque coda: provato con un poliglotta JPEG+PHP). File in `uploads/frmm-lavagna/<128 bit>.jpg`. Da anonimo verificati chiusi `?attachment_id=`, `?p=`, `/wp/v2/media` (404/401), cartella 403, Yoast senza sitemap degli allegati. Il plugin di sicurezza SiteGround **non** blocca i POST anonimi.
-2. [ ] Invio dall'app: `client_id`, export 1600 senza logo, finestra dopo SALVA, conferma ed errore per bambini, URL dell'endpoint passato dallo shortcode all'iframe. Richiede solo se il disegno è cambiato. Provato dal telefono.
+2. [x] Invio dall'app — **fatto il 23/09/2026, plugin 1.4.1**, manca solo la prova dal telefono. `src/invio.js`: finestra dopo SALVA (INVIA / NO GRAZIE), stati per bambini (invio, fatto, rete, server, grande, troppi), `client_id` in `frmm-lavagna:client_id` (chiave **senza** percorso: identifica il dispositivo), punti arrotondati al centesimo nella copia che parte, JPEG senza logo (verificato sul file arrivato). L'indirizzo arriva dallo shortcode in `?invio=` e si accetta **solo della stessa origine**. Si richiede solo se il disegno è cambiato dall'ultima risposta; un invio fallito non è una risposta. NO GRAZIE **bianco su trasparente** come RIPETI: col `.secondario` di base sembrava spento, e il no deve essere disponibile quanto il sì. Peso misurato: disegno fitto 1600×2248, 180 tratti → JPEG 368 KB + JSON 83 KB, lontano dai limiti (5 MB / 3 MB).
 3. [ ] Bacheca: colonna miniatura, Approva/Rifiuta, email con miniatura.
 4. [ ] Anti-abuso con script ripetibile: rate limit per IP **in hash** e per `client_id`, limiti prima di leggere il corpo, honeypot.
 5. [ ] Retention: Rifiuta = cestino, 30 giorni, hook che cancella l'allegato.
@@ -54,6 +54,9 @@ Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collega
 
 ## Trappole
 
+- **SiteGround serve i `.js` con `max-age` di un anno.** Il `?v=` dello shortcode rinnova solo `index.html`: i moduli restavano quelli vecchi per chi aveva già aperto la lavagna, e un modulo nuovo che importa da uno vecchio **non apre la lavagna**. Dalla 1.4.1 `pacchetto.py` mette `?v=` su **ogni** import della copia nello zip e rifiuta di costruire se ne manca uno. Scoperto sullo staging il 23/09/2026: il browser di prova aveva il `main.js` della 1.2.0.
+- **`drawing.board.h` non seguiva `unfreezeBoardHeight()`** (corretto il 23/09/2026, `adattaLavagna()` in `model.js`): a lavagna vuota il rapporto cambiava, il Drawing no, e l'immagine salvata aveva le misure del primo layout. Colpiva proprio Chrome Android dentro WordPress.
+
 - **Chrome Android si comporta diversamente da Chrome desktop e da Safari.** La corsa script/primo layout si vedeva solo lì: ciò che non si riproduce sulla propria macchina non è per questo risolto.
 - **Lo `<script>` di `altezza="schermo"` deve uscire DOPO il `<div>` e girare subito.** Rimandarlo a `DOMContentLoaded` riapre la corsa col `freezeBoardHeight()` dell'app.
 - **Il `rect` del canvas si rilegge a ogni `pointerdown`**: nell'iframe il canvas può spostarsi senza cambiare dimensione, e nessun evento lo dice.
@@ -78,4 +81,4 @@ Rischi: **i disegni in attesa compaiono nella Media Library** per chi è collega
 
 ## Prossimo passo
 
-**Passo 2 del piano: l'invio dall'app.** Da decidere all'apertura: se arrotondare i `pts` a 2 decimali prima di mandarli (oggi sono float pieni, ~18 caratteri l'uno; il server accetta fino a 3 MB di JSON). E va misurato il peso vero di un JPEG 1600 × ~2500 pieno di gesso contro il limite di 5 MB.
+**Prova dal telefono del passo 2** (iPhone e Android, `/lavagna-prova-plugin/` sullo staging): SALVA → foglio di condivisione → poi la domanda → INVIA → «Arrivato!». Su iPhone è il primo punto da guardare: la domanda compare dopo che il foglio di condivisione si chiude. Poi **passo 3: la bacheca**.

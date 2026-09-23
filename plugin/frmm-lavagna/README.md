@@ -152,8 +152,20 @@ Cose da non disfare per sbaglio:
 
 Prove: `python .lavoro/prova-invio.py` contro lo staging (35 controlli; lascia due disegni in attesa a ogni giro).
 
+### Dall'app (dalla 1.4.0)
+
+Lo shortcode passa l'indirizzo dell'endpoint all'iframe in `?invio=`, codificato. L'app (`app/src/invio.js`) lo accetta **solo se ha la sua stessa origine**. Senza il parametro, SALVA resta un download e basta: e' il caso del prototipo fuori da WordPress. Se un giorno `home_url` e `site_url` divergessero, per esempio `www` da una parte sola, la domanda dopo SALVA sparirebbe e lo direbbe solo un avviso nella console.
+
+## Aggiornare: la cache di un anno sui `.js`
+
+SiteGround serve i file statici con `Cache-Control: max-age=31536000`. Il `?v=` dello shortcode rinnova `index.html`, **ma non i moduli che importa**. Per questo `pacchetto.py` aggiunge `?v=<versione>` a ogni import della copia che va nello zip, e **si rifiuta di costruire** se un import resta senza.
+
+Senza quella riscrittura, chi aveva gia' aperto la lavagna riceveva l'`index.html` nuovo con i moduli vecchi. Nel caso peggiore un modulo nuovo importava una funzione assente da quello vecchio e la lavagna non si apriva, **solo per chi c'era gia' stato**. Scoperto sullo staging il 23/09/2026.
+
+Il logo e i font restano senza versione: se cambiassero, vanno rinominati.
+
 ## Cosa non fa (ancora)
 
-L'app non chiama ancora l'endpoint: SALVA scarica e basta. Mancano l'email all'amministratore, la miniatura e i tasti Approva/Rifiuta in bacheca, il rate limit, la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
+Mancano l'email all'amministratore, la miniatura e i tasti Approva/Rifiuta in bacheca, il rate limit, la retention dei rifiutati e la galleria. Sono i passi 2-10 del piano in `.lavoro/stato.md`.
 
 L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.

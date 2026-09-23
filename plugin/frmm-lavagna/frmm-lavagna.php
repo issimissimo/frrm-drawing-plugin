@@ -3,7 +3,7 @@
  * Plugin Name:       FRMM Lavagna
  * Plugin URI:        https://github.com/issimissimo/frrm-drawing-plugin
  * Description:       La lavagna a gessetti della Fondazione. Si inserisce in una pagina con lo shortcode [lavagna], dentro un Container Elementor a cui si sia data un'altezza.
- * Version:           1.3.0
+ * Version:           1.4.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Daniele Suppo
@@ -70,7 +70,7 @@ require_once __DIR__ . '/includes/invio.php';
  * due divergono, cosi' la dimenticanza la trova una macchina e non un bambino
  * con la cache vecchia.
  */
-define('FRMM_LAVAGNA_VER', '1.3.0');
+define('FRMM_LAVAGNA_VER', '1.4.1');
 
 /**
  * Altezza minima del contenitore.
@@ -133,9 +133,25 @@ function frmm_lavagna_shortcode($atts = [])
     // perche' il tutorial ricorda di essere stato visto in una chiave che
     // contiene location.pathname: se cambiasse il percorso, ogni
     // aggiornamento rimetterebbe il tutorial davanti a chi l'ha gia' fatto.
+    //
+    // Il secondo parametro e' l'indirizzo dell'endpoint di invio: l'app lo
+    // legge da qui e, se non c'e', SALVA resta un download e basta. Non lo
+    // indovina da se' perche' dipende da come e' configurato WordPress
+    // (permalink, sottocartella), e perche' cosi' la stessa app gira anche
+    // fuori da WordPress senza chiedere niente a nessuno.
+    //
+    // rawurlencode: add_query_arg non codifica i valori, e un URL dentro un
+    // URL senza codifica si spezza al primo "?" o "&".
+    //
+    // ⚠️ L'app lo accetta solo se ha la sua stessa origine (invio.js). Se un
+    // giorno home_url e site_url divergessero — www da una parte e non
+    // dall'altra — la domanda dopo SALVA sparirebbe senza errori visibili:
+    // lo dice solo un avviso nella console.
     $src = add_query_arg(
-        'v',
-        FRMM_LAVAGNA_VER,
+        [
+            'v'     => FRMM_LAVAGNA_VER,
+            'invio' => rawurlencode(rest_url(FRMM_LAVAGNA_REST_NS . '/invio')),
+        ],
         plugins_url('app/index.html', __FILE__)
     );
 

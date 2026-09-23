@@ -15,15 +15,28 @@ import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
+import { clientId, CHIAVE_CLIENT, endpointInvio, payloadDisegno, firma,
+         motivoDaStatus, invia } from '../src/invio.js';
+import { createDrawing, adattaLavagna } from '../src/model.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
          giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
 let passed = 0, failed = 0;
 const results = [];
 
+// I test sincroni girano subito, nell'ordine in cui sono scritti: alcuni
+// condividono lo stato del modulo palette.js e contano su quell'ordine. Quelli
+// asincroni (l'invio) partono subito anche loro, e si aspettano alla fine.
+const inSospeso = [];
 function test(nome, fn) {
-  try { fn(); passed++; results.push(['ok  ', nome, '']); }
-  catch (e) { failed++; results.push(['FAIL', nome, e.message]); }
+  const i = results.push(null) - 1;
+  const ok = () => { passed++; results[i] = ['ok  ', nome, '']; };
+  const ko = (e) => { failed++; results[i] = ['FAIL', nome, e.message]; };
+  try {
+    const r = fn();
+    if (r && typeof r.then === 'function') inSospeso.push(r.then(ok, ko));
+    else ok();
+  } catch (e) { ko(e); }
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 function close(a, b, tol, msg) {
@@ -639,7 +652,116 @@ test('lavagna: un rapporto assurdo non viene accettato', () => {
   freezeBoardHeight(BOARD_W / 1200);
 });
 
+/* ---------------- invio ---------------- */
+
+const finto = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), m }; };
+const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+test('invio: il client_id e un UUID v4 e resta lo stesso', () => {
+  const st = finto();
+  const a = clientId(st);
+  assert(UUID4.test(a), `non e un UUID v4: ${a}`);
+  assert(clientId(st) === a, 'la seconda chiamata deve restituire lo stesso id');
+  assert(st.m.get(CHIAVE_CLIENT) === a, 'va salvato sotto la chiave dichiarata');
+});
+
+test('invio: il client_id e un UUID v4 anche senza randomUUID', () => {
+  const c = { getRandomValues: (b) => globalThis.crypto.getRandomValues(b) };
+  assert(UUID4.test(clientId(finto(), c)), 'il ripiego su getRandomValues deve dare un v4');
+});
+
+test('invio: la chiave del client_id non contiene il percorso', () => {
+  // Al contrario del tutorial: identifica il dispositivo, non la pagina.
+  assert(!CHIAVE_CLIENT.includes('/'), CHIAVE_CLIENT);
+});
+
+test('invio: senza storage il client_id vive in memoria', () => {
+  const rotto = { getItem() { throw new Error('privato'); }, setItem() { throw new Error('privato'); } };
+  const a = clientId(rotto);
+  assert(UUID4.test(a) && clientId(rotto) === a, 'stesso id per tutta la sessione');
+});
+
+test("invio: l'endpoint si accetta solo dalla stessa origine", () => {
+  const o = 'https://sito.org';
+  const u = encodeURIComponent('https://sito.org/wp-json/frmm-lavagna/v1/invio');
+  assert(endpointInvio(`?v=1&invio=${u}`, o) === 'https://sito.org/wp-json/frmm-lavagna/v1/invio', 'stessa origine');
+  const warn = console.warn; console.warn = () => {};
+  try {
+    assert(endpointInvio(`?invio=${encodeURIComponent('https://altro.org/x')}`, o) === null, 'altra origine');
+    assert(endpointInvio(`?invio=${encodeURIComponent('http://sito.org/x')}`, o) === null, 'altro schema');
+  } finally { console.warn = warn; }
+  assert(endpointInvio('?invio=non-un-url', o) === null, 'non URL');
+  assert(endpointInvio('?v=1', o) === null, 'assente');
+});
+
+test('invio: il payload arrotonda i punti e non tocca il disegno', () => {
+  const d = { version: 1, board: { w: 1600, h: 1200 },
+    strokes: [{ id: 3, tool: 'chalk', color: '#FAF8F3', width: 27, seed: 5, pts: [1.23456, 2.98765, 0.8412345] }] };
+  const p = payloadDisegno(d);
+  assert(JSON.stringify(p.strokes[0].pts) === '[1.23,2.99,0.84]', JSON.stringify(p.strokes[0].pts));
+  assert(d.strokes[0].pts[0] === 1.23456, 'il Drawing originale non va arrotondato');
+  assert(p.board.h === 1200 && p.strokes[0].seed === 5, "il resto passa com'e");
+});
+
+test('invio: la firma cambia con un tratto nuovo anche dopo un annulla', () => {
+  const d = { strokes: [{ id: 1 }, { id: 2 }] };
+  const a = firma(d);
+  d.strokes.pop(); d.strokes.push({ id: 3 });
+  assert(firma(d) !== a, 'stesso numero di tratti, ultimo diverso');
+  assert(firma({ strokes: [] }) === '0:0', 'lavagna vuota');
+});
+
+test('invio: gli status diventano motivi per il bambino', () => {
+  const m = [[201, 'fatto'], [413, 'grande'], [429, 'troppi'], [0, 'rete'], [400, 'server'], [500, 'server']];
+  for (const [st, atteso] of m) assert(motivoDaStatus(st) === atteso, `${st} -> ${motivoDaStatus(st)}`);
+});
+
+const disegnoProva = { version: 1, board: { w: 1600, h: 1200 },
+  strokes: [{ id: 1, tool: 'chalk', color: '#FAF8F3', width: 27, seed: 1, pts: [1, 2, 1] }] };
+
+test('invio: manda i tre campi, anonimo, e riconosce il 201', async () => {
+  let visto = null;
+  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
+    jpeg: () => new Blob(['jpg'], { type: 'image/jpeg' }),
+    fetchImpl: async (url, o) => { visto = o; return { status: 201 }; },
+  });
+  assert(esito === 'fatto', esito);
+  assert(visto.method === 'POST' && visto.credentials === 'omit', 'POST senza cookie');
+  assert(visto.body.get('client_id') === 'id', 'client_id');
+  assert(JSON.parse(visto.body.get('disegno')).board.h === 1200, 'disegno');
+  assert(visto.body.get('immagine').name === 'disegno.jpg', 'immagine');
+});
+
+test('invio: una fetch che fallisce e "rete", non una eccezione', async () => {
+  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
+    jpeg: () => new Blob(['x']), fetchImpl: async () => { throw new TypeError('offline'); },
+  });
+  assert(esito === 'rete', esito);
+});
+
+test('invio: una risposta che non arriva scade', async () => {
+  const esito = await invia('https://sito.org/x', disegnoProva, 'id', {
+    jpeg: () => new Blob(['x']), attesa: 20,
+    fetchImpl: (u, o) => new Promise((_, no) => o.signal.addEventListener('abort', () => no(new Error('abort')))),
+  });
+  assert(esito === 'rete', esito);
+});
+
+test('lavagna: il Drawing vuoto segue il rapporto nuovo, quello pieno no', () => {
+  unfreezeBoardHeight(); freezeBoardHeight(BOARD_W / 1200);
+  const d = createDrawing();
+  unfreezeBoardHeight(); freezeBoardHeight(390 / 501);
+  assert(adattaLavagna(d) && d.board.h === boardHeight(), `vuoto: ${d.board.h} vs ${boardHeight()}`);
+  d.strokes.push({ id: 1 });
+  const h = d.board.h;
+  unfreezeBoardHeight(); freezeBoardHeight(BOARD_W / 1200);
+  assert(!adattaLavagna(d) && d.board.h === h, 'con un tratto non si tocca');
+  unfreezeBoardHeight(); freezeBoardHeight(BOARD_W / 1200);
+});
+
 /* ---------------- esito ---------------- */
+
+await Promise.all(inSospeso);
 
 const w = Math.max(...results.map((r) => r[1].length));
 for (const [esito, nome, msg] of results) {

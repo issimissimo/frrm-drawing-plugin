@@ -56,6 +56,60 @@ def versioni():
     return header.group(1), costante.group(1)
 
 
+def versiona_moduli(app, versione):
+    """Mette ?v=<versione> in coda a OGNI modulo, non solo a index.html.
+
+    ⚠️ Scoperto il 23/09/2026 provando la 1.4.0 sullo staging: SiteGround serve
+    i .js con Cache-Control max-age=31536000, un anno. Il ?v= dello shortcode
+    rinnova index.html, ma i moduli che index.html importa hanno sempre lo
+    stesso URL: chi aveva gia' aperto la lavagna riceveva l'index nuovo e il
+    main.js vecchio. Nel caso buono non vedeva la novita'; in quello cattivo
+    un modulo nuovo importava una funzione da un modulo vecchio che non ce
+    l'ha, e la lavagna non si apriva — solo per chi c'era gia' stato.
+
+    Si riscrive la COPIA che va nello zip: il sorgente in prototipo/ resta
+    senza versioni, e il prototipo in locale o sotto temp/ gira come prima.
+    Ogni import di un modulo diventa './x.js?v=1.4.0' in tutti i file, quindi
+    per il browser ogni modulo ha un solo URL e non ne esistono due copie.
+
+    Non si usa un import map, che farebbe lo stesso senza toccare i file:
+    Safari lo supporta dalla 16.4, e un iPad di qualche anno fa e' proprio il
+    dispositivo che un bambino si fa prestare.
+
+    Il logo (new URL('../images/logo.png', import.meta.url)) e i font restano
+    senza versione: non cambiano, e se cambiassero andrebbero rinominati.
+    """
+    q = f"?v={versione}"
+    import_rel = re.compile(r"""(\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)(['"])(\.{1,2}/[^'"?]+\.js)\2""")
+    for js in sorted((app / "src").glob("*.js")):
+        testo = js.read_text(encoding="utf-8")
+        nuovo = import_rel.sub(lambda m: f"{m.group(1)}{m.group(2)}{m.group(3)}{q}{m.group(2)}", testo)
+        js.write_text(nuovo, encoding="utf-8", newline="")
+
+    html_p = app / "index.html"
+    html = html_p.read_text(encoding="utf-8")
+    html = re.sub(r'(<script[^>]*\bsrc=")(\./src/[^"?]+\.js)(")', lambda m: m.group(1) + m.group(2) + q + m.group(3), html)
+    html_p.write_text(html, encoding="utf-8", newline="")
+
+    # La verifica, che vale piu' di un conteggio di file: ogni modulo
+    # importato esiste nel pacchetto e porta la versione. Un import mancante o
+    # senza versione dentro un iframe da' una lavagna nera senza un messaggio.
+    riferimenti = [("index.html", m) for m in re.findall(r'<script[^>]*\bsrc="(\./src/[^"]+)"', html)]
+    for js in sorted((app / "src").glob("*.js")):
+        for m in re.findall(r"""(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"](\.{1,2}/[^'"]+)['"]""", js.read_text(encoding="utf-8")):
+            riferimenti.append((f"src/{js.name}", m))
+    if not riferimenti:
+        sys.exit(rosso("Non trovo nessun import: la riscrittura dei moduli non ha visto niente."))
+    for chi, rif in riferimenti:
+        percorso, _, query = rif.partition("?")
+        base = app if chi == "index.html" else app / "src"
+        if not (base / percorso).resolve().exists():
+            sys.exit(rosso(f"{chi} importa {rif}, che nel pacchetto non c'e'."))
+        if query != f"v={versione}":
+            sys.exit(rosso(f"{chi} importa {rif} senza la versione: resterebbe in cache un anno."))
+    print(f"      {len(riferimenti)} import versionati con {q}")
+
+
 def main():
     v_header, v_costante = versioni()
     if v_header != v_costante:
@@ -97,16 +151,7 @@ def main():
     if "images" in mancanti:
         print(rosso("  !!  prototipo/images/ non c'e': le immagini salvate non avranno il logo."))
 
-    # Un controllo che vale piu' di un conteggio di file: i moduli che
-    # index.html importa devono esserci tutti. Un import mancante dentro un
-    # iframe da' una pagina nera senza un messaggio visibile.
-    html = (staging / "app" / "index.html").read_text(encoding="utf-8")
-    moduli = set(re.findall(r'src="(src/[^"]+\.js)"', html)) | set(
-        re.findall(r"from\s+'(\./[^']+\.js)'", html)
-    )
-    for m in sorted(moduli):
-        if not (staging / "app" / m.replace("./", "src/")).exists() and not (staging / "app" / m).exists():
-            sys.exit(rosso(f"index.html carica {m}, che nel pacchetto non c'e'."))
+    versiona_moduli(staging / "app", v_header)
 
     zip_path = DIST / f"frmm-lavagna-{v_header}.zip"
     if zip_path.exists():
