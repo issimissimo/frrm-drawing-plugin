@@ -5,6 +5,11 @@ Il marquee gia' in uso sul sito non deve cambiare: questo script lo misura.
     python .lavoro/prova-marquee.py foto prima       # salva il riferimento
     python .lavoro/prova-marquee.py foto dopo
     python .lavoro/prova-marquee.py confronta prima dopo
+    python .lavoro/prova-marquee.py foto prima --produzione   # il sito ufficiale
+
+Con --produzione le foto si chiamano prod-<nome>: non si confondono con
+quelle dello staging, e confronta le cerca con lo stesso prefisso. Sola
+lettura, da anonimo.
 
 Fotografa, sulla pagina /chi-siamo/ dello STAGING, due cose del widget
 custom_marquee: il blocco HTML che il PHP stampa, e le regole che Elementor
@@ -25,6 +30,11 @@ import staging  # noqa: E402
 
 DIST = Path(__file__).resolve().parent / "dist"
 PAGINA = "chi-siamo/"
+PREFISSO = ""
+if "--produzione" in sys.argv:
+    sys.argv.remove("--produzione")
+    staging.usa_produzione()
+    PREFISSO = "prod-"
 
 
 def blocco_widget(pagina):
@@ -43,10 +53,18 @@ def blocco_widget(pagina):
 def regole_css(sessione, pagina, apertura):
     """Le regole del CSS di Elementor che nominano questo widget."""
     wid = re.search(r'data-id="([0-9a-f]+)"', apertura).group(1)
-    fogli = re.findall(r"""href=['"]([^'"]*/elementor/css/post-\d+\.css[^'"]*)['"]""", pagina)
+    # Sullo staging le regole stanno in post-N.css; in produzione Speed
+    # Optimizer combina i fogli e minifica: si cercano in ogni foglio del sito
+    # e nei <style> della pagina.
+    host = re.match(r"https?://[^/]+", staging.base()).group(0)
+    fogli = [u for u in re.findall(r"""<link[^>]*rel=['"]stylesheet['"][^>]*href=['"]([^'"]+)['"]""", pagina)
+             + re.findall(r"""<link[^>]*href=['"]([^'"]+\.css[^'"]*)['"][^>]*rel=['"]stylesheet['"]""", pagina)
+             if u.startswith(host)]
+    fogli = list(dict.fromkeys(fogli))
+    testi = [sessione.get(url, timeout=60).text for url in fogli]
+    testi += re.findall(r"<style[^>]*>(.*?)</style>", pagina, re.S)
     regole = []
-    for url in fogli:
-        css = sessione.get(url, timeout=60).text
+    for css in testi:
         regole += [r.strip() for r in re.findall(r"[^{}]*\{[^{}]*\}", css) if f"elementor-element-{wid}" in r]
         # Le media query racchiudono le regole responsive: si prendono intere.
         for mq in re.finditer(r"@media[^{]*\{((?:[^{}]*\{[^{}]*\})*)\s*\}", css):
@@ -63,17 +81,17 @@ def foto(nome):
     html, apertura = blocco_widget(r.text)
     wid, fogli, regole = regole_css(s, r.text, apertura)
     DIST.mkdir(exist_ok=True)
-    (DIST / f"marquee-{nome}.html").write_text(html, encoding="utf-8", newline="")
-    (DIST / f"marquee-{nome}.css").write_text("\n".join(sorted(set(regole))), encoding="utf-8", newline="")
+    (DIST / f"marquee-{PREFISSO}{nome}.html").write_text(html, encoding="utf-8", newline="")
+    (DIST / f"marquee-{PREFISSO}{nome}.css").write_text("\n".join(sorted(set(regole))), encoding="utf-8", newline="")
     immagini = html.count('class="mq-item"')
-    print(f"  {nome}: widget {wid}, {len(html)} byte, {immagini} immagini, "
+    print(f"  {PREFISSO}{nome} ({staging.base()}): widget {wid}, {len(html)} byte, {immagini} immagini, "
           f"{len(set(regole))} regole CSS da {len(fogli)} fogli")
 
 
 def confronta(a, b):
     esito = 0
     for est in ("html", "css"):
-        pa, pb = DIST / f"marquee-{a}.{est}", DIST / f"marquee-{b}.{est}"
+        pa, pb = DIST / f"marquee-{PREFISSO}{a}.{est}", DIST / f"marquee-{PREFISSO}{b}.{est}"
         ta, tb = pa.read_text(encoding="utf-8"), pb.read_text(encoding="utf-8")
         if ta == tb:
             print(f"  ok  {est}: identico ({len(ta)} byte)")

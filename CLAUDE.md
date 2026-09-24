@@ -60,7 +60,7 @@ Cose da non disfare per sbaglio, anche qui:
 
 ## La galleria — `plugin/custom-marquee/` (dal 24/09/2026)
 
-La galleria dei disegni è il widget **Custom Marquee** già presente sul sito, entrato nel repo il 24/09/2026 (autore «Issimissimo»). La Lavagna 1.7.0 gli fornisce la sorgente «Disegni della Lavagna (approvati)» con due filtri: il marquee non sa niente di disegni. Dettaglio nei README dei due plugin; sullo staging la pagina di prova è `/playground/`.
+La galleria dei disegni è il widget **Custom Marquee** già presente sul sito, entrato nel repo il 24/09/2026 (autore «Issimissimo»). **In produzione dal 24/09/2026**: marquee 1.2.1 e Lavagna 1.7.0 (`installa-staging.py custom-marquee <v> --produzione`; `prova-marquee.py ... --produzione` per il confronto su `/chi-siamo/`, dove le regole stanno nel CSS combinato di Speed Optimizer). La Lavagna 1.7.0 gli fornisce la sorgente «Disegni della Lavagna (approvati)» con due filtri: il marquee non sa niente di disegni. Dettaglio nei README dei due plugin; sullo staging la pagina di prova è `/playground/`.
 
 - **Il marquee è usato anche su `/chi-siamo/` del sito ufficiale**, con immagini scelte a mano. Ogni modifica si verifica con `python .lavoro/prova-marquee.py foto` / `confronta`: HTML del widget identico byte per byte. È il criterio con cui è stato scritto.
 - **I suoi file sono CRLF e devono restarlo** (`.gitattributes`): il template finisce nell'HTML con i suoi `\r`. Modificarli con uno strumento che converte i fine riga rompe il confronto.

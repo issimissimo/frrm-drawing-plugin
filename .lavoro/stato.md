@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 24/09/2026
-Versione corrente: plugin `frmm-lavagna` **1.7.0 sullo staging**, **1.6.2 in produzione**; `custom-marquee` **1.2.1 sullo staging**, originale in produzione (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
+Versione corrente: `frmm-lavagna` **1.7.0** e `custom-marquee` **1.2.1**, sullo staging **e in produzione** (produzione aggiornata il 24/09/2026, decisione di Daniele). Prototipo online: `temp/frmm-drawing-plugin-18/`.
 
 ## Dove siamo
 Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin 1.6.1 è installato e attivo con l'invio acceso**, prima dei passi 4-6; nessuna pagina lo usa ancora. `admin_email` lì è `d.suppo@issimissimo.com`.
@@ -20,10 +20,10 @@ Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuor
 5. [ ] Retention: cestino 30 giorni, cancellazione dell'allegato **e del file** (oggi svuotare il cestino lascia il JPEG in `uploads/frmm-lavagna/`).
 6. [ ] Bozze legali per un genitore: privacy policy + testo accanto alla domanda. Devono dire che «SALVA E INVIA» manda il disegno alla Fondazione.
 7. [x] **Fermata sciolta** (Daniele, 23/09/2026): la galleria è il **Custom Marquee** già presente sul sito. **Ordine dei fronti deciso da Daniele: prima la galleria, poi il 4.**
-8. [ ] Galleria sullo staging, solo approvati — sotto-piano qui sotto.
+8. [x] Galleria: il Custom Marquee con sorgente «Disegni della Lavagna» — sotto-piano chiuso il 24/09/2026, installato anche in produzione. Resta da verificare lì il purge all'approvazione (vedi Prossimo passo).
 9. [ ] QA su device veri, flusso intero.
 
-### Sotto-piano del passo 8 — il Custom Marquee si aggiorna da solo (approvato 24/09/2026, passo 2 compreso)
+### Sotto-piano del passo 8 — il Custom Marquee si aggiorna da solo (CHIUSO 24/09/2026)
 Obiettivo: un disegno approvato compare nella striscia senza che nessuno la modifichi a mano, e il marquee già in uso (`/chi-siamo/`) non cambia.
 
 Criterio di finito (staging, misurato con script e Playwright):
@@ -44,8 +44,8 @@ Passi:
 2. [x] **Scatto di mezzo gap al giro** (1.1.0: 11,9 → 0 px a 1920 e 390; CSS rigenerato da solo al cambio di versione): difetto già presente, misurato 11,9 px su `/chi-siamo/`. Una riga (`padding-right` pari al gap) + svuotamento del CSS di Elementor al cambio di versione, senza il quale la correzione resta invisibile. Prova: scatto 0 px, resto dell'HTML identico.
 3. [x] **Marquee: la sorgente** (1.2.0, 17 test; `/chi-siamo/` identico a HTML e CSS rigenerato). Controllo «Sorgente» (default «Immagini scelte a mano»: le istanze esistenti non cambiano). Per le sorgenti esterne: massimo N (default 20), misura dell'immagine (default `large`, non l'originale fino a 2 MB), ripetizione fino a riempire ~3840 px, velocità in px/s calcolata in PHP sulle misure desktop. Prova: test PHP sulle funzioni pure (ripetizione, durata); `/chi-siamo/` identico.
 4. [x] **Lavagna: la sorgente** (1.7.0, 9 test; purge con `sg_cachepress_purge_cache()`, non `_everything`, che svuota anche memcached e gli asset). Registra «Disegni della Lavagna»: ultimi N **per data di approvazione** (meta scritto su `transition_post_status`, fallback su `post_date` per i già approvati), mostrati dal più vecchio al più nuovo; solo `publish`. A ogni ingresso/uscita da `publish` svuota la cache di Speed Optimizer, se esiste. Prova: test PHP su selezione e ordine.
-5. [ ] **Prova sullo staging** — pagina `/playground/` (Daniele, 24/09/2026: «funziona tutto», anche il pannello). Fatto: ordine per approvazione, in attesa mai visibile, il tolto sparisce, mai l'originale (trovato e corretto in 1.2.1), 60,00 px/s reali su 60, giro 3904 px su track 1905, scatto 0, 106 KB per 4 disegni. **Manca il tetto**: il widget era a 20, la prova col tetto 3 va rifatta impostandolo davvero. Disegni di prova rimasti: 11649, 11651 pubblicati, 11653 in attesa (`prova-galleria.py pulisci`). — `python .lavoro/prova-galleria.py prova <url> <max>`: pagina di prova col marquee (la crea Daniele nell'editor: è anche la prova che il flusso si capisce), 4-5 disegni di prova inviati e approvati da script, N messo a 3 per provare il tetto. Script ripetibile `prova-galleria.py` + misure Playwright. Criterio di finito punto per punto.
-6. [ ] README dei due plugin e `CLAUDE.md` scritti; manca il push, dopo la prova del tetto.
+5. [x] **Prova sullo staging** — pagina `/playground/` (Daniele, 24/09/2026: «funziona tutto», anche il pannello). Fatto: ordine per approvazione, in attesa mai visibile, il tolto sparisce, mai l'originale (trovato e corretto in 1.2.1), 60,00 px/s reali su 60, giro 3904 px su track 1905, scatto 0, 106 KB per 4 disegni. Tetto 3 verificato dopo, 5/5 (ultimi tre approvati, 11653 approvato da Daniele). Disegni di prova rimasti: 11649, 11651 pubblicati, 11653 in attesa (`prova-galleria.py pulisci`). — `python .lavoro/prova-galleria.py prova <url> <max>`: pagina di prova col marquee (la crea Daniele nell'editor: è anche la prova che il flusso si capisce), 4-5 disegni di prova inviati e approvati da script, N messo a 3 per provare il tetto. Script ripetibile `prova-galleria.py` + misure Playwright. Criterio di finito punto per punto.
+6. [x] README dei due plugin e `CLAUDE.md`, push. **Produzione** (Daniele, 24/09/2026): marquee 1.2.1 e Lavagna 1.7.0 installati; `/chi-siamo/` HTML identico, CSS diverso solo per il `padding-right` (le regole lì stanno nel CSS combinato di Speed Optimizer), scatto 0 px misurato, fogli tutti 200, cache svuotata da Speed Optimizer all'aggiornamento; endpoint vivo (richiesta invalida → 400, nessuna scrittura).
 
 Rischi aperti:
 - **Il purge di Speed Optimizer non si può provare sullo staging** (lì è spento): **si verifica in produzione** (Daniele, 24/09/2026). Senza purge, in produzione un disegno approvato compare quando scade la cache di pagina.
@@ -101,4 +101,4 @@ Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per 
 - Il `.md` del brief ha il markdown escapato: voluto.
 
 ## Prossimo passo
-Sotto-piano del passo 8: fatti 1-4, il 5 tranne il tetto (serve «Immagini al massimo» a 3 sul widget di `/playground/`), il 6 tranne il push. Marquee 1.2.1 e Lavagna 1.7.0 sullo staging, commit locali. Subito dopo il passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.
+Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). Poi il passo 4, anti-abuso. Subito dopo il passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.
