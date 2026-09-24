@@ -74,6 +74,42 @@ function custom_marquee_ripetizioni($larghezza_copia, $minimo = CUSTOM_MARQUEE_G
 }
 
 /**
+ * Quale misura del file servire, fra quelle che il file ha DAVVERO.
+ *
+ * Scoperto provando la 1.2.0 sullo staging: sul sito della Fondazione
+ * WordPress non genera medium_large, 1536x1536 e 2048x2048 (qualcosa le
+ * toglie). Chiesta una misura che il file non ha, wp_get_attachment_image_src
+ * non fallisce: restituisce l'ORIGINALE con le dimensioni ridotte. Il widget
+ * scriveva width="768" e serviva un JPEG da 1600 px e 2 MB.
+ *
+ * Qui si sceglie la misura esistente piu' piccola che sia almeno larga
+ * $larghezza; se nessuna lo e', la piu' larga che c'e'. Null se il file non
+ * ha misure intermedie: allora resta l'originale, che vuol dire che e' gia'
+ * piccolo.
+ *
+ * @param array $misure nome => ['width' => ..., 'height' => ...], come in
+ *                      wp_get_attachment_metadata()['sizes']
+ */
+function custom_marquee_misura_vicina(array $misure, $larghezza)
+{
+    $sopra = null;
+    $larga = null;
+    foreach ($misure as $nome => $m) {
+        $w = isset($m['width']) ? (int) $m['width'] : 0;
+        if ($w <= 0) {
+            continue;
+        }
+        if ($w >= $larghezza && ($sopra === null || $w < $misure[$sopra]['width'])) {
+            $sopra = $nome;
+        }
+        if ($larga === null || $w > $misure[$larga]['width']) {
+            $larga = $nome;
+        }
+    }
+    return $sopra !== null ? $sopra : $larga;
+}
+
+/**
  * Durata dell'animazione in secondi: mezza striscia (= un giro) a velocita'
  * costante. Una velocita' non positiva ricade su 60 px/s.
  */

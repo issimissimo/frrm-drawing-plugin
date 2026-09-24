@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 23/09/2026
-Versione corrente: plugin `frmm-lavagna` **1.6.2**, sullo staging **e in produzione** (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
+Ultimo aggiornamento: 24/09/2026
+Versione corrente: plugin `frmm-lavagna` **1.7.0 sullo staging**, **1.6.2 in produzione**; `custom-marquee` **1.2.0 sullo staging**, originale in produzione (installato e attivo il 23/09/2026). Prototipo online: `temp/frmm-drawing-plugin-18/`.
 
 ## Dove siamo
 Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin 1.6.1 è installato e attivo con l'invio acceso**, prima dei passi 4-6; nessuna pagina lo usa ancora. `admin_email` lì è `d.suppo@issimissimo.com`.
@@ -19,9 +19,44 @@ Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuor
 4. [ ] **Anti-abuso**: rate limit per IP in hash e per `client_id`, limiti prima di leggere il corpo, honeypot, script ripetibile. **Da decidere all'apertura: quanti invii al giorno per dispositivo** (brief: 3; proposta Claude: 10). Oltre il limite il bambino non vede errori.
 5. [ ] Retention: cestino 30 giorni, cancellazione dell'allegato **e del file** (oggi svuotare il cestino lascia il JPEG in `uploads/frmm-lavagna/`).
 6. [ ] Bozze legali per un genitore: privacy policy + testo accanto alla domanda. Devono dire che «SALVA E INVIA» manda il disegno alla Fondazione.
-7. [ ] **Fermata**: masonry, custom marquee o altro per la galleria? Senza risposta la 8 non parte.
-8. [ ] Galleria sullo staging, solo approvati, senza leggere l'inbox (D3).
+7. [x] **Fermata sciolta** (Daniele, 23/09/2026): la galleria è il **Custom Marquee** già presente sul sito. **Ordine dei fronti deciso da Daniele: prima la galleria, poi il 4.**
+8. [ ] Galleria sullo staging, solo approvati — sotto-piano qui sotto.
 9. [ ] QA su device veri, flusso intero.
+
+### Sotto-piano del passo 8 — il Custom Marquee si aggiorna da solo (approvato 24/09/2026, passo 2 compreso)
+Obiettivo: un disegno approvato compare nella striscia senza che nessuno la modifichi a mano, e il marquee già in uso (`/chi-siamo/`) non cambia.
+
+Criterio di finito (staging, misurato con script e Playwright):
+- pagina di prova con marquee in sorgente «Disegni della Lavagna»: mostra solo i disegni approvati, al massimo N, dal più vecchio al più nuovo;
+- approvo un disegno → c'è al ricaricamento; lo rifiuto o lo tolgo dalla pubblicazione → sparisce;
+- con 1 disegno la striscia è piena a 1920 px (un giro ≥ larghezza del track, nessun buco);
+- velocità misurata = valore impostato in px/s ±5%, con 3 disegni e con N;
+- nessun disegno servito all'originale (src = misura intermedia), peso della pagina misurato e riportato;
+- `/chi-siamo/`: HTML del widget identico byte per byte a prima (con il passo 2: diverso solo nel CSS, scatto al giro da 11,9 a 0 px);
+- test PHP e `node test/run.js` verdi.
+
+Fuori perimetro: installazione in produzione di entrambi i plugin (decisione di Daniele, dopo la prova: tocca `/chi-siamo/` del sito ufficiale) · lightbox, pagina a griglia · nascondere il widget a zero disegni (oggi non stampa niente) · didascalie · anti-abuso (passo 4, subito dopo) · caricamento differito delle immagini.
+
+Architettura scelta: **il marquee resta generico e la Lavagna gli fornisce una sorgente**, con due filtri (`custom_marquee/sorgenti`, `custom_marquee/immagini`). Scartato il *dynamic tag* di Elementor, più elegante: sullo staging Elementor Pro ha la licenza non valida e la parte editor non si potrebbe nemmeno provare; e le modifiche al marquee servirebbero comunque. Il marquee non sa niente di disegni: se la Lavagna viene disattivata, la sorgente sparisce e il widget non stampa niente.
+
+Passi:
+1. [x] **Il marquee entra nel repo così com'è** (`plugin/custom-marquee/`, dallo zip in Download), poi intestazione con Version e Author «Issimissimo». `pacchetto.py` e `installa-staging.py` imparano a costruirlo e installarlo. Prova: si fotografa l'HTML di `/chi-siamo/` PRIMA, si reinstalla, si confronta → identico. Conferma anche che lo zip scaricato è quello dello staging.
+2. [x] **Scatto di mezzo gap al giro** (1.1.0: 11,9 → 0 px a 1920 e 390; CSS rigenerato da solo al cambio di versione): difetto già presente, misurato 11,9 px su `/chi-siamo/`. Una riga (`padding-right` pari al gap) + svuotamento del CSS di Elementor al cambio di versione, senza il quale la correzione resta invisibile. Prova: scatto 0 px, resto dell'HTML identico.
+3. [x] **Marquee: la sorgente** (1.2.0, 17 test; `/chi-siamo/` identico a HTML e CSS rigenerato). Controllo «Sorgente» (default «Immagini scelte a mano»: le istanze esistenti non cambiano). Per le sorgenti esterne: massimo N (default 20), misura dell'immagine (default `large`, non l'originale fino a 2 MB), ripetizione fino a riempire ~3840 px, velocità in px/s calcolata in PHP sulle misure desktop. Prova: test PHP sulle funzioni pure (ripetizione, durata); `/chi-siamo/` identico.
+4. [x] **Lavagna: la sorgente** (1.7.0, 9 test; purge con `sg_cachepress_purge_cache()`, non `_everything`, che svuota anche memcached e gli asset). Registra «Disegni della Lavagna»: ultimi N **per data di approvazione** (meta scritto su `transition_post_status`, fallback su `post_date` per i già approvati), mostrati dal più vecchio al più nuovo; solo `publish`. A ogni ingresso/uscita da `publish` svuota la cache di Speed Optimizer, se esiste. Prova: test PHP su selezione e ordine.
+5. [ ] **Prova sullo staging** — `python .lavoro/prova-galleria.py prova <url> <max>`: pagina di prova col marquee (la crea Daniele nell'editor: è anche la prova che il flusso si capisce), 4-5 disegni di prova inviati e approvati da script, N messo a 3 per provare il tetto. Script ripetibile `prova-galleria.py` + misure Playwright. Criterio di finito punto per punto.
+6. [ ] README dei due plugin, decisioni in questo file, `CLAUDE.md`. Commit e push.
+
+Rischi aperti:
+- **Il purge di Speed Optimizer non si può provare sullo staging** (lì è spento): **si verifica in produzione** (Daniele, 24/09/2026). Senza purge, in produzione un disegno approvato compare quando scade la cache di pagina.
+- Lo zip in Download è quello dello staging (verificato al passo 1) e, per Daniele, anche quello di produzione.
+- Velocità e riempimento sono calcolati sui valori desktop: su tablet/mobile, con misure diverse, i px/s cambiano in proporzione, come oggi con i secondi.
+- Ogni disegno di prova manda un'email all'`admin_email` dello staging (4-5 email).
+- Il marquee carica tutte le immagini subito e a priorità alta (scelta originale, contro gli scatti di layout): con 20 disegni in `large` il peso va misurato, non stimato.
+- **Scostamento da D3, dichiarato**: la striscia legge i `frmm_disegno` pubblicati, non la Libreria media. La garanzia resta (solo `publish` = solo approvati) e migliora: un disegno tolto dalla pubblicazione sparisce da solo.
+- Il passo 4 resta aperto: **l'endpoint in produzione è senza rate limit** per tutta la durata di questo sotto-piano.
+
+Costo stimato: 6 passi (5 senza il 2), una sessione piena. Proporzionato: tre dei sei passi esistono perché una lista che cresce da sola rompe velocità, riempimento e peso, non per abbellire.
 
 Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per i genitori** finché non si chiudono i passi 4 e 6 — per questo il 4 va fatto per primo e installato anche lì · il nome casuale rende l'URL non indovinabile, non segreto · SiteGround Optimizer, se sposta gli script inline, riaprirebbe la corsa di `altezza="schermo"` · i testi legali sono una dipendenza esterna · le prove d'invio non vanno fatte in produzione: ogni disegno di prova resta nella bacheca del sito ufficiale.
 
@@ -66,4 +101,4 @@ Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per 
 - Il `.md` del brief ha il markdown escapato: voluto.
 
 ## Prossimo passo
-Passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.
+Sotto-piano del passo 8: fatti 1-4 (marquee 1.2.0 e Lavagna 1.7.0 sullo staging, commit locali non pushati). Manca la pagina di prova di Daniele per il 5. Subito dopo il passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.

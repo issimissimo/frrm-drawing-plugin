@@ -2,7 +2,7 @@
 /**
  * Plugin Name:      Custom Marquee Widget
  * Description:      Widget Elementor: una striscia di immagini che scorre senza fine.
- * Version:          1.2.0
+ * Version:          1.2.1
  * Author:           Issimissimo
  * Requires Plugins: elementor
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) exit;
 
 // Va cambiata insieme a Version: qui sopra. pacchetto.py rifiuta di
 // costruire lo zip se divergono.
-const CUSTOM_MARQUEE_VER = '1.2.0';
+const CUSTOM_MARQUEE_VER = '1.2.1';
 
 require_once __DIR__ . '/includes/giro.php';
 

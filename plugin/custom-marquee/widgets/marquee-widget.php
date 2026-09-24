@@ -97,7 +97,7 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
                 'type' => \Elementor\Controls_Manager::SELECT,
                 'default' => 'large',
                 'options' => $misure,
-                'description' => 'Il file che il browser scarica. Per restare nitido sugli schermi ad alta densità deve essere circa il doppio della dimensione a schermo.',
+                'description' => 'Il file che il browser scarica. Per restare nitido sugli schermi ad alta densità deve essere circa il doppio della dimensione a schermo. Se un file non ha questa misura, si usa la più piccola fra quelle che ha che sia almeno altrettanto larga.',
                 'condition' => [
                     'sorgente!' => 'manuale'
                 ]
@@ -431,6 +431,21 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
             $src = wp_get_attachment_image_src((int) $id, $misura);
             if (!is_array($src) || empty($src[1]) || empty($src[2])) {
                 continue;
+            }
+            // $src[3] falso = il file non ha quella misura e WordPress ha
+            // ripiegato sull'originale: vedi custom_marquee_misura_vicina().
+            if ($misura !== 'full' && empty($src[3])) {
+                $meta = wp_get_attachment_metadata((int) $id);
+                $nome = custom_marquee_misura_vicina(
+                    isset($meta['sizes']) ? (array) $meta['sizes'] : [],
+                    (int) $src[1]
+                );
+                if ($nome !== null) {
+                    $vicina = wp_get_attachment_image_src((int) $id, $nome);
+                    if (is_array($vicina) && !empty($vicina[1]) && !empty($vicina[2])) {
+                        $src = $vicina;
+                    }
+                }
             }
             $copia[] = ['id' => (int) $id, 'url' => $src[0], 'w' => (int) $src[1], 'h' => (int) $src[2]];
             $larghezza += custom_marquee_larghezza_elemento(

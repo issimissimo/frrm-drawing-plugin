@@ -62,5 +62,20 @@ foreach ([1, 3, 20] as $n) {
     prova("$n disegni: 64 px/s", 64.0, $giro / custom_marquee_durata($giro, 64));
 }
 
+// --- misura del file -------------------------------------------------------------
+
+// Le misure di un disegno sullo staging: niente medium_large, niente 1536.
+$staging = [
+    'medium' => ['width' => 300, 'height' => 268],
+    'large' => ['width' => 1024, 'height' => 913],
+    'thumbnail' => ['width' => 150, 'height' => 150],
+    'trp-custom-language-flag' => ['width' => 13, 'height' => 12],
+];
+prova('768 chiesta, manca: large', 'large', custom_marquee_misura_vicina($staging, 768));
+prova('300 chiesta: medium', 'medium', custom_marquee_misura_vicina($staging, 300));
+prova('1536 chiesta, niente di piu\' largo: la piu\' larga', 'large', custom_marquee_misura_vicina($staging, 1536));
+prova('nessuna misura: null (resta l\'originale)', null, custom_marquee_misura_vicina([], 768));
+prova('misure senza larghezza ignorate', 'large', custom_marquee_misura_vicina(['x' => ['width' => 0], 'large' => ['width' => 1024]], 768));
+
 echo "\n  $ok passati, $ko falliti\n";
 exit($ko ? 1 : 0);
