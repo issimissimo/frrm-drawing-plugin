@@ -1,6 +1,10 @@
 <?php
 /**
- * Plugin Name: Custom Marquee Widget
+ * Plugin Name:      Custom Marquee Widget
+ * Description:      Widget Elementor: una striscia di immagini che scorre senza fine.
+ * Version:          1.0.0
+ * Author:           Issimissimo
+ * Requires Plugins: elementor
  */
 
 if (!defined('ABSPATH')) exit;

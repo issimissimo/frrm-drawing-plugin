@@ -2,7 +2,8 @@
 """
 Costruisce lo zip installabile del plugin WordPress.
 
-    python .lavoro/pacchetto.py
+    python .lavoro/pacchetto.py                  # la Lavagna
+    python .lavoro/pacchetto.py custom-marquee   # il Custom Marquee (passo 8)
 
 Esiste per una ragione sola, e non e' la comodita': nel repo il plugin e'
 SOLTANTO il PHP. L'app (index.html, src/, images/, font/) resta dove e' sempre
@@ -110,7 +111,35 @@ def versiona_moduli(app, versione):
     print(f"      {len(riferimenti)} import versionati con {q}")
 
 
+def marquee():
+    """Il Custom Marquee: niente app, niente costante di versione, solo il PHP.
+
+    Si copia com'e', byte per byte: il widget stampa il proprio template, e
+    i fine riga CRLF del sorgente finiscono nell'HTML del sito (vedi
+    .gitattributes). Uno zip che li convertisse cambierebbe /chi-siamo/.
+    """
+    sorgente = RADICE / "plugin" / "custom-marquee"
+    testo = (sorgente / "custom-marquee.php").read_text(encoding="utf-8")
+    v = re.search(r"^\s*\*\s*Version:\s*(\S+)", testo, re.M)
+    if not v:
+        sys.exit(rosso("Non trovo Version: nell'header di custom-marquee.php."))
+    zip_path = DIST / f"custom-marquee-{v.group(1)}.zip"
+    DIST.mkdir(exist_ok=True)
+    if zip_path.exists():
+        zip_path.unlink()
+    file = [f for f in sorted(sorgente.rglob("*")) if f.is_file()]
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in file:
+            z.write(f, Path("custom-marquee") / f.relative_to(sorgente))
+    print(f"  ok  {zip_path.relative_to(RADICE)}  ({len(file)} file)")
+
+
 def main():
+    if sys.argv[1:] == ["custom-marquee"]:
+        return marquee()
+    if sys.argv[1:]:
+        sys.exit(__doc__)
+
     v_header, v_costante = versioni()
     if v_header != v_costante:
         sys.exit(rosso(
