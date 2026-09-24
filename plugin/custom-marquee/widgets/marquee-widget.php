@@ -32,12 +32,75 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
             ]
         );
 
+        // Da dove vengono le immagini (1.2.0).
+        //
+        // 'manuale' e' il default, ed e' quel che fanno tutte le istanze
+        // create prima che il controllo esistesse: per loro non cambia niente.
+        // Le altre sorgenti le aggiungono altri plugin col filtro
+        // custom_marquee/sorgenti, e danno le immagini con
+        // custom_marquee/immagini (vedi README). Il marquee non sa cosa siano.
+        //
+        // Il controllo si registra SEMPRE, anche con una sola opzione: la
+        // condizione di 'gallery' lo nomina, e una condizione su un controllo
+        // che non esiste nasconde la galleria e ne butta via le immagini.
+        $this->add_control(
+            'sorgente',
+            [
+                'label' => 'Sorgente delle immagini',
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'default' => 'manuale',
+                'options' => apply_filters('custom_marquee/sorgenti', [
+                    'manuale' => 'Immagini scelte a mano'
+                ])
+            ]
+        );
+
         // Immagini da Media Library
         $this->add_control(
             'gallery',
             [
                 'label' => 'Immagini',
-                'type' => \Elementor\Controls_Manager::GALLERY
+                'type' => \Elementor\Controls_Manager::GALLERY,
+                'condition' => [
+                    'sorgente' => 'manuale'
+                ]
+            ]
+        );
+
+        // ---- Sorgenti esterne: quante e quanto grandi -----------------
+        $this->add_control(
+            'max_immagini',
+            [
+                'label' => 'Immagini al massimo',
+                'type' => \Elementor\Controls_Manager::NUMBER,
+                'default' => 20,
+                'min' => 1,
+                'max' => 100,
+                'condition' => [
+                    'sorgente!' => 'manuale'
+                ]
+            ]
+        );
+
+        // Non l'originale: una sorgente esterna puo' dare file enormi (un
+        // disegno della Lavagna arriva a 2 MB), e il marquee carica tutto
+        // subito e a priorita' alta.
+        $misure = [];
+        foreach (wp_get_registered_image_subsizes() as $nome => $m) {
+            $misure[$nome] = $nome . ' (' . $m['width'] . ' x ' . $m['height'] . ')';
+        }
+        $misure['full'] = 'Originale';
+        $this->add_control(
+            'misura',
+            [
+                'label' => 'Misura del file',
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'default' => 'large',
+                'options' => $misure,
+                'description' => 'Il file che il browser scarica. Per restare nitido sugli schermi ad alta densità deve essere circa il doppio della dimensione a schermo.',
+                'condition' => [
+                    'sorgente!' => 'manuale'
+                ]
             ]
         );
 
@@ -192,6 +255,26 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
                 'selectors' => [
                     '{{WRAPPER}} .marquee-inner' =>
                         'animation-duration: {{VALUE}}s;'
+                ],
+                'condition' => [
+                    'sorgente' => 'manuale'
+                ]
+            ]
+        );
+
+        // Con una sorgente esterna il numero di immagini cambia da solo, e a
+        // durata fissa la striscia accelererebbe a ogni immagine in piu'. Qui
+        // la durata si calcola: vedi includes/giro.php.
+        $this->add_control(
+            'velocita_px',
+            [
+                'label' => 'Velocità (pixel al secondo)',
+                'type' => \Elementor\Controls_Manager::NUMBER,
+                'default' => 60,
+                'min' => 1,
+                'description' => 'Resta la stessa qualunque sia il numero di immagini. Vale per il desktop: dove le immagini sono più piccole, scorre in proporzione.',
+                'condition' => [
+                    'sorgente!' => 'manuale'
                 ]
             ]
         );
@@ -320,6 +403,61 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
     }
 
     /**
+     * Le immagini di una sorgente esterna, gia' ripetute per riempire il giro,
+     * e lo stile con la durata che tiene costante la velocita'.
+     *
+     * La sorgente da' solo gli id degli allegati (filtro
+     * custom_marquee/immagini): misura del file, ripetizioni e durata le
+     * decide il marquee, perche' dipendono da come la striscia e' disegnata.
+     *
+     * @return array [elenco per render_item, attributo style per .marquee-inner]
+     */
+    private function giro_esterno($sorgente, $settings) {
+
+        $max = isset($settings['max_immagini']) ? max(1, (int) $settings['max_immagini']) : 20;
+        $ids = apply_filters('custom_marquee/immagini', [], $sorgente, $max);
+
+        $misura = !empty($settings['misura']) ? $settings['misura'] : 'large';
+        $px = function ($chiave, $riserva) use ($settings) {
+            return isset($settings[$chiave]['size']) && $settings[$chiave]['size'] !== ''
+                ? (float) $settings[$chiave]['size']
+                : $riserva;
+        };
+        $modo = isset($settings['image_mode']) ? $settings['image_mode'] : 'crop';
+
+        $copia = [];
+        $larghezza = 0.0;
+        foreach (array_slice((array) $ids, 0, $max) as $id) {
+            $src = wp_get_attachment_image_src((int) $id, $misura);
+            if (!is_array($src) || empty($src[1]) || empty($src[2])) {
+                continue;
+            }
+            $copia[] = ['id' => (int) $id, 'url' => $src[0], 'w' => (int) $src[1], 'h' => (int) $src[2]];
+            $larghezza += custom_marquee_larghezza_elemento(
+                $src[1], $src[2], $modo,
+                $px('max_size', 400), $px('width', 300), $px('margin', 50), $px('gap', 24)
+            );
+        }
+        if (!$copia) {
+            return [[], ''];
+        }
+
+        $volte = custom_marquee_ripetizioni($larghezza);
+        $immagini = [];
+        for ($i = 0; $i < $volte; $i++) {
+            $immagini = array_merge($immagini, $copia);
+        }
+
+        $v = isset($settings['velocita_px']) ? (float) $settings['velocita_px'] : 60;
+        $durata = custom_marquee_durata($volte * $larghezza, $v);
+
+        // Nell'attributo style, non nel CSS di Elementor: dipende da quante
+        // immagini ci sono adesso, e il CSS della pagina e' scritto una volta.
+        return [$immagini, ' style="animation-duration:' . sprintf('%.2F', $durata) . 's"'];
+
+    }
+
+    /**
      * Renderizza un singolo item (immagine + eventuale didascalia).
      * Usato sia per le immagini originali sia per i cloni del loop.
      *
@@ -339,7 +477,11 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
 
         if (!empty($image['id'])) {
 
-            $src = wp_get_attachment_image_src($image['id'], 'full');
+            // Le sorgenti esterne portano gia' le misure del file che si
+            // serve (non l'originale); le immagini scelte a mano no.
+            $src = isset($image['w'])
+                ? [$image['url'], $image['w'], $image['h']]
+                : wp_get_attachment_image_src($image['id'], 'full');
 
             if (is_array($src) && !empty($src[1]) && !empty($src[2])) {
                 $dim_attr = ' width="' . esc_attr($src[1]) . '"'
@@ -375,8 +517,29 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
 
         $settings = $this->get_settings_for_display();
 
-        if (empty($settings['gallery'])) {
-            return;
+        $sorgente = isset($settings['sorgente']) ? $settings['sorgente'] : 'manuale';
+
+        if ($sorgente === 'manuale') {
+
+            if (empty($settings['gallery'])) {
+                return;
+            }
+            $immagini = $settings['gallery'];
+            $stile_inner = '';
+
+        } else {
+
+            list($immagini, $stile_inner) = $this->giro_esterno($sorgente, $settings);
+
+            if (empty($immagini)) {
+                // Sul sito non si stampa niente; nell'editor un widget vuoto
+                // non si vede e non si riesce a selezionare.
+                if (\Elementor\Plugin::$instance->editor->is_edit_mode()) {
+                    echo '<p style="text-align:center;opacity:.6">Custom Marquee: la sorgente non ha ancora immagini.</p>';
+                }
+                return;
+            }
+
         }
 
         $show_caption = isset($settings['show_caption']) ? $settings['show_caption'] : '';
@@ -395,17 +558,17 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
 
         <div class="<?= $track_classes ?>" id="<?= $uid ?>">
 
-            <div class="marquee-inner">
+            <div class="marquee-inner"<?= $stile_inner ?>>
 
                 <?php
 
                 // immagini originali
-                foreach ($settings['gallery'] as $image) {
+                foreach ($immagini as $image) {
                     $this->render_item($image, $show_caption);
                 }
 
                 // clone automatico (necessario al loop infinito)
-                foreach ($settings['gallery'] as $image) {
+                foreach ($immagini as $image) {
                     $this->render_item($image, $show_caption);
                 }
 
