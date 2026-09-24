@@ -162,6 +162,19 @@ SALVA chiede **prima** «SALVA E INVIA» / «SOLO SALVA». Dopo sarebbe inutile:
 
 Lo shortcode passa l'indirizzo dell'endpoint all'iframe in `?invio=`, codificato. L'app (`app/src/invio.js`) lo accetta **solo se ha la sua stessa origine**. Senza il parametro, SALVA resta un download e basta: e' il caso del prototipo fuori da WordPress. Se un giorno `home_url` e `site_url` divergessero, per esempio `www` da una parte sola, la domanda dopo SALVA sparirebbe e lo direbbe solo un avviso nella console.
 
+## La galleria: i disegni approvati nel Custom Marquee (dalla 1.7.0)
+
+La galleria è il widget **Custom Marquee** (`plugin/custom-marquee/`, dalla 1.2.0), che la Lavagna alimenta da sola. In Elementor si imposta **Sorgente delle immagini → «Disegni della Lavagna (approvati)»**: da lì la striscia si aggiorna a ogni approvazione, senza toccare la pagina.
+
+Il codice sta in `includes/galleria.php`, che si aggancia ai due filtri del marquee (`custom_marquee/sorgenti`, `custom_marquee/immagini`). Il marquee non sa niente di disegni. Se la Lavagna viene disattivata, la sorgente sparisce dalla tendina e il widget non stampa niente.
+
+- **Quali**: gli ultimi N (impostato nel widget, 20 di default) per **data di approvazione**, mostrati dal più vecchio al più nuovo. La data di approvazione la scrive `transition_post_status` nel meta `_frmm_approvato_il`: `wp_publish_post()` lascia quella d'invio, e con quella un disegno inviato un mese fa e approvato oggi potrebbe restare fuori dai 20. I disegni approvati prima della 1.7.0 ricadono sulla data d'invio.
+- **Solo `publish`.** È uno **scostamento da D3**, dichiarato: il brief voleva la galleria alimentata dalla Libreria media, qui si leggono i `frmm_disegno`. La garanzia resta, perché publish vuol dire approvato. E migliora: un disegno tolto dalla pubblicazione sparisce da solo dalla striscia.
+- **La cache di Speed Optimizer si svuota** a ogni ingresso o uscita da `publish`, con `sg_cachepress_purge_cache()` senza URL, cioè tutta la cache dinamica. Non con `sg_cachepress_purge_everything()`, che svuota anche memcached e cancella gli asset combinati. Sullo staging Speed Optimizer è spento: **questo ramo si verifica in produzione.**
+- La cache degli elementi di Elementor non c'entra: un widget che non dichiara `is_dynamic_content()` falso viene rigenerato a ogni richiesta (verificato nel sorgente di Elementor 4.2.3).
+
+Prove: `php plugin/test/galleria.php` (la scelta, senza WordPress) e `python .lavoro/prova-galleria.py prova <url-pagina> <immagini-al-massimo>` (il giro completo sullo staging: invia, approva, toglie, e legge la pagina da anonimo dopo ogni mossa).
+
 ## Aggiornare: la cache di un anno sui `.js`
 
 SiteGround serve i file statici con `Cache-Control: max-age=31536000`. Il `?v=` dello shortcode rinnova `index.html`, **ma non i moduli che importa**. Per questo `pacchetto.py` aggiunge `?v=<versione>` a ogni import della copia che va nello zip, e **si rifiuta di costruire** se un import resta senza.
@@ -172,6 +185,6 @@ Il logo e i font restano senza versione: se cambiassero, vanno rinominati.
 
 ## Cosa non fa (ancora)
 
-Mancano il rate limit (e con lui il tetto alle email), la retention dei rifiutati e la galleria. Sono i passi 4-9 del piano in `.lavoro/stato.md`.
+Mancano il rate limit (e con lui il tetto alle email) e la retention dei rifiutati. Sono i passi 4-6 e 9 del piano in `.lavoro/stato.md`.
 
 L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.

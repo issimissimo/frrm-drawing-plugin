@@ -58,6 +58,17 @@ Cose da non disfare per sbaglio, anche qui:
 - **Il `rect` del canvas si rilegge a ogni `pointerdown`** (`board.refreshRect()`, chiamata da `input.js`). Il commento che diceva «la pagina non scrolla mai, basta invalidarlo al resize» valeva quando la lavagna era una pagina a sé. Dentro un iframe in WordPress il canvas può **spostarsi senza cambiare dimensione** — basta la barra di Chrome Android che si ritrae — e nessun `resize` né `ResizeObserver` se ne accorge. Costa un reflow per gesto, non per campione.
 - **`unfreezeBoardHeight()` si chiama solo a lavagna vuota**, dal `relayout()` di `main.js`. Il congelamento esiste per non deformare i tratti già fatti: se ce n'è anche uno solo, il rapporto non si tocca più. Verificato: con un tratto sopra, restringere il contenitore produce le bande e **non** cambia il rapporto.
 
+## La galleria — `plugin/custom-marquee/` (dal 24/09/2026)
+
+La galleria dei disegni è il widget **Custom Marquee** già presente sul sito, entrato nel repo il 24/09/2026 (autore «Issimissimo»). La Lavagna 1.7.0 gli fornisce la sorgente «Disegni della Lavagna (approvati)» con due filtri: il marquee non sa niente di disegni. Dettaglio nei README dei due plugin; sullo staging la pagina di prova è `/playground/`.
+
+- **Il marquee è usato anche su `/chi-siamo/` del sito ufficiale**, con immagini scelte a mano. Ogni modifica si verifica con `python .lavoro/prova-marquee.py foto` / `confronta`: HTML del widget identico byte per byte. È il criterio con cui è stato scritto.
+- **I suoi file sono CRLF e devono restarlo** (`.gitattributes`): il template finisce nell'HTML con i suoi `\r`. Modificarli con uno strumento che converte i fine riga rompe il confronto.
+- **`CUSTOM_MARQUEE_VER` insieme a `Version:`**: al cambio fa rigenerare il CSS di Elementor. Senza, un selettore cambiato non arriva alle pagine.
+- **Scostamento da D3**: la striscia legge i `frmm_disegno` in `publish`, non la Libreria media. Garanzia invariata: publish = approvato.
+- **Il sito non genera `medium_large`, `1536x1536`, `2048x2048`**: chiesta una misura mancante, WordPress serve l'originale. Il marquee ripiega sulla misura esistente più vicina.
+- **Il purge di Speed Optimizer all'approvazione si verifica solo in produzione**: sullo staging è spento.
+
 **Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche.
 
 **Fase 1 chiusa.** Codice in `prototipo/` (avvio: vedi `prototipo/README.md`).
