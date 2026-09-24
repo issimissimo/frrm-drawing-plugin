@@ -139,6 +139,14 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
         );
 
         // Gap (distanza fissa tra un elemento e l'altro)
+        //
+        // Il padding-right uguale al gap non e' decorativo: chiude il giro.
+        // Fra un'immagine e l'altra c'e' un gap, ma in fondo alla seconda
+        // copia no: la striscia misurava 2 copie + (2n - 1) gap, e il -50%
+        // del keyframe cadeva mezzo gap PRIMA dell'inizio della seconda
+        // copia. A ogni giro l'immagine scattava in avanti di gap/2:
+        // misurato 11,9px su /chi-siamo/ con gap 24 (1.0.0). Con il padding
+        // la striscia e' 2 x (copia + n gap), e -50% cade esattamente li'.
         $this->add_responsive_control(
             'gap',
             [
@@ -151,7 +159,7 @@ class Custom_Marquee_Widget extends \Elementor\Widget_Base {
                 ],
                 'selectors' => [
                     '{{WRAPPER}} .marquee-inner' =>
-                        'gap: {{SIZE}}{{UNIT}};'
+                        'gap: {{SIZE}}{{UNIT}}; padding-right: {{SIZE}}{{UNIT}};'
                 ]
             ]
         );

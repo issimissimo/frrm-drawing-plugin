@@ -123,6 +123,11 @@ def marquee():
     v = re.search(r"^\s*\*\s*Version:\s*(\S+)", testo, re.M)
     if not v:
         sys.exit(rosso("Non trovo Version: nell'header di custom-marquee.php."))
+    # La costante decide quando Elementor rifa' il CSS: se restasse indietro
+    # rispetto all'header, un selettore cambiato non arriverebbe alle pagine.
+    c = re.search(r"const\s+CUSTOM_MARQUEE_VER\s*=\s*'([^']+)'", testo)
+    if c and c.group(1) != v.group(1):
+        sys.exit(rosso(f"Le versioni divergono: header «{v.group(1)}», CUSTOM_MARQUEE_VER «{c.group(1)}»."))
     zip_path = DIST / f"custom-marquee-{v.group(1)}.zip"
     DIST.mkdir(exist_ok=True)
     if zip_path.exists():
