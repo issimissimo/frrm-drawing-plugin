@@ -1,0 +1,5 @@
+# Il Custom Marquee stampa il proprio template PHP cosi' com'e', fine riga
+# compresi: l'HTML reso contiene i \r del sorgente. Convertirli cambierebbe
+# l'output byte per byte, ed e' il criterio con cui si verifica che le
+# istanze gia' in uso sul sito non cambino. Git lo conserva tale e quale.
+plugin/custom-marquee/** -text
