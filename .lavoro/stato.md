@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 24/09/2026
-Versione corrente: `frmm-lavagna` **1.7.0** e `custom-marquee` **1.2.1**, sullo staging **e in produzione** (produzione aggiornata il 24/09/2026, decisione di Daniele). Prototipo online: `temp/frmm-drawing-plugin-18/`.
+Ultimo aggiornamento: 25/09/2026
+Versione corrente: `frmm-lavagna` **1.7.0** e `custom-marquee` **1.2.1**, sullo staging **e in produzione** (produzione aggiornata il 24/09/2026, decisione di Daniele). Prototipo online: `temp/frmm-drawing-plugin-18/`. **Stato approvato dal cliente salvato il 25/09/2026**: tag `approvato-cliente-25092026` su `0d6df7c` (pushato), zip installati in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
 Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin 1.6.1 è installato e attivo con l'invio acceso**, prima dei passi 4-6; nessuna pagina lo usa ancora. `admin_email` lì è `d.suppo@issimissimo.com`.
@@ -16,12 +16,43 @@ Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuor
 1. [x] Endpoint `POST /wp-json/frmm-lavagna/v1/invio` (1.3.0).
 2. [x] Invio dall'app (1.5.1): domanda PRIMA di salvare, invio in parallelo alla condivisione con ripresa, `invio_id` contro i doppioni, `tentativo` registrato.
 3. [x] Bacheca ed email (1.6.0).
-4. [ ] **Anti-abuso**: rate limit per IP in hash e per `client_id`, limiti prima di leggere il corpo, honeypot, script ripetibile. **Da decidere all'apertura: quanti invii al giorno per dispositivo** (brief: 3; proposta Claude: 10). Oltre il limite il bambino non vede errori.
+4. [ ] **Anti-abuso** — sotto-piano qui sotto: rate limit per IP in hash e per `client_id`, limiti prima di leggere il corpo, honeypot, script ripetibile. Oltre il limite il bambino non vede errori. **Numeri decisi da Daniele il 25/09/2026: 3 invii per dispositivo (`client_id`) e 20 per IP, finestra di 24 ore dal primo invio.** Perché due limiti: il `client_id` lo inventa chi manda, quindi da solo non ferma un ciclo con curl — lo ferma l'IP; ma 3 per IP farebbe perdere in silenzio i disegni di una classe (wifi della scuola, CGNAT mobile), e l'uso in classe è plausibile. Chi cambia rete e ne manda altri 100 **non è coperto, per scelta**: si riapre se ne arrivano a centinaia, e l'allarme è la casella stessa (una mail per disegno). **Prima di scrivere il limite**: verificare sullo staging e in produzione che `REMOTE_ADDR` sia l'IP di chi disegna e non quello di un proxy (CDN SiteGround, Cloudflare) — altrimenti 20 per IP diventa 20 al giorno per tutti.
 5. [ ] Retention: cestino 30 giorni, cancellazione dell'allegato **e del file** (oggi svuotare il cestino lascia il JPEG in `uploads/frmm-lavagna/`).
 6. [ ] Bozze legali per un genitore: privacy policy + testo accanto alla domanda. Devono dire che «SALVA E INVIA» manda il disegno alla Fondazione.
 7. [x] **Fermata sciolta** (Daniele, 23/09/2026): la galleria è il **Custom Marquee** già presente sul sito. **Ordine dei fronti deciso da Daniele: prima la galleria, poi il 4.**
 8. [x] Galleria: il Custom Marquee con sorgente «Disegni della Lavagna» — sotto-piano chiuso il 24/09/2026, installato anche in produzione. Resta da verificare lì il purge all'approvazione (vedi Prossimo passo).
 9. [ ] QA su device veri, flusso intero.
+
+### Sotto-piano del passo 4 — anti-abuso (PROPOSTO 25/09/2026, in attesa di approvazione)
+Obiettivo: una persona sola, da una rete sola, non può riempire la bacheca, il disco e la posta dell'account SiteGround; i bambini veri non se ne accorgono.
+
+Criterio di finito:
+- **produzione**: l'IP che PHP vede per una richiesta dal PC è l'IP pubblico del PC, non uno della CDN (rotta di diagnostica);
+- **staging, `prova-abuso.py`**: stesso `client_id` → 3 × 201, il 4° 429 · stesso IP e `client_id` diversi → il 21° 429 · la ripresa di un `invio_id` già arrivato, a limite superato → 200 `doppio`, non 429 · 500 invii di fila → 20 in bacheca e il resto 429, senza scrivere niente (bacheca e file in `uploads/frmm-lavagna/` contati prima e dopo) · 50 MB → rifiutato, codice misurato · non-immagine e JSON rotto → 400 senza scrivere;
+- dal telefono in 4G, con il PC già al limite, il disegno arriva: il limite è per IP e non globale;
+- dopo l'azzeramento da amministratore un invio passa;
+- test PHP (funzioni pure nuove comprese) e `node test/run.js` verdi, `prova-invio.py` ancora tutto verde.
+
+Fuori perimetro: **honeypot** (vedi Rischi) · Turnstile/captcha · tetto globale · Approva/Rifiuta dalla mail · controllo che l'immagine corrisponda al disegno · passo 5 (retention) e 6 (testi legali). **L'app non si tocca**: al 429 lascia già perdere senza dire niente al bambino (`invio.js`, `motivoDaStatus` → `troppi`).
+
+Passi:
+1. [x] **Fatto, 25/09/2026: `REMOTE_ADDR` è l'IP vero sia sullo staging sia in produzione, e un'intestazione falsa non lo cambia** (`python .lavoro/diagnostica-ip.py [--produzione]`). In produzione la CDN aggiunge l'IP vero in coda a `X-Forwarded-For` (`falso,vero`); sullo staging `X-Forwarded-For` arriva **così come lo scrive il client**. Quindi il limite legge **solo** `REMOTE_ADDR`, mai le intestazioni. `post_max_size` e `upload_max_filesize` sono **256M** su tutti e due: PHP legge corpi fino a 256 MB prima del nostro codice. Non si cambia da un plugin (vale per la radice del sito): fuori perimetro, si sa. 1.7.1 installata su staging e produzione. — **1.7.1 — diagnostica, solo amministratore**: `GET /frmm-lavagna/v1/limiti` restituisce l'IP che vede PHP (`REMOTE_ADDR`), le intestazioni di inoltro presenti, `post_max_size` / `upload_max_filesize`. Installata su staging e produzione, confrontata con l'IP pubblico del PC. Se in produzione l'IP è della CDN ci si ferma e si decide come leggere l'inoltro, con i dati in mano.
+2. [ ] **1.8.0 — il limite**. Funzioni pure in `validazione.php` (chiave dell'IP con HMAC sul salt del sito, IPv6 contato per /64, finestra di 24 ore dal primo invio) con i loro test. Contatori in transient, con un numero di generazione nella chiave: azzerarli è incrementarlo, e funziona anche con la cache a oggetti, dove i transient non si possono elencare. Ordine nell'endpoint: dimensione dichiarata → `client_id` → doppione di `invio_id` → **limite** → JSON, JPEG, GD. Il contatore sale **solo a disegno archiviato**: una ripresa non consuma, un invio respinto nemmeno. `DELETE /limiti` da amministratore azzera.
+3. [ ] **Prova sullo staging**: `prova-abuso.py` (nuovo), `prova-invio.py` che azzera i contatori all'inizio, la prova dal telefono in 4G.
+4. [ ] **Produzione**: installazione, diagnostica rilanciata. Niente invii di prova lì (regola del piano): il limite in produzione si considera provato dal codice identico allo staging più l'IP giusto.
+5. [ ] README del plugin, `stato.md`, `CLAUDE.md`, commit e push.
+
+Rischi aperti:
+- **La produzione sta dietro la CDN di SiteGround, lo staging no** (misurato il 25/09/2026: produzione `X-SG-CDN: 1` e 4 IP anycast Google; staging un IP solo, niente CDN). Lo staging non prova niente sull'IP: da qui il passo 1. Se servisse leggere `X-Forwarded-For`, lo si legge **solo** quando `REMOTE_ADDR` è della CDN e se ne prende l'elemento aggiunto dalla CDN, **mai il primo**, che lo scrive chi manda. Altrimenti il limite si aggira con un'intestazione.
+- **Honeypot tolto** (era nel passo 4 approvato il 23/09/2026): la richiesta la costruisce il JavaScript, non c'è un modulo HTML da riempire. I bot che cadono nei honeypot sono quelli che compilano moduli, e qui non arrivano. Chi copia la richiesta con «Copy as cURL» il campo lo trova già vuoto. Non prenderebbe nessuno.
+- **«Prima di leggere il corpo» in PHP non si può**: quando parte il codice del plugin il multipart è già letto. Si fa il possibile, cioè il limite prima di decodificare il JSON e prima di GD; il resto lo fa `post_max_size` del server, misurato al passo 1.
+- **Un'immagine estranea con le misure giuste passa**, oggi e dopo: il criterio del piano del 23/09/2026 («immagine estranea fallisce») vale solo per le misure sbagliate. La difesa è la moderazione (non va mai in galleria) più il limite (al massimo 20 al giorno da un IP). Resta però nella mail di notifica.
+- Transient espulsi dalla cache a oggetti (Memcached di Speed Optimizer) → il limite si azzera prima delle 24 ore. Richieste in parallelo → qualche invio oltre il limite. Accettabili tutti e due.
+- **Privacy**: un'impronta dell'IP (HMAC, non reversibile senza il salt) resta 24 ore in un transient, **mai nei meta del disegno**. Va scritto nel testo del passo 6.
+- Ogni esecuzione di `prova-abuso.py` manda ~20 email all'`admin_email` dello staging.
+- Un tablet usato da tre fratelli: 3 disegni in tutto. Deciso così (Daniele, 25/09/2026).
+
+Costo stimato: 5 passi, due versioni del plugin (la 1.7.1 esiste solo per la diagnostica, ed è il prezzo della CDN), mezza sessione. Proporzionato.
 
 ### Sotto-piano del passo 8 — il Custom Marquee si aggiorna da solo (CHIUSO 24/09/2026)
 Obiettivo: un disegno approvato compare nella striscia senza che nessuno la modifichi a mano, e il marquee già in uso (`/chi-siamo/`) non cambia.
@@ -100,5 +131,9 @@ Rischi: **l'endpoint in produzione è aperto senza rate limit e senza testi per 
 - **Vicoli ciechi**: aspetto del timbro legato alla posizione; più smoothing con `minCutoff`/`beta`.
 - Il `.md` del brief ha il markdown escapato: voluto.
 
+- **PHP non è installato su questa macchina.** I test PHP girano con la copia rimasta nella scratchpad di una sessione precedente (`%LOCALAPPDATA%\Temp\claude\e--Claude-Workspace-frrm-drawing-plugin3a19454-...\scratchpad\php\php.exe`, PHP 8.3), cartella temporanea che può sparire.
+
 ## Prossimo passo
-Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). Poi il passo 4, anti-abuso. Subito dopo il passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Prima di scrivere codice, far decidere a Daniele quanti invii al giorno per dispositivo; poi installarlo sullo staging **e** in produzione.
+Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). Poi il passo 4, anti-abuso. Subito dopo il passo 4, anti-abuso — **urgente: l'endpoint in produzione è già aperto**. Numeri già decisi (3 per dispositivo, 20 per IP, vedi passo 4): si parte dalla verifica dell'IP reale, poi codice, poi installazione sullo staging **e** in produzione.
+
+**Proposta in attesa, dopo il passo 4 — Approva/Rifiuta dalla mail** (discussa il 25/09/2026, non decisa). Fattibile, ma non con i link della bacheca: il loro nonce nascerebbe nella richiesta anonima del bambino (utente 0) e richiede il login. Serve un link firmato (HMAC, per disegno e per azione, con scadenza) verso un endpoint pubblico. **Il link NON deve eseguire l'azione con un GET**: gli scanner di posta (Safe Links, gateway antispam, anteprime) aprono i link da soli e approverebbero e rifiuterebbero senza che nessuno guardi — apre una pagina col disegno a grandezza piena e un pulsante che fa POST. Da dichiarare: chi ha la mail modera (inoltro, casella condivisa), salta il controllo per ruolo di PublishPress, l'azione va registrata come «via email» perché non c'è un utente. Variante: dopo l'azione la pagina propone il disegno successivo in attesa (ma allora un link vale per tutta la coda).

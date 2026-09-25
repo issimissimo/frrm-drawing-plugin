@@ -3,7 +3,7 @@
  * Plugin Name:       FRMM Lavagna
  * Plugin URI:        https://github.com/issimissimo/frrm-drawing-plugin
  * Description:       La lavagna a gessetti della Fondazione. Si inserisce in una pagina con lo shortcode [lavagna], dentro un Container Elementor a cui si sia data un'altezza.
- * Version:           1.7.0
+ * Version:           1.7.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Issimissimo
@@ -47,6 +47,7 @@
  *   includes/notifica.php     l'email a ogni disegno, con la miniatura
  *   includes/bacheca.php      miniature, Approva / Rifiuta, fuori dalla Libreria
  *   includes/galleria.php     gli approvati come sorgente del Custom Marquee
+ *   includes/limiti.php       il rate limit dell'invio e la sua diagnostica
  *
  * Qui resta lo shortcode, che e' quel che il plugin era prima e che non
  * dipende da niente di quanto sopra.
@@ -66,6 +67,7 @@ require_once __DIR__ . '/includes/disegni.php';
 require_once __DIR__ . '/includes/invio.php';
 require_once __DIR__ . '/includes/notifica.php';
 require_once __DIR__ . '/includes/galleria.php';
+require_once __DIR__ . '/includes/limiti.php';
 if (is_admin()) {
     require_once __DIR__ . '/includes/bacheca.php';
 }
@@ -79,7 +81,7 @@ if (is_admin()) {
  * due divergono, cosi' la dimenticanza la trova una macchina e non un bambino
  * con la cache vecchia.
  */
-define('FRMM_LAVAGNA_VER', '1.7.0');
+define('FRMM_LAVAGNA_VER', '1.7.1');
 
 /**
  * Altezza minima del contenitore.
