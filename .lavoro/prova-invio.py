@@ -107,6 +107,8 @@ def main():
     cid = str(uuid.uuid4())
     buono = json.dumps(disegno())
     img = jpeg()
+    gen = staging.azzera_limiti()
+    print(f"  contatori del rate limit azzerati (generazione {gen})")
     print(f"\n  {URL}\n\n  -- 1. cosa passa e cosa no\n")
 
     st, corpo = attesa("disegno valido", 201, None, {"client_id": cid, "disegno": buono}, img)

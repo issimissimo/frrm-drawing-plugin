@@ -78,6 +78,18 @@ def collegata():
     return s
 
 
+def azzera_limiti(adm=None):
+    """Azzera i contatori del rate limit (plugin 1.8.0+). Gli script che
+    inviano lo chiamano all'inizio: senza, ogni giro consumerebbe i 20 invii
+    al giorno dell'IP di questo PC, e dopo qualche giro le prove fallirebbero
+    con 429 per una ragione che non c'entra niente con quel che provano."""
+    adm = adm or collegata()
+    r = adm.delete(base() + "wp-json/frmm-lavagna/v1/limiti", timeout=30)
+    if r.status_code != 200:
+        sys.exit(f"Azzeramento dei limiti fallito: HTTP {r.status_code} {r.text[:160]}")
+    return r.json()["generazione"]
+
+
 def testo(pagina):
     """Il testo del riquadro principale della bacheca, senza HTML."""
     m = re.search(r'<div class="wrap">(.*?)</div>\s*<div class="clear">', pagina, re.S)

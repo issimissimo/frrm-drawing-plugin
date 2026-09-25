@@ -161,6 +161,53 @@ if (!function_exists('imagecreatetruecolor')) {
     prova('la ricodifica toglie la coda', false, strpos(file_get_contents("$tmp/ripulito.jpg"), '<?php') !== false);
 }
 
+// --- rate limit: le funzioni pure (passo 4) ----------------------------------
+
+prova('IPv4 com\'e\'', '109.118.72.129', frmm_lavagna_ip_da_contare('109.118.72.129'));
+prova('IPv4 scritto come IPv6', '109.118.72.129', frmm_lavagna_ip_da_contare('::ffff:109.118.72.129'));
+prova('IPv6 contato per /64', '2001:db8:1:2::/64', frmm_lavagna_ip_da_contare('2001:db8:1:2:aaaa:bbbb:cccc:dddd'));
+prova('IPv6 stesso /64, stesso contatore', frmm_lavagna_ip_da_contare('2001:db8:1:2::1'),
+    frmm_lavagna_ip_da_contare('2001:db8:1:2:ffff:ffff:ffff:ffff'));
+prova('IPv6 altro /64, altro contatore', false,
+    frmm_lavagna_ip_da_contare('2001:db8:1:2::1') === frmm_lavagna_ip_da_contare('2001:db8:1:3::1'));
+prova('IP non valido', null, frmm_lavagna_ip_da_contare('203.0.113.7, 109.118.72.129'));
+prova('IP mancante', null, frmm_lavagna_ip_da_contare(null));
+
+prova('impronta: 32 caratteri esadecimali', 1, preg_match('/^[0-9a-f]{32}$/', frmm_lavagna_impronta('1.2.3.4', 's')));
+prova('impronta: stabile', frmm_lavagna_impronta('1.2.3.4', 's'), frmm_lavagna_impronta('1.2.3.4', 's'));
+prova('impronta: dipende dal segreto', false, frmm_lavagna_impronta('1.2.3.4', 's') === frmm_lavagna_impronta('1.2.3.4', 't'));
+prova('impronta: non contiene l\'IP', false, strpos(frmm_lavagna_impronta('1.2.3.4', 's'), '1.2.3.4') !== false);
+
+$D = 86400;
+prova('contatore mancante (false)', ['n' => 0, 't0' => 1000], frmm_lavagna_contatore(false, 1000, $D));
+prova('contatore rovinato', ['n' => 0, 't0' => 1000], frmm_lavagna_contatore(['n' => 'x', 't0' => 5], 1000, $D));
+prova('contatore senza t0', ['n' => 0, 't0' => 1000], frmm_lavagna_contatore(['n' => 2], 1000, $D));
+prova('contatore in corso', ['n' => 2, 't0' => 1000], frmm_lavagna_contatore(['n' => 2, 't0' => 1000], 1000 + $D - 1, $D));
+prova('contatore scaduto allo scoccare', ['n' => 0, 't0' => 1000 + $D], frmm_lavagna_contatore(['n' => 2, 't0' => 1000], 1000 + $D, $D));
+prova('contatore con numeri in stringa', ['n' => 2, 't0' => 1000], frmm_lavagna_contatore(['n' => '2', 't0' => '1000'], 1500, $D));
+
+list($c, $ttl) = frmm_lavagna_contatore_piu_uno(false, 1000, $D);
+prova('primo invio: n 1', ['n' => 1, 't0' => 1000], $c);
+prova('primo invio: tenuto 24 ore', $D, $ttl);
+list($c, $ttl) = frmm_lavagna_contatore_piu_uno(['n' => 1, 't0' => 1000], 1000 + 3600, $D);
+prova('secondo invio un\'ora dopo: t0 resta', ['n' => 2, 't0' => 1000], $c);
+prova('secondo invio: tenuto solo il resto della finestra', $D - 3600, $ttl);
+list($c, $ttl) = frmm_lavagna_contatore_piu_uno(['n' => 3, 't0' => 1000], 1000 + $D + 5, $D);
+prova('invio a finestra scaduta: si riparte', ['n' => 1, 't0' => 1000 + $D + 5], $c);
+
+// La regola, messa insieme come in limiti.php: con limite 3, tre invii
+// passano e il quarto no.
+$stato = false;
+$passati = 0;
+for ($i = 0; $i < 4; $i++) {
+    if (frmm_lavagna_contatore($stato, 2000 + $i, $D)['n'] >= 3) {
+        break;
+    }
+    list($stato) = frmm_lavagna_contatore_piu_uno($stato, 2000 + $i, $D);
+    $passati++;
+}
+prova('limite 3: ne passano 3', 3, $passati);
+
 array_map('unlink', glob("$tmp/*"));
 @rmdir($tmp);
 
