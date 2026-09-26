@@ -1,54 +1,49 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 26/09/2026
-Versione corrente: `frmm-lavagna` **1.11.5 sullo staging**, **1.9.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-19/`. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
+Versione corrente: `frmm-lavagna` **1.11.5 su staging e produzione** (produzione aggiornata il 26/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-19/`. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
-La lavagna salva e, con «SALVA E INVIA», manda il disegno; arriva in bacheca e la galleria (Custom Marquee) mostra gli approvati. **In produzione** (1.9.0) ci sono anche il rate limit (3 per dispositivo, 20 per IP in 24 ore) e la retention (un disegno eliminato si porta via la sua immagine). **Sullo staging** (1.11.5) la mail di notifica ha un link che apre una pagina con Approva / Rifiuta, senza login: provato da Daniele dal telefono il 26/09/2026 (11765 approvato e in galleria, 11755 e 11768 rifiutati, tutti «via email»).
+In produzione: la lavagna salva e manda il disegno; arriva in bacheca; la mail di notifica ha un link a una pagina con Approva / Rifiuta, senza login; la galleria (Custom Marquee) mostra gli approvati. Ci sono rate limit (3 per dispositivo, 20 per IP in 24 ore) e retention. La mail in produzione va ancora ad `admin_email` (`d.suppo@issimissimo.com`): l'impostazione «Notifiche dei disegni» è vuota.
 
 ## Piano attivo — Fasi 6, 7, 9, 10 (approvato 23/09/2026)
-Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · email ✅ · moderazione ✅ (bacheca e mail) · approvato in galleria, rifiutato mai e sparisce dal server immagine compresa ✅ · abuso respinto ✅ (con due scostamenti, sotto) · nessuna immagine in attesa a URL indovinabile ✅ · **bozze legali consegnate ✗ (passo 6, sospeso da Daniele)**.
+Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · email ✅ · moderazione ✅ (bacheca e mail) · approvato in galleria, rifiutato mai e sparisce dal server immagine compresa ✅ · abuso respinto ✅ · nessuna immagine in attesa a URL indovinabile ✅ · **bozze legali consegnate ✗ (passo 6, sospeso da Daniele)**.
 
-1. [x] Endpoint (1.3.0) · 2. [x] Invio dall'app (1.5.1) · 3. [x] Bacheca ed email (1.6.0)
-4. [x] Anti-abuso (1.8.0, staging e produzione, 25/09/2026)
-5. [x] Retention (1.9.0, staging e produzione, 26/09/2026)
+1-5, 7-8. [x] Endpoint, invio dall'app, bacheca ed email, anti-abuso, retention, galleria.
 6. [ ] **Sospeso** (Daniele, 26/09/2026): bozze legali per i genitori. Devono dire che SALVA E INVIA manda il disegno alla Fondazione, e che un'impronta dell'IP resta 24 ore.
-7-8. [x] Galleria nel Custom Marquee (1.7.0, produzione 24/09/2026)
-9. [ ] QA su device veri, flusso intero.
-- **Fuori dal piano, chiesto da Daniele**: moderazione dalla mail (1.10.0 → 1.11.5, **solo staging**). Fatto e provato. La 1.11.3 (26/09/2026) toglie «[nome del sito]» dall'oggetto, intitola la pagina «Nuovo disegno», dà ai tasti lo stile di quelli del sito (copiato dal kit Elementor, valori nel commento di `frmm_lavagna_rispondi_mail()`) e toglie il fondo alla frase d'esito. La 1.11.4: il titolo dice lo stato («Disegno approvato» / «Disegno rifiutato», anche subito dopo il tasto), e Rifiuta è senza bordo — pesa meno di Approva, obiezione registrata nel codice. La 1.11.5: oggetto «Nuovo disegno da moderare», e i gessetti che su **Firefox desktop** finivano sotto il cancellino (Firefox misura `#chalks` dal contenuto e non dal `flex-basis`: `width` esplicito, commento in `index.html`). Il design <https://claude.ai/artifact/QZApsX3hLAqZtKDwwbsQoN> (font Nunito) resta com'era: la pagina segue il sito, non quelle tavole. **Per la produzione servono**: l'indirizzo del cliente (`b.bruschi@monaco.mc`, personale) nell'impostazione «Notifiche dei disegni», e una prova del link da telefono in produzione (CDN + firewall).
+9. [ ] QA su device veri, flusso intero, **in produzione**: un disegno vero dal telefono → mail → link → Approva → galleria (compreso il purge di Speed Optimizer).
+- [x] Fuori piano, chiesto da Daniele: moderazione dalla mail (1.10.0 → 1.11.5), in produzione dal 26/09/2026.
+- [ ] **Aperto, fuori piano**: la mensola non ci sta fra 701 e ~1046px (sotto).
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.
 - **Domanda d'invio PRIMA di salvare; invio in parallelo alla condivisione con ripresa; `invio_id` fisso per tentativo**: Safari rifiuta `navigator.share` dopo un'attesa, e chi va su WhatsApp non torna a rispondere.
 - **Endpoint anonimo senza nonce**: per un anonimo il nonce è uguale per tutti e la cache lo servirebbe scaduto. La difesa sono i limiti.
-- **Rate limit 3 per dispositivo + 20 per IP**: il `client_id` lo inventa chi manda (lo ferma solo l'IP), ma 3 per IP perderebbe i disegni di una classe. Chi cambia rete non è coperto, per scelta. **Solo `REMOTE_ADDR`**: sullo staging `X-Forwarded-For` lo scrive il client.
-- **Honeypot tolto**: non c'è un modulo HTML da compilare, e chi copia la richiesta trova il campo già vuoto.
-- **Un'immagine estranea con le misure giuste passa**: la difesa è la moderazione più il limite.
-- **Retention in `disegni.php`, non in `bacheca.php`**: lo svuotamento automatico gira nel cron, dove `bacheca.php` non c'è. Tocca solo gli allegati in `uploads/frmm-lavagna/`.
-- **Moderazione dalla mail: aprire il link non agisce mai, agisce solo il pulsante in POST.** Gli scanner di posta aprono i link dai loro server; discussi e scartati tasti diretti, doppio clic, conferma via JavaScript (motivi in cima a `moderazione-mail.php`). Aperta: misurare in produzione chi apre i link prima del cliente.
-- **Link firmato, 7 giorni, un disegno per link, niente ri-moderazione dalla pagina** (errori e scaduti li gestisce Daniele dalla bacheca). **Destinatario in un'impostazione a sé**, non `admin_email`. **Mail senza miniatura** (un disegno inappropriato non finisce in nessuna casella) e senza link alla bacheca (il cliente non entra in WordPress). Mittente col nome del sito, indirizzo lasciato a WordPress (SPF).
-- **`drop-shadow` e `random-tilt` nella pagina sono una copia** del codice personalizzato del sito: lì sono inline nel tema, non in un file collegabile.
-- **Opacità del tratto 0.35** (cliente); se torna «tratti sottili», la causa è questa, non `PRESSURE_*`. **Spessore/velocità chiuso** il 17/09/2026: non si ritara.
+- **Rate limit 3 per dispositivo + 20 per IP**, **solo `REMOTE_ADDR`** (sullo staging `X-Forwarded-For` lo scrive il client). Chi cambia rete non è coperto, per scelta.
+- **Honeypot tolto; un'immagine estranea con le misure giuste passa**: la difesa è la moderazione più il limite.
+- **Retention in `disegni.php`, non in `bacheca.php`**: lo svuotamento automatico gira nel cron, dove `bacheca.php` non c'è.
+- **Moderazione dalla mail: aprire il link non agisce mai, agisce solo il pulsante in POST** (scanner di posta; motivi in cima a `moderazione-mail.php`). Link firmato, 7 giorni, un disegno per link, niente ri-moderazione dalla pagina. Destinatario in un'impostazione a sé, non `admin_email`. Mail senza miniatura né link alla bacheca. Mittente col nome del sito, oggetto senza (26/09/2026).
+- **Pagina di moderazione**: titolo con lo stato («Nuovo disegno» / «Disegno approvato» / «Disegno rifiutato»); tasti copiati dal kit Elementor del sito; **Rifiuta senza bordo per decisione di Daniele**, contro l'obiezione che fa pesare meno il tasto prudente (registrata nel codice). Il design Nunito (<https://claude.ai/artifact/QZApsX3hLAqZtKDwwbsQoN>) è superato: la pagina segue il sito.
+- **`drop-shadow`, `random-tilt` e i tasti della pagina sono copie** del sito: se il sito cambia, qui restano com'erano.
+- **Opacità del tratto 0.35** (cliente); se torna «tratti sottili», la causa è questa, non `PRESSURE_*`. **Spessore/velocità chiuso** il 17/09/2026.
 - **Iframe, non inline, senza `sandbox`; cache buster in query string, non nel percorso** (il tutorial ha il percorso nella chiave).
 - **Disegni anonimi, niente nickname. CPT `frmm_disegno`**, non pubblico, non in REST.
 
 ## Trappole
-- **Il firewall di SiteGround filtra `/wp-admin/` per user agent**: `python-requests` prende 403, un browser passa. La pagina della mail sta lì: gli script si presentano come Safari. In produzione c'è anche la CDN: il link va provato da telefono prima di darlo al cliente.
-- **`prova-bacheca.py` consuma i due disegni in attesa più vecchi**: lanciato prima di una prova di Daniele, gli brucia i disegni lasciati apposta. Già successo il 26/09/2026.
-- **Da ora le mail dello staging vanno a `danielesuppo@gmail.com`** (impostazione «Notifiche dei disegni»), anche quelle degli script di prova.
+- **La mensola non ci sta fra 701 e ~1046px, in tutti i browser**: il layout desktop chiede ~1046px; a 1024 gessetti e cancellino si toccano, a 820 (iPad verticale) si sovrappongono. Strade: mensola su due righe in quella fascia (solo CSS, preferita) o soglia mobile più alta (è la stessa `SOGLIA_STRETTA` che sceglie la misura del logo).
+- **Firefox misura una fila flex dal contenuto dei figli, non dal `flex-basis`**: per questo `.tools .chalk` ha anche `width`. Chrome non mostra il difetto.
+- **Chrome/Edge headless hanno una larghezza minima di finestra ~500px**: per gli screenshot da telefono si mette la pagina in un iframe da 390. Firefox headless scatta allo `load` e usa la cache del profilo: profilo nuovo a ogni giro.
+- **Il firewall di SiteGround filtra `/wp-admin/` per user agent**: `python-requests` prende 403, un browser passa. Gli script si presentano come Safari. In produzione un link falso risponde 403 «Link non valido» (verificato 26/09/2026): la pagina passa CDN e firewall.
+- **I link delle mail degli script di prova non mostrano i tasti**: quei disegni li modera lo script stesso. Per provare i tasti serve un disegno lasciato in attesa.
+- **`prova-mail.py` riscrive «Notifiche dei disegni» dello staging a `danielesuppo@gmail.com`**, e manda due mail vere a ogni giro.
+- **`prova-bacheca.py` consuma i due disegni in attesa più vecchi**: lanciato prima di una prova di Daniele, gli brucia i disegni lasciati apposta.
 - **L'IP del PC di Daniele cambia a metà prova** (FWA/mobile): la raffica di `prova-abuso.py` usa il limite del dispositivo per questo.
-- **Gmail butta padding e bordo sugli `<a>` e cambia i colori col tema scuro**: stili sulle celle di tabella o sugli `<span>`, mai sull'`<a>`.
-- **Il dominio della Fondazione non ha BIMI** (nessun record, DMARC `p=none`): l'icona nelle mail non dipende dal plugin.
+- **Gmail butta padding e bordo sugli `<a>` e cambia i colori col tema scuro**: stili sugli `<span>`, mai sull'`<a>`.
 - **SiteGround serve i `.js` con un anno di cache**: `pacchetto.py` mette `?v=` su ogni import e rifiuta di costruire se ne manca uno.
 - **Chrome Android ≠ desktop ≠ Safari**; lo `<script>` di `altezza="schermo"` esce DOPO il `<div>`; il `rect` del canvas si rilegge a ogni `pointerdown`; header `fixed` → `margin-top` 55/65px su tutti e tre i dispositivi; `dvh`, non `vh`.
-- **Il purge di Speed Optimizer all'approvazione si verifica solo in produzione** (sullo staging è spento): ancora da vedere.
-- **PHP non è installato sul PC**: i test girano con una copia nella scratchpad della sessione `63a19454…` (`…\scratchpad\php\php.exe`, con `-d extension_dir=<quella cartella>\ext -d extension=gd`). Cartella temporanea: può sparire.
+- **PHP non è installato sul PC**: i test usano la copia in `…\e--Claude-Workspace-frrm-drawing-plugin\63a19454…\scratchpad\php\php.exe` (`-d extension_dir=<cartella>\ext -d extension=gd`). Cartella temporanea: può sparire.
 - **`.lavoro/` non è gitignorata e il repo è pubblico**: niente credenziali lì. Token GitHub e password dello staging passati in chiaro in transcript: **da ruotare**.
 - **FTP**: credenziali che aprono tutto l'account; solo `temp/frmm-drawing-plugin*`. Online `frmm`, repo `frrm`: non correggere.
-- Verifiche: `node prototipo/test/run.js` (68) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (28) · `prova-bacheca.py` (14, consuma disegni) · `prova-abuso.py` (20 mail) · `prova-retention.py [svuota|orfani]` · `diagnostica-ip.py [--produzione]` (sola lettura).
+- Verifiche: `node prototipo/test/run.js` (68) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33, due mail) · `prova-bacheca.py` (14, consuma disegni) · `prova-abuso.py` (20 mail) · `prova-retention.py [svuota|orfani]` · `diagnostica-ip.py [--produzione]` (sola lettura).
 
 ## Prossimo passo
-Leggere il design <https://claude.ai/artifact/QZApsX3hLAqZtKDwwbsQoN> così come l'ha lasciato Daniele e portarne le modifiche in `frmm_lavagna_rispondi_mail()` / `frmm_lavagna_corpo_mail()`, poi screenshot a 390px e `prova-mail.py`.
-
-## Aperto: la mensola non ci sta fra 701 e ~1046px (26/09/2026)
-
-Misurato in Firefox ed Edge: il layout desktop della mensola chiede ~1046px (colonna degli strumenti 425px più spessori, comandi, SALVA, margini e gap). Sotto, e sopra la soglia mobile di 700, la colonna si stringe e i gessetti finiscono sotto il cancellino: a 1024 si toccano (gessetti fino a 558, cancellino da 555), a 820 — iPad in verticale — è molto peggio. Non dipende dal browser. Non corretto: è una decisione di layout (mensola su due righe in quella fascia, o soglia mobile più alta, che però è la stessa `SOGLIA_STRETTA` che sceglie la misura del logo). In attesa di Daniele.
+In produzione: un disegno vero dal telefono, la mail a `d.suppo@issimissimo.com`, Approva dal link, verificare che compaia nella galleria del sito (purge di Speed Optimizer). Solo dopo, l'indirizzo del cliente in «Notifiche dei disegni».
