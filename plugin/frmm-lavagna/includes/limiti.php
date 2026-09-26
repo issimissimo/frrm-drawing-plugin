@@ -178,6 +178,13 @@ function frmm_lavagna_diagnostica()
         'limiti'       => FRMM_LAVAGNA_LIMITI + ['finestra' => FRMM_LAVAGNA_FINESTRA],
         'generazione'  => (int) get_option(FRMM_LAVAGNA_OPZIONE_GEN, 0),
         'contatore_ip' => $contatore_ip,
+        // Il passo 5 (disegni.php): quanti giorni resta nel cestino un
+        // disegno rifiutato, e quando il cron lo svuota la prossima volta.
+        // 0 giorni vorrebbe dire niente cestino: si cancella subito.
+        'cestino'      => [
+            'giorni'   => defined('EMPTY_TRASH_DAYS') ? (int) EMPTY_TRASH_DAYS : null,
+            'prossimo' => wp_next_scheduled('wp_scheduled_delete') ?: null,
+        ],
         'php'          => [
             'post_max_size'       => ini_get('post_max_size'),
             'upload_max_filesize' => ini_get('upload_max_filesize'),

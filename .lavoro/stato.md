@@ -1,9 +1,9 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 25/09/2026 (passo 4 chiuso)
-Versione corrente: `frmm-lavagna` **1.8.0** (rate limit, 25/09/2026) e `custom-marquee` **1.2.1**, sullo staging **e in produzione**. Prototipo online: `temp/frmm-drawing-plugin-18/`. **Stato approvato dal cliente salvato il 25/09/2026**: tag `approvato-cliente-25092026` su `0d6df7c` (pushato), zip installati in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
+Ultimo aggiornamento: 26/09/2026 (passo 5 chiuso)
+Versione corrente: `frmm-lavagna` **1.9.0** (retention, 26/09/2026; rate limit dalla 1.8.0) e `custom-marquee` **1.2.1**, sullo staging **e in produzione**. Prototipo online: `temp/frmm-drawing-plugin-18/`. **Stato approvato dal cliente salvato il 25/09/2026**: tag `approvato-cliente-25092026` su `0d6df7c` (pushato), zip installati in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
-Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin è installato e attivo con l'invio acceso** (oggi 1.8.0). Il passo 4, rate limit, è chiuso e installato anche lì dal 25/09/2026; restano scoperti il 5 (retention) e il 6 (testi per i genitori). `admin_email` lì è `d.suppo@issimissimo.com`.
+Sullo staging (`/lavagna-prova-plugin/`) la lavagna salva e, se il bambino sceglie «SALVA E INVIA», manda il disegno: arriva in bacheca con miniatura, email all'admin, Approva/Rifiuta in un click. Provato sul telefono da Daniele il 23/09/2026, WhatsApp compreso. **In produzione (23/09/2026, decisione di Daniele) il plugin è installato e attivo con l'invio acceso** (oggi 1.8.0). Il passo 4 (rate limit, 25/09/2026) e il 5 (retention, 26/09/2026) sono chiusi e installati anche lì; resta scoperto il 6 (testi per i genitori), **sospeso** da Daniele. `admin_email` lì è `d.suppo@issimissimo.com`.
 Verifiche: `node prototipo/test/run.js` (68) · `php -d extension=gd plugin/test/validazione.php` (71) · `python .lavoro/diagnostica-ip.py [--produzione]` (solo lettura) · `python .lavoro/prova-abuso.py` (staging, 20 disegni e 20 email; `raffica` 3, `pulisci`) · `python .lavoro/prova-invio.py` (40, staging) · `python .lavoro/prova-bacheca.py` (14, staging, consuma 2 disegni in attesa). Zip: `python .lavoro/pacchetto.py`; installazione: `python .lavoro/installa-staging.py`.
 
 ## Piano attivo — Fasi 6, 7, 9, 10 sullo staging (approvato 23/09/2026)
@@ -22,6 +22,66 @@ Fuori perimetro: ~~go-live in produzione~~ (fatto da Daniele il 23/09/2026, fuor
 7. [x] **Fermata sciolta** (Daniele, 23/09/2026): la galleria è il **Custom Marquee** già presente sul sito. **Ordine dei fronti deciso da Daniele: prima la galleria, poi il 4.**
 8. [x] Galleria: il Custom Marquee con sorgente «Disegni della Lavagna» — sotto-piano chiuso il 24/09/2026, installato anche in produzione. Resta da verificare lì il purge all'approvazione (vedi Prossimo passo).
 9. [ ] QA su device veri, flusso intero.
+
+### Sotto-piano del passo 5 — retention (approvato e CHIUSO il 26/09/2026, staging e produzione)
+Ordine deciso da Daniele il 26/09/2026: **prima il 5, poi Approva/Rifiuta dalla mail; il 6 sospeso.**
+
+Obiettivo: un disegno rifiutato sparisce davvero dopo 30 giorni nel cestino (post, allegato, file, miniature), e nel frattempo non ricompare da nessuna parte.
+
+**Perché non è solo spazio su disco** (trovato il 26/09/2026 leggendo il codice): la Libreria media nasconde le immagini dei disegni in base al disegno a cui sono attaccate (`bacheca.php`). Eliminando un post, WordPress non cancella i suoi allegati: li stacca. A cestino svuotato, l'immagine di un disegno RIFIUTATO resta senza disegno, esce dal filtro e ricompare nella Libreria e nei selettori di Elementor. Probabilmente diventa anche leggibile da anonimo in `/wp/v2/media`, perché un allegato senza genitore la REST API lo tratta come pubblico: **ipotesi, da riprodurre al passo 1**. Oggi nessun orfano (26/09/2026: staging 51 allegati tutti attaccati, produzione 1). Diventa reale sullo staging verso il 23/10 (primi disegni di prova nel cestino da 30 giorni) e in produzione 30 giorni dopo il primo rifiuto.
+
+Criterio di finito (staging):
+- **con la 1.8.0**, un disegno di prova rifiutato ed eliminato definitivamente lascia un allegato orfano: si misura dove ricompare (Libreria, `/wp/v2/media` da anonimo, URL del file). È la prova del difetto;
+- **con la 1.9.0**, la stessa sequenza non lascia niente: nessun allegato, file e miniature 404 da anonimo;
+- vale per tutte le strade: «Elimina definitivamente», «Svuota cestino» (provato sui ~27 disegni di prova già nel cestino dello staging) e lo svuotamento automatico dopo 30 giorni, che passa dalla stessa funzione (`wp_delete_post`) e quindi dallo stesso aggancio. Quest'ultimo si dimostra dal codice, non aspettando 30 giorni;
+- `EMPTY_TRASH_DAYS` misurato su staging e produzione (atteso 30, il default; se è 0 il cestino non esiste e si cancella subito);
+- i disegni approvati non si toccano; test verdi.
+
+Fuori perimetro: i disegni in attesa mai moderati (restano finché qualcuno decide) · orfani creati prima della 1.9.0 (oggi zero, misurato).
+
+Passi:
+1. [x] **Riprodotto, 26/09/2026, ipotesi confermata per intero**: sulla 1.8.0 l'allegato orfano restava, compariva nella Libreria e **`/wp/v2/media/<id>` lo dava a un anonimo (200)**, con originale e 4 miniature leggibili. L'orfano della prova è stato cancellato a mano. — **Riproduzione sulla 1.8.0**: `prova-retention.py` invia un disegno, lo rifiuta, lo elimina definitivamente con i link veri della bacheca, e guarda dove ricompare l'immagine.
+2. [x] **Fatto**: 1.9.0, in `disegni.php` perché il cron non carica `bacheca.php`. Cancella solo gli allegati in `uploads/frmm-lavagna/`: un'immagine in evidenza messa a mano dalla Libreria non si tocca. — **1.9.0**: su `before_delete_post` di un `frmm_disegno`, `wp_delete_attachment(..., true)` dei suoi allegati (file e miniature compresi). La diagnostica (`GET /limiti`) riporta anche `EMPTY_TRASH_DAYS`.
+3. [x] **Verde**: `prova-retention.py` 10/10 (niente allegato, niente Libreria, REST anonima 404, file e miniature 404, **anche fuori dall'albero anno/mese**); «Svuota cestino» sui 43 disegni di prova, zero orfani; ripetuto su un disegno apposta, 11/11. `EMPTY_TRASH_DAYS` 30 su staging e produzione. Non regressione: 71 PHP, 9 galleria, 68 JS, `prova-invio` 40, `prova-bacheca` 14. — **Prova sullo staging**: lo script di nuovo, poi «Svuota cestino» dei disegni di prova e ricerca degli orfani.
+4. [x] README, `stato.md`, commit e push. **Produzione** (Daniele: «se funziona tutto installa anche in produzione»): 1.9.0 installata il 26/09/2026, cestino 30 giorni, zero orfani, endpoint vivo.
+
+Rischi aperti:
+- Il file sta in `uploads/frmm-lavagna/`, fuori dall'albero anno/mese: che `wp_delete_attachment` lo trovi e lo cancelli con le miniature va **verificato** (404 da anonimo), non supposto.
+- Svuotare il cestino di un disegno approvato e poi tolto cancella anche la sua immagine: è giusto, ma è irreversibile.
+- Lo svuotamento automatico dipende dal cron di WordPress, cioè dalle visite o dal cron di SiteGround: il giorno esatto non è garantito.
+- **In produzione il difetto scatta 30 giorni dopo il primo rifiuto.** La 1.9.0 va installata lì prima di allora; consiglio subito dopo la prova sullo staging.
+
+Costo stimato: 4 passi, una versione, poco codice (l'aggancio sono una decina di righe), mezza sessione.
+
+### Sotto-piano — Approva/Rifiuta dalla mail (PROPOSTO 26/09/2026; viene DOPO il passo 5, decisione di Daniele)
+Anticipato sui passi 5 e 6 per decisione di Daniele. **Solo staging.**
+
+Obiettivo: moderare un disegno dal telefono, partendo dalla mail di notifica, senza fare il login a WordPress.
+
+Criterio di finito (staging):
+- la mail vera ha due tasti, Approva e Rifiuta; dal telefono il tasto apre una pagina col disegno a grandezza piena e un pulsante di conferma; confermato, il disegno è approvato (compare su `/playground/`) o nel cestino;
+- **aprire i link non cambia niente**: solo la conferma (POST) agisce. Lo script apre tutti i link come farebbe uno scanner di posta e verifica che lo stato non cambi;
+- un link manomesso, scaduto o di un altro disegno non fa niente e lo dice; un link di un disegno già moderato dice com'è andata e non fa niente;
+- l'azione resta registrata come «via mail» nel disegno;
+- test PHP delle funzioni pure (firma, scadenza) verdi, `prova-invio.py` e `prova-bacheca.py` ancora verdi.
+
+Fuori perimetro: produzione · la coda (dopo un disegno, il successivo) · più destinatari · la mail riassuntiva.
+
+Passi:
+1. [ ] **Funzioni pure** in `validazione.php`: firma HMAC di (id del disegno, scadenza) e verifica, con i loro test. Il segreto è **un'opzione a sé** generata a caso, non il salt del sito: cambiarla invalida tutti i link in giro senza toccare i login di nessuno.
+2. [ ] **La pagina** (`admin-post.php`, azione aperta anche agli anonimi): in GET mostra il disegno, il suo stato e i due pulsanti, con quello del tasto premuto in evidenza; in POST esegue (`wp_publish_post` / `wp_trash_post`, le stesse di oggi, quindi la data di approvazione e la cache della galleria seguono da sole) e scrive `_frmm_moderato_via = email`. Un solo link per disegno, per tutte e due le azioni: chi ha premuto Approva può ancora cambiare idea sulla pagina.
+3. [ ] **La mail**: i due tasti sotto la miniatura, il link alla bacheca resta. Versione 1.9.0, solo staging.
+4. [ ] **Prova**: `prova-mail.py` (i link li dà una rotta per il solo amministratore, perché lo script non legge la posta) più la prova vera di Daniele dal telefono, dalla mail vera.
+5. [ ] README, `stato.md`, commit e push.
+
+Rischi aperti:
+- **Chi ha la mail modera**: inoltrarla vuol dire dare il potere di pubblicare. Oggi il destinatario è Daniele; il giorno che diventa la Fondazione o una casella condivisa, va ripensato.
+- **Salta il controllo per ruolo** (PublishPress): l'autorizzazione diventa aver ricevuto la mail.
+- Gli scanner di posta aprono i link (Safe Links, antispam): da qui la conferma in POST. Uno scanner che compila e invia moduli non l'ho mai visto, ma non lo escludo.
+- L'immagine nella pagina è quella del disegno in attesa: il suo URL casuale lo vede solo chi ha il link.
+- Ogni prova manda mail all'`admin_email` dello staging.
+
+Costo stimato: 5 passi, una versione del plugin, mezza sessione più la prova sul telefono.
 
 ### Sotto-piano del passo 4 — anti-abuso (approvato e CHIUSO il 25/09/2026)
 Obiettivo: una persona sola, da una rete sola, non può riempire la bacheca, il disco e la posta dell'account SiteGround; i bambini veri non se ne accorgono.
@@ -134,6 +194,6 @@ Rischi: **l'endpoint in produzione è aperto senza testi per i genitori** finch�
 - **PHP non è installato su questa macchina.** I test PHP girano con la copia rimasta nella scratchpad di una sessione precedente (`%LOCALAPPDATA%\Temp\claude\e--Claude-Workspace-frrm-drawing-plugin3a19454-...\scratchpad\php\php.exe`, PHP 8.3), cartella temporanea che può sparire. Per GD serve anche `-d extension_dir=<quella cartella>\ext`, altrimenti cerca in `C:\php\ext` e salta i test sui JPEG.
 
 ## Prossimo passo
-Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). **Passo 4 chiuso il 25/09/2026** (1.8.0 su staging e produzione). Da fare quando Daniele vuole: un SALVA E INVIA dal telefono sullo staging, per vedere il flusso vero con la 1.8.0 (l'app non è cambiata, il server sì). Poi, nell'ordine del piano: passo 5 (retention) e 6 (testi per i genitori, che devono dire anche dell'impronta dell'IP tenuta 24 ore).
+Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). **Passo 4 chiuso il 25/09/2026, passo 5 il 26/09/2026** (1.9.0 su staging e produzione). **Prossimo: Approva/Rifiuta dalla mail, solo staging** (sotto-piano sopra, due domande aperte: scadenza del link, proposta 7 giorni; coda del disegno successivo, proposta no). Il 6 è sospeso. Da fare quando Daniele vuole: un SALVA E INVIA dal telefono sullo staging, per vedere il flusso vero con la 1.8.0 (l'app non è cambiata, il server sì). Poi, nell'ordine del piano: passo 5 (retention) e 6 (testi per i genitori, che devono dire anche dell'impronta dell'IP tenuta 24 ore).
 
 **Proposta in attesa, dopo il passo 4 — Approva/Rifiuta dalla mail** (discussa il 25/09/2026, non decisa). Fattibile, ma non con i link della bacheca: il loro nonce nascerebbe nella richiesta anonima del bambino (utente 0) e richiede il login. Serve un link firmato (HMAC, per disegno e per azione, con scadenza) verso un endpoint pubblico. **Il link NON deve eseguire l'azione con un GET**: gli scanner di posta (Safe Links, gateway antispam, anteprime) aprono i link da soli e approverebbero e rifiuterebbero senza che nessuno guardi — apre una pagina col disegno a grandezza piena e un pulsante che fa POST. Da dichiarare: chi ha la mail modera (inoltro, casella condivisa), salta il controllo per ruolo di PublishPress, l'azione va registrata come «via email» perché non c'è un utente. Variante: dopo l'azione la pagina propone il disegno successivo in attesa (ma allora un link vale per tutta la coda).

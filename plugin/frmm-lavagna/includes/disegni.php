@@ -60,3 +60,48 @@ add_action('init', function () {
         'capabilities'    => ['create_posts' => 'do_not_allow'],
     ]);
 });
+
+/**
+ * Eliminare un disegno elimina la sua immagine (passo 5, dalla 1.9.0).
+ *
+ * WordPress, eliminando un post, NON cancella i suoi allegati: li stacca.
+ * Qui era un buco, riprodotto sullo staging il 26/09/2026: l'immagine di un
+ * disegno RIFIUTATO, a cestino svuotato, restava senza disegno. Usciva cosi'
+ * dal filtro di bacheca.php, che la nasconde in base al disegno a cui e'
+ * attaccata, e ricompariva nella Libreria e nei selettori di Elementor; e
+ * /wp-json/wp/v2/media/<id> la mostrava a chiunque, originale e miniature,
+ * perche' un allegato senza genitore la REST API lo tratta come pubblico.
+ *
+ * Vale per ogni strada: "Elimina definitivamente", "Svuota cestino" e lo
+ * svuotamento automatico dopo EMPTY_TRASH_DAYS, che passano tutti da
+ * wp_delete_post(). Per questo sta qui e non in bacheca.php: il cestino
+ * automatico gira nel cron, dove bacheca.php non e' caricato.
+ *
+ * Si cancellano SOLO gli allegati in uploads/frmm-lavagna/, cioe' quelli
+ * scritti dall'endpoint. Il disegno supporta l'immagine in evidenza, e chi
+ * ci mettesse a mano una foto della Libreria non deve vedersela sparire
+ * insieme al disegno.
+ */
+add_action('before_delete_post', function ($post_id) {
+    if (get_post_type($post_id) !== FRMM_LAVAGNA_CPT) {
+        return;
+    }
+    $allegati = get_children([
+        'post_parent' => $post_id,
+        'post_type'   => 'attachment',
+        'fields'      => 'ids',
+    ]);
+    $allegati[] = (int) get_post_thumbnail_id($post_id);
+
+    foreach (array_unique(array_filter(array_map('intval', $allegati))) as $att) {
+        $file = (string) get_post_meta($att, '_wp_attached_file', true);
+        if (strpos($file, FRMM_LAVAGNA_CARTELLA . '/') !== 0) {
+            continue;
+        }
+        // true = davvero, non nel cestino dei media: cancella anche il file
+        // e le miniature.
+        if (!wp_delete_attachment($att, true)) {
+            error_log('[frmm-lavagna] immagine ' . $att . ' del disegno ' . (int) $post_id . ' non cancellata');
+        }
+    }
+});

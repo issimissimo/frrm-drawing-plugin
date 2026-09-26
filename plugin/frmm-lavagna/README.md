@@ -157,6 +157,18 @@ Cose da non disfare per sbaglio:
 
 Prove: `python .lavoro/prova-invio.py` contro lo staging (40 controlli; lascia tre disegni in attesa a ogni giro, e azzera i contatori del rate limit all'inizio).
 
+### Il cestino: un disegno eliminato si porta via la sua immagine (dalla 1.9.0)
+
+Un disegno rifiutato va nel cestino e ci resta `EMPTY_TRASH_DAYS` giorni (30, misurato su staging e produzione), poi WordPress lo elimina da solo. **Eliminare un post non cancella i suoi allegati: li stacca.** Fino alla 1.8.0 l'immagine di un disegno rifiutato sopravviveva senza disegno, usciva dal filtro della Libreria (che guarda il disegno a cui e' attaccata), ricompariva nei selettori di Elementor, e `/wp-json/wp/v2/media/<id>` la mostrava **a chiunque**, originale e miniature. Riprodotto sullo staging il 26/09/2026, prima che capitasse davvero: nessun disegno era ancora rimasto 30 giorni nel cestino.
+
+Dalla 1.9.0 `disegni.php`, su `before_delete_post`, cancella allegato, file e miniature. Cose da non disfare per sbaglio:
+
+- **Sta in `disegni.php`, non in `bacheca.php`**: lo svuotamento automatico gira nel cron, dove `bacheca.php` non e' caricato. Tutte e tre le strade ("Elimina definitivamente", "Svuota cestino", il cron) passano da `wp_delete_post()`.
+- **Cancella solo gli allegati in `uploads/frmm-lavagna/`**: chi mettesse a mano una foto della Libreria come immagine in evidenza di un disegno non deve vedersela sparire.
+- Vale anche per un disegno approvato che qualcuno toglie e poi elimina: la sua immagine se ne va, ed e' irreversibile.
+
+Prove: `python .lavoro/prova-retention.py` (un disegno: invia, rifiuta, elimina, e guarda Libreria, REST da anonimo e file), `svuota` («Svuota cestino» dei disegni), `orfani` (sola lettura). La diagnostica (`GET /limiti`) riporta anche i giorni del cestino e il prossimo svuotamento.
+
 ### Il rate limit (dalla 1.8.0)
 
 Al massimo **3 disegni per dispositivo** (`client_id`) e **20 per IP** in **24 ore dal primo invio** (Daniele, 25/09/2026). Oltre, `429 frmm_troppi` e niente scritto. L'app lo sa (`motivoDaStatus` → `troppi`) e lascia perdere **senza dire niente al bambino** e senza riprovare.
@@ -203,6 +215,6 @@ Il logo e i font restano senza versione: se cambiassero, vanno rinominati.
 
 ## Cosa non fa (ancora)
 
-Mancano la retention dei rifiutati (svuotare il cestino lascia il JPEG in `uploads/frmm-lavagna/`) e i testi per i genitori. Sono i passi 5, 6 e 9 del piano in `.lavoro/stato.md`.
+Mancano i testi per i genitori. Sono i passi 6 e 9 del piano in `.lavoro/stato.md`.
 
 L'iframe e' same-origin e senza sandbox, quindi l'app chiama l'endpoint con una `fetch` diretta: non serve `postMessage`.
