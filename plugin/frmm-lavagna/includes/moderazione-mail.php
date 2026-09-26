@@ -131,17 +131,17 @@ function frmm_lavagna_pagina_mail()
     $esito = frmm_lavagna_verifica_mail($id, $scadenza, $firma, frmm_lavagna_segreto_mail(), time());
     if ($esito === 'firma') {
         frmm_lavagna_rispondi_mail(403, __('Link non valido', 'frmm-lavagna'),
-            '<p>' . esc_html__('Questo link non è valido. Usa i tasti della mail così come sono arrivati.', 'frmm-lavagna') . '</p>');
+            '<p class="messaggio">' . esc_html__('Questo link non è valido. Usa i tasti della mail così come sono arrivati.', 'frmm-lavagna') . '</p>');
     }
     if ($esito === 'scaduto') {
         frmm_lavagna_rispondi_mail(410, __('Link scaduto', 'frmm-lavagna'),
-            '<p>' . esc_html__('Questo link valeva 7 giorni ed è scaduto. Il disegno resta in attesa: se ne occupa chi gestisce il sito.', 'frmm-lavagna') . '</p>');
+            '<p class="messaggio">' . esc_html__('Questo link valeva 7 giorni ed è scaduto. Il disegno resta in attesa: se ne occupa chi gestisce il sito.', 'frmm-lavagna') . '</p>');
     }
 
     $post = get_post($id);
     if (!$post || $post->post_type !== FRMM_LAVAGNA_CPT) {
         frmm_lavagna_rispondi_mail(404, __('Disegno non trovato', 'frmm-lavagna'),
-            '<p>' . esc_html__('Questo disegno non esiste più.', 'frmm-lavagna') . '</p>');
+            '<p class="messaggio">' . esc_html__('Questo disegno non esiste più.', 'frmm-lavagna') . '</p>');
     }
 
     // L'azione: solo in POST, solo su un disegno ancora in attesa.
@@ -160,67 +160,102 @@ function frmm_lavagna_pagina_mail()
         }
     }
 
-    frmm_lavagna_rispondi_mail(200, $post->post_title, frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto));
+    frmm_lavagna_rispondi_mail(
+        200,
+        __('Un disegno dalla lavagna', 'frmm-lavagna'),
+        frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto),
+        sprintf(
+            /* translators: 1: data, 2: ora dell'invio */
+            __('Arrivato il %1$s alle %2$s', 'frmm-lavagna'),
+            get_the_date('d/m/Y', $post),
+            get_the_time('H:i', $post)
+        )
+    );
 }
 
-/** Il corpo della pagina, secondo lo stato del disegno. */
+/**
+ * Il corpo della pagina, secondo lo stato del disegno.
+ *
+ * In attesa, la pagina e' fatta per UN tocco (Daniele, 26/09/2026): subito
+ * sotto il titolo, dove cade il pollice, il pulsante dell'azione scelta nella
+ * mail; l'altra resta come link piccolo, per chi ha premuto il tasto
+ * sbagliato. Il disegno viene dopo: la miniatura l'ha gia' vista nella mail,
+ * qui c'e' per chi lo vuole guardare grande prima di confermare.
+ */
 function frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto)
 {
     $stato = get_post_status($id);
-    $h = '';
-
     $img = wp_get_attachment_image_url((int) get_post_thumbnail_id($id), 'large');
-    if ($img) {
-        $h .= '<img src="' . esc_url($img) . '" alt="">';
-    }
+    $disegno = $img ? '<img src="' . esc_url($img) . '" alt="">' : '';
 
+    $esito = null;
     if ($fatto === 'approva') {
-        return $h . '<p class="esito">' . esc_html__('Fatto: il disegno è approvato. Comparirà nella galleria del sito.', 'frmm-lavagna') . '</p>';
+        $esito = ['approva', __('Fatto: il disegno è approvato. Comparirà nella galleria del sito.', 'frmm-lavagna')];
+    } elseif ($fatto === 'rifiuta') {
+        $esito = ['rifiuta', __('Fatto: il disegno è rifiutato. Non comparirà da nessuna parte.', 'frmm-lavagna')];
+    } elseif ($stato === 'publish') {
+        $esito = ['approva', __('Questo disegno è già stato approvato.', 'frmm-lavagna')];
+    } elseif ($stato !== 'pending') {
+        $esito = ['rifiuta', __('Questo disegno è già stato rifiutato.', 'frmm-lavagna')];
     }
-    if ($fatto === 'rifiuta') {
-        return $h . '<p class="esito">' . esc_html__('Fatto: il disegno è rifiutato. Non comparirà da nessuna parte.', 'frmm-lavagna') . '</p>';
-    }
-    if ($stato === 'publish') {
-        return $h . '<p class="esito">' . esc_html__('Questo disegno è già stato approvato.', 'frmm-lavagna') . '</p>';
-    }
-    if ($stato !== 'pending') {
-        return $h . '<p class="esito">' . esc_html__('Questo disegno è già stato rifiutato.', 'frmm-lavagna') . '</p>';
+    if ($esito) {
+        return '<p class="esito">' . frmm_lavagna_icona_mail($esito[0]) . '<span>' . esc_html($esito[1]) . '</span></p>'
+            . $disegno;
     }
 
-    // In attesa: i due pulsanti, quello del tasto premuto nella mail per primo
-    // e pieno. L'azione del modulo e' la stessa pagina, col suo link firmato.
-    $url = esc_url(add_query_arg([]));
-    $bottoni = [
-        'approva' => __('Approva', 'frmm-lavagna'),
-        'rifiuta' => __('Rifiuta', 'frmm-lavagna'),
+    $altra = $evidenza === 'approva' ? 'rifiuta' : 'approva';
+    $testi = [
+        'approva' => [__('Approva il disegno', 'frmm-lavagna'), __('oppure rifiutalo', 'frmm-lavagna')],
+        'rifiuta' => [__('Rifiuta il disegno', 'frmm-lavagna'), __('oppure approvalo', 'frmm-lavagna')],
     ];
-    if ($evidenza === 'rifiuta') {
-        $bottoni = array_reverse($bottoni, true);
-    }
-    $h .= '<form method="post" action="' . $url . '">';
-    foreach ($bottoni as $azione => $testo) {
-        $h .= sprintf(
-            '<button type="submit" name="azione" value="%s" class="%s%s">%s</button>',
-            esc_attr($azione),
-            esc_attr($azione),
-            $azione === $evidenza ? ' pieno' : '',
-            esc_html($testo)
-        );
-    }
-    $h .= '</form>';
-    $h .= '<p class="nota">' . esc_html(sprintf(
-        /* translators: %s: data e ora di scadenza del link */
-        __('Approvato, il disegno comparirà nella galleria del sito; rifiutato, non lo vedrà nessuno. Questo link vale fino al %s.', 'frmm-lavagna'),
-        wp_date('d/m/Y H:i', $scadenza)
-    )) . '</p>';
-    return $h;
+
+    // L'azione del modulo e' la stessa pagina, col suo link firmato.
+    return '<form method="post" action="' . esc_url(add_query_arg([])) . '" class="scelta">'
+        . sprintf(
+            '<button type="submit" name="azione" value="%1$s" class="%1$s pieno">%2$s<span>%3$s</span></button>',
+            esc_attr($evidenza),
+            frmm_lavagna_icona_mail($evidenza),
+            esc_html($testi[$evidenza][0])
+        )
+        . sprintf(
+            '<button type="submit" name="azione" value="%1$s" class="%1$s">%2$s</button>',
+            esc_attr($altra),
+            esc_html($testi[$evidenza][1])
+        )
+        . '</form>'
+        . $disegno
+        . '<p class="nota">' . esc_html(sprintf(
+            /* translators: %s: data e ora di scadenza del link */
+            __('Approvato, il disegno comparirà nella galleria del sito; rifiutato, non lo vedrà nessuno. Questo link vale fino al %s.', 'frmm-lavagna'),
+            wp_date('d/m/Y H:i', $scadenza)
+        )) . '</p>';
+}
+
+/**
+ * Il segno di spunta o la croce. Il colore e' l'unico posto in cui la pagina
+ * dice "approva" o "rifiuta" col colore: il resto lo dicono le parole.
+ */
+function frmm_lavagna_icona_mail($azione)
+{
+    $tratto = $azione === 'rifiuta' ? 'M6 6l12 12M18 6L6 18' : 'M4.5 12.5l5 5L19.5 7';
+    return '<svg class="icona ' . esc_attr($azione) . '" viewBox="0 0 24 24" aria-hidden="true">'
+        . '<path d="' . $tratto . '" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"/></svg>';
 }
 
 /**
  * Stampa la pagina ed esce. Nessuna cache, nessun indice, nessun referrer:
  * l'URL contiene la firma, e non deve finire nei log di nessuno.
+ *
+ * L'aspetto e' quello della Fondazione: fondo arancione istituzionale
+ * (#FF6000, lo stesso del tutorial della lavagna), SebinoSoft, tasti squadrati
+ * col bordo di 2px come sul sito. I testi sono nero lavagna e non bianchi:
+ * il bianco sull'arancione ha contrasto 3:1, che regge un titolo grande ma
+ * non una riga a 13px; il #1F2225 ha 5,3:1.
+ *
+ * I font sono quelli che l'app ha gia' nello zip (app/font/): se mancano, il
+ * testo esce in un carattere di sistema e la pagina funziona uguale.
  */
-function frmm_lavagna_rispondi_mail($status, $titolo, $corpo)
+function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
 {
     status_header($status);
     nocache_headers();
@@ -228,24 +263,46 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo)
     header('X-Robots-Tag: noindex, nofollow');
     header('Referrer-Policy: no-referrer');
 
+    $principale = dirname(__DIR__) . '/frmm-lavagna.php';
+    $font = '';
+    foreach ([400 => 'Regular', 700 => 'Bold'] as $peso => $nome) {
+        $font .= "@font-face{font-family:'SebinoSoft';font-weight:$peso;font-display:swap;src:url('"
+            . esc_url(plugins_url("app/font/SebinoSoft-$nome.woff2", $principale)) . "') format('woff2')}";
+    }
+
     $sito = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
     echo '<!doctype html><html lang="it"><head><meta charset="utf-8">'
         . '<meta name="viewport" content="width=device-width,initial-scale=1">'
         . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">'
-        . '<title>' . esc_html($titolo) . '</title><style>'
-        . 'body{margin:0;background:#f4f3f0;color:#222;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}'
-        . 'main{max-width:640px;margin:0 auto;padding:24px 16px 40px}'
-        . '.sito{margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#777}'
-        . 'h1{margin:0 0 16px;font-size:20px}'
-        . 'img{display:block;width:100%;height:auto;background:#1F2225;margin:0 0 20px}'
-        . 'form{display:flex;gap:12px;flex-wrap:wrap}'
-        . 'button{flex:1 1 160px;min-height:52px;font:inherit;font-weight:700;border-radius:8px;cursor:pointer;background:#fff;border:2px solid}'
-        . '.approva{color:#2f6b4a;border-color:#2f6b4a}.rifiuta{color:#9a3b32;border-color:#9a3b32}'
-        . '.approva.pieno{background:#2f6b4a;color:#fff}.rifiuta.pieno{background:#9a3b32;color:#fff}'
-        . '.esito{font-size:18px;font-weight:700}.nota{font-size:14px;color:#666;margin-top:20px}'
+        . '<meta name="theme-color" content="#FF6000">'
+        . '<title>' . esc_html($titolo) . '</title><style>' . $font
+        . ':root{--arancio:#FF6000;--ink:#1F2225;--bianco:#FFFFFF;--si:#2f6b4a;--no:#9a3b32}'
+        . '*{box-sizing:border-box}'
+        . 'body{margin:0;min-height:100vh;background:var(--arancio);color:var(--ink);'
+        . "font:17px/1.45 'SebinoSoft',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}"
+        . 'main{max-width:560px;margin:0 auto;padding:28px 16px 40px}'
+        . '.sito{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}'
+        . 'h1{margin:0;font-size:30px;line-height:1.1;font-weight:700}'
+        . '.sotto{margin:6px 0 0;font-size:15px}'
+        . '.scelta{display:flex;flex-direction:column;align-items:center;gap:4px;margin:24px 0}'
+        . 'button{-webkit-appearance:none;appearance:none;font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}'
+        . '.pieno{display:flex;align-items:center;justify-content:center;gap:.6em;width:100%;min-height:64px;padding:0 22px;'
+        . 'background:var(--bianco);border:2px solid var(--bianco);border-radius:0;'
+        . 'font-size:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}'
+        . '.scelta button:not(.pieno){background:none;border:0;padding:12px;font-size:15px;'
+        . 'text-decoration:underline;text-underline-offset:3px}'
+        . 'button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}'
+        . '.icona{width:1.2em;height:1.2em;flex:0 0 auto}.icona.approva{color:var(--si)}.icona.rifiuta{color:var(--no)}'
+        . '.esito{display:flex;gap:.6em;align-items:flex-start;margin:24px 0;padding:18px;background:var(--bianco);'
+        . 'font-size:19px;font-weight:700;line-height:1.3}'
+        . '.esito .icona{margin-top:.05em}'
+        . 'img{display:block;width:100%;height:auto;background:#1F2225}'
+        . '.nota{margin:16px 0 0;font-size:13px}'
+        . '.messaggio{margin:24px 0 0;font-size:17px}'
         . '</style></head><body><main>'
         . '<p class="sito">' . esc_html($sito) . '</p>'
         . '<h1>' . esc_html($titolo) . '</h1>'
+        . ($sotto !== '' ? '<p class="sotto">' . esc_html($sotto) . '</p>' : '')
         . $corpo
         . '</main></body></html>';
     exit;

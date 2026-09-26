@@ -38,20 +38,29 @@ function frmm_lavagna_notifica($post_id, $att_id)
     $mini = frmm_lavagna_file_miniatura($att_id);
     $scadenza = time() + FRMM_LAVAGNA_MAIL_DURATA;
 
-    // Tasti fatti di <a> con gli stili in linea: e' quel che i programmi di
-    // posta mostrano tutti. Aprono una pagina, non agiscono: il perche' e' in
-    // cima a moderazione-mail.php.
-    $tasto = '<a href="%s" style="display:inline-block;padding:12px 24px;margin:0 8px 8px 0;border-radius:8px;'
-        . 'font-weight:bold;text-decoration:none;border:2px solid %s;background:%s;color:%s">%s</a>';
-    $tasti = sprintf($tasto, esc_url(frmm_lavagna_link_mail($post_id, 'approva', $scadenza)),
+    // I tasti sono celle di tabella: bordo, fondo, padding e distanza stanno
+    // sulla <td>, che tutti i programmi di posta rispettano. Con gli stili
+    // sull'<a> (1.10.0) Gmail teneva i colori e buttava bordo, padding e
+    // margine: due parole colorate attaccate, non due tasti (screenshot di
+    // Daniele, 26/09/2026). Squadrati come i tasti del sito.
+    //
+    // Aprono una pagina, non agiscono: il perche' e' in cima a
+    // moderazione-mail.php.
+    $tasto = '<td style="border:2px solid %2$s;background:%3$s;padding:13px 26px">'
+        . '<a href="%1$s" style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;'
+        . 'letter-spacing:1px;text-transform:uppercase;text-decoration:none;color:%4$s">%5$s</a></td>';
+    $tasti = '<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:22px 0 12px"><tr>'
+        . sprintf($tasto, esc_url(frmm_lavagna_link_mail($post_id, 'approva', $scadenza)),
             '#2f6b4a', '#2f6b4a', '#ffffff', esc_html__('Approva', 'frmm-lavagna'))
+        . '<td style="width:20px;font-size:0;line-height:0">&nbsp;</td>'
         . sprintf($tasto, esc_url(frmm_lavagna_link_mail($post_id, 'rifiuta', $scadenza)),
-            '#9a3b32', '#ffffff', '#9a3b32', esc_html__('Rifiuta', 'frmm-lavagna'));
+            '#9a3b32', '#ffffff', '#9a3b32', esc_html__('Rifiuta', 'frmm-lavagna'))
+        . '</tr></table>';
 
     $corpo = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222">'
         . '<p>' . esc_html__('È arrivato un disegno dalla lavagna.', 'frmm-lavagna') . '</p>'
         . ($mini ? '<p><img src="cid:frmm-disegno" alt="" width="300" style="display:block;max-width:100%;height:auto;background:#1F2225"></p>' : '')
-        . '<p style="margin:20px 0 4px">' . $tasti . '</p>'
+        . $tasti
         . '<p style="font-size:13px;color:#666">' . esc_html(sprintf(
             /* translators: %s: data e ora di scadenza dei tasti */
             __('I tasti aprono una pagina dove il disegno si vede grande e si conferma la scelta. Valgono fino al %s.', 'frmm-lavagna'),

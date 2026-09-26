@@ -169,6 +169,8 @@ Cose da non disfare per sbaglio:
 - **Chi ha la mail modera**, senza login e senza il controllo per ruolo della bacheca. Con un indirizzo personale va bene; con una casella condivisa, chiunque la legga pubblica sul sito. Cambiare l'opzione `frmm_lavagna_segreto_mail` (o cancellarla: si rigenera) invalida tutti i link in giro, senza toccare i login.
 - **La pagina sta sotto `/wp-admin/admin-post.php`**, dove SiteGround non mette cache. Ma il suo firewall filtra `/wp-admin/` per user agent: `python-requests` prende 403, un browser vero passa (misurato sullo staging il 26/09/2026). Per i clienti di posta e' un bene; per gli script vuol dire usare lo user agent di un browser. **In produzione, dietro la CDN, va riprovato da telefono prima di dare la funzione al cliente.**
 - La pagina non va in cache, non si indicizza e non manda referrer: l'URL contiene la firma.
+- **La pagina è fatta per un tocco** (1.10.1): subito sotto il titolo il pulsante dell'azione scelta nella mail, l'altra come link piccolo, il disegno dopo. Fondo arancione istituzionale `#FF6000`, SebinoSoft da `app/font/`, testi nero lavagna e non bianchi: il bianco sull'arancione ha contrasto 3:1, il `#1F2225` 5,3:1.
+- **I tasti della mail sono celle di tabella** (1.10.1): bordo, fondo e padding sulla `<td>`. Con gli stili sull'`<a>` Gmail teneva i colori e buttava bordo, padding e margine.
 
 Prove: `php plugin/test/validazione.php` (firma e scadenza) e `python .lavoro/prova-mail.py` sullo staging (31 controlli: link aperti senza effetto, link manomessi, approva, rifiuta, disegni gia' moderati; imposta il destinatario dello staging all'indirizzo di prova).
 
