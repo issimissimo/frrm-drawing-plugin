@@ -213,7 +213,13 @@
      restano staccati. Su telefono devono poter scendere sotto --slot, o a
      360px sforano. */
   @media (min-width: 701px) {
-    .tools .chalk { flex: 0 0 var(--slot); }
+    /* width oltre a flex-basis, e non e' un doppione: Firefox ricava la
+       larghezza naturale di #chalks dal CONTENUTO dei gessetti (la stecca,
+       30px) e non dal flex-basis. La colonna della griglia usciva stretta di
+       54px, #chalks (min-width 0) si stringeva e i gessetti, che non si
+       stringono, finivano sotto il cancellino (Daniele, 26/09/2026). Chrome
+       usa il flex-basis e non lo mostrava. */
+    .tools .chalk { flex: 0 0 var(--slot); width: var(--slot); }
   }
   #btn-save { grid-area: save; }
 

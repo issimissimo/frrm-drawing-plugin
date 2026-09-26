@@ -77,7 +77,7 @@ function frmm_lavagna_notifica($post_id, $att_id)
         // Niente "[nome del sito]" in testa all'oggetto (Daniele, 26/09/2026):
         // il nome c'e' gia' nel mittente, e ripeterlo spingeva fuori dalla
         // colonna dei programmi di posta proprio le parole che contano.
-        __('Un nuovo disegno da guardare', 'frmm-lavagna'),
+        __('Nuovo disegno da moderare', 'frmm-lavagna'),
         $corpo,
         ['Content-Type: text/html; charset=UTF-8']
     );
