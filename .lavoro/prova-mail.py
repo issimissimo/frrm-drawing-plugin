@@ -9,7 +9,7 @@ Imposta il destinatario delle notifiche dello staging all'indirizzo di prova
 disegni, e con i loro link fa quel che farebbero uno scanner di posta, un
 furbo e il cliente:
 
-  1. apre i link senza premere niente: NIENTE deve cambiare;
+  1. apre il link senza premere niente: NIENTE deve cambiare;
   2. manomette firma, id e scadenza: 403 e niente cambia;
   3. approva il primo e rifiuta il secondo, come il cliente;
   4. riprova su disegni gia' moderati: la pagina lo dice e non fa niente.
@@ -96,26 +96,28 @@ def main():
     # 26/09/2026), e la pagina sta sotto /wp-admin/admin-post.php.
     anon = requests.Session()
     anon.headers["User-Agent"] = SAFARI
-    for nome, url in (("Approva", ia["approva"]), ("Rifiuta", ia["rifiuta"])):
-        p = anon.get(url, timeout=60)
-        esito(f"il tasto {nome} apre la pagina (200)", p.status_code == 200, p.status_code)
-        esito(f"  ... col disegno e i due pulsanti", "<img" in p.text
-              and 'value="approva"' in p.text and 'value="rifiuta"' in p.text)
-        primo = re.search(r'<button[^>]*value="(\w+)"', p.text)
-        esito(f"  ... con {nome} per primo e pieno",
-              primo and primo.group(1) == nome.lower() and f'class="{nome.lower()} pieno"' in p.text)
-        esito(f"  ... non indicizzabile e senza referrer",
-              "noindex" in p.headers.get("X-Robots-Tag", "") and p.headers.get("Referrer-Policy") == "no-referrer")
-    anon.head(ia["approva"], timeout=60)
-    esito("dopo GET e HEAD su tutti e due i link, il disegno e' ancora in attesa", info(adm, a)["stato"] == "pending")
+    la, lb = ia["link"], ib["link"]
+    p = anon.get(la, timeout=60)
+    esito("il link apre la pagina (200)", p.status_code == 200, p.status_code)
+    esito("  ... col disegno, con le classi del sito drop-shadow e random-tilt",
+          re.search(r'<img class="[^"]*drop-shadow[^"]*random-tilt', p.text) is not None)
+    esito("  ... e i due pulsanti, Approva e Rifiuta, di pari peso",
+          'value="approva" class="approva"' in p.text and 'value="rifiuta" class="rifiuta"' in p.text)
+    esito("  ... non indicizzabile e senza referrer",
+          "noindex" in p.headers.get("X-Robots-Tag", "") and p.headers.get("Referrer-Policy") == "no-referrer")
+    anon.get(la, timeout=60)
+    anon.head(la, timeout=60)
+    esito("dopo tre aperture (GET, GET, HEAD) il disegno e' ancora in attesa", info(adm, a)["stato"] == "pending")
+    vecchio = ritocca(la, a="rifiuta")
+    esito("un link della 1.10.x (col parametro a=) funziona ancora", anon.get(vecchio, timeout=60).status_code == 200)
 
     print("\n  -- 2. i link manomessi non fanno niente\n")
-    firma = parse_qs(urlparse(ia["approva"]).query)["f"][0]
+    firma = parse_qs(urlparse(la).query)["f"][0]
     for nome, url in (
-        ("firma cambiata di un carattere", ritocca(ia["approva"], f=firma[:-1] + ("0" if firma[-1] != "0" else "1"))),
-        ("la firma del disegno A sul disegno B", ritocca(ia["approva"], d=b)),
-        ("scadenza allungata di un giorno", ritocca(ia["approva"], s=int(parse_qs(urlparse(ia["approva"]).query)["s"][0]) + 86400)),
-        ("senza firma", ritocca(ia["approva"], f="")),
+        ("firma cambiata di un carattere", ritocca(la, f=firma[:-1] + ("0" if firma[-1] != "0" else "1"))),
+        ("la firma del disegno A sul disegno B", ritocca(la, d=b)),
+        ("scadenza allungata di un giorno", ritocca(la, s=int(parse_qs(urlparse(la).query)["s"][0]) + 86400)),
+        ("senza firma", ritocca(la, f="")),
     ):
         p = anon.post(url, data={"azione": "approva"}, timeout=60)
         esito(f"{nome}: 403, e dice che il link non e' valido", p.status_code == 403 and "non è valido" in p.text, p.status_code)
@@ -123,28 +125,28 @@ def main():
     esito("il disegno B e' ancora in attesa", info(adm, b)["stato"] == "pending")
 
     print("\n  -- 3. approvare e rifiutare, come il cliente\n")
-    p = anon.post(ia["approva"], data={"azione": "approva"}, timeout=60)
+    p = anon.post(la, data={"azione": "approva"}, timeout=60)
     esito("A: conferma Approva -> 'approvato'", p.status_code == 200 and "è approvato" in p.text)
     x = info(adm, a)
     esito("A e' pubblicato", x["stato"] == "publish", x["stato"])
     esito("A registra 'via email'", x["moderato_via"] == "email", x["moderato_via"])
     esito("A ha la data di approvazione (la galleria lo ordina con quella)", bool(x["approvato_il"]))
-    p = anon.post(ib["rifiuta"], data={"azione": "rifiuta"}, timeout=60)
+    p = anon.post(lb, data={"azione": "rifiuta"}, timeout=60)
     esito("B: conferma Rifiuta -> 'rifiutato'", p.status_code == 200 and "è rifiutato" in p.text)
     y = info(adm, b)
     esito("B e' nel cestino", y["stato"] == "trash", y["stato"])
     esito("B registra 'via email'", y["moderato_via"] == "email", y["moderato_via"])
 
     print("\n  -- 4. un disegno gia' moderato non si ri-modera\n")
-    p = anon.post(ia["rifiuta"], data={"azione": "rifiuta"}, timeout=60)
+    p = anon.post(la, data={"azione": "rifiuta"}, timeout=60)
     esito("A approvato, Rifiuta dal link: dice 'gia' approvato'", "già stato approvato" in p.text)
     esito("  ... e resta pubblicato", info(adm, a)["stato"] == "publish")
-    p = anon.post(ib["approva"], data={"azione": "approva"}, timeout=60)
+    p = anon.post(lb, data={"azione": "approva"}, timeout=60)
     esito("B rifiutato, Approva dal link: dice 'gia' rifiutato'", "già stato rifiutato" in p.text)
     esito("  ... e resta nel cestino", info(adm, b)["stato"] == "trash")
-    p = anon.get(ia["approva"], timeout=60)
+    p = anon.get(la, timeout=60)
     esito("riaprire il link di A: nessun pulsante", 'name="azione"' not in p.text)
-    p = adm.get(ib["rifiuta"], timeout=60)
+    p = adm.get(lb, timeout=60)
     esito("aperto da chi e' collegato a WordPress, il link funziona uguale", p.status_code == 200 and "già stato rifiutato" in p.text,
           p.status_code)
 

@@ -1,21 +1,28 @@
 <?php
 /**
- * Approva / Rifiuta dalla mail di notifica (dalla 1.10.0).
+ * Approvare o rifiutare un disegno dalla mail di notifica (dalla 1.10.0).
  *
  * La mail va al cliente, che NON ha un accesso a WordPress (Daniele,
- * 26/09/2026): i due tasti della mail sono il suo solo modo di moderare.
+ * 26/09/2026): il link della mail e' il suo solo modo di moderare.
  *
- * COME FUNZIONA. Ogni disegno ha un link firmato (validazione.php), valido 7
- * giorni. I due tasti portano allo stesso link, cambia solo quale azione la
- * pagina mette in evidenza. Il link apre una pagina col disegno a grandezza
- * piena e i due pulsanti; e' il pulsante, in POST, che agisce.
+ * COME FUNZIONA (dalla 1.11.0). Ogni disegno ha un link firmato
+ * (validazione.php), valido 7 giorni: "Guardalo per approvarlo o rifiutarlo".
+ * Apre una pagina col disegno e i due pulsanti, Approva e Rifiuta; e' il
+ * pulsante, in POST, che agisce. Nella 1.10.x la mail aveva due tasti che
+ * portavano alla stessa pagina: promettevano un'azione che non facevano, e
+ * sono diventati un link che dice quel che fa.
  *
  * ⚠️ APRIRE IL LINK NON DEVE MAI CAMBIARE NIENTE. I filtri antispam, Safe
  * Links di Outlook e le anteprime dei programmi di posta aprono da soli i
- * link che trovano: se bastasse aprirlo, uno scanner che li segue tutti e due
- * approverebbe e rifiuterebbe senza che nessuno abbia guardato il disegno.
- * Chi trasformasse la pagina in un'azione diretta sul GET "per risparmiare un
- * tocco" riaprirebbe esattamente quel buco.
+ * link che trovano, dai loro server e prima che il destinatario legga la
+ * mail: per il nostro server quella richiesta e il tocco di una persona sono
+ * la stessa cosa. Se aprire il link agisse, uno scanner approverebbe un
+ * disegno che nessuno ha guardato. Discusso a lungo con Daniele il 26/09/2026
+ * (anche: doppio clic nella mail — nelle mail il JavaScript non gira, e lo
+ * scanner il link non lo clicca, lo legge; conferma automatica via
+ * JavaScript — ferma gli scanner semplici ma non quelli con un browser vero).
+ * La strada rimasta aperta e' MISURARE in produzione chi apre i link prima
+ * del cliente, e decidere sui dati.
  *
  * DECISIONI (Daniele, 26/09/2026):
  * - scade dopo 7 giorni; un disegno rimasto in attesa lo smaltisce Daniele
@@ -70,7 +77,7 @@ add_action('admin_init', function () {
                 esc_attr(FRMM_LAVAGNA_OPZIONE_DESTINATARIO),
                 esc_attr(get_option(FRMM_LAVAGNA_OPZIONE_DESTINATARIO, '')),
                 esc_attr(get_option('admin_email')),
-                esc_html__('A chi arriva la mail di ogni disegno nuovo, con i tasti Approva e Rifiuta. Chi la riceve modera senza entrare in WordPress. Vuoto: l\'indirizzo email di amministrazione.', 'frmm-lavagna')
+                esc_html__('A chi arriva la mail di ogni disegno nuovo, con il link per approvarlo o rifiutarlo. Chi la riceve modera senza entrare in WordPress. Vuoto: l\'indirizzo email di amministrazione.', 'frmm-lavagna')
             );
         },
         'general',
@@ -101,15 +108,18 @@ function frmm_lavagna_segreto_mail()
     return $s;
 }
 
-/** Il link di un disegno, con l'azione da mettere in evidenza. */
-function frmm_lavagna_link_mail($id, $azione, $scadenza)
+/**
+ * Il link di un disegno. I link delle mail della 1.10.x hanno in piu' un
+ * parametro "a" (il tasto premuto): la firma non lo copre, e la pagina lo
+ * ignora, quindi continuano a funzionare fino alla loro scadenza.
+ */
+function frmm_lavagna_link_mail($id, $scadenza)
 {
     return add_query_arg([
         'action' => 'frmm_mail',
         'd'      => (int) $id,
         's'      => (int) $scadenza,
         'f'      => frmm_lavagna_firma_mail($id, $scadenza, frmm_lavagna_segreto_mail()),
-        'a'      => $azione === 'rifiuta' ? 'rifiuta' : 'approva',
     ], admin_url('admin-post.php'));
 }
 
@@ -126,12 +136,11 @@ function frmm_lavagna_pagina_mail()
     $id       = isset($_GET['d']) ? (int) $_GET['d'] : 0;
     $scadenza = isset($_GET['s']) ? (int) $_GET['s'] : 0;
     $firma    = isset($_GET['f']) ? (string) wp_unslash($_GET['f']) : '';
-    $evidenza = (isset($_GET['a']) && $_GET['a'] === 'rifiuta') ? 'rifiuta' : 'approva';
 
     $esito = frmm_lavagna_verifica_mail($id, $scadenza, $firma, frmm_lavagna_segreto_mail(), time());
     if ($esito === 'firma') {
         frmm_lavagna_rispondi_mail(403, __('Link non valido', 'frmm-lavagna'),
-            '<p class="messaggio">' . esc_html__('Questo link non è valido. Usa i tasti della mail così come sono arrivati.', 'frmm-lavagna') . '</p>');
+            '<p class="messaggio">' . esc_html__('Questo link non è valido. Usa il link della mail così come è arrivato.', 'frmm-lavagna') . '</p>');
     }
     if ($esito === 'scaduto') {
         frmm_lavagna_rispondi_mail(410, __('Link scaduto', 'frmm-lavagna'),
@@ -163,7 +172,7 @@ function frmm_lavagna_pagina_mail()
     frmm_lavagna_rispondi_mail(
         200,
         __('Un disegno dalla lavagna', 'frmm-lavagna'),
-        frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto),
+        frmm_lavagna_corpo_mail($id, $scadenza, $fatto),
         sprintf(
             /* translators: 1: data, 2: ora dell'invio */
             __('Arrivato il %1$s alle %2$s', 'frmm-lavagna'),
@@ -176,17 +185,16 @@ function frmm_lavagna_pagina_mail()
 /**
  * Il corpo della pagina, secondo lo stato del disegno.
  *
- * In attesa, la pagina e' fatta per UN tocco (Daniele, 26/09/2026): subito
- * sotto il titolo, dove cade il pollice, il pulsante dell'azione scelta nella
- * mail; l'altra resta come link piccolo, per chi ha premuto il tasto
- * sbagliato. Il disegno viene dopo: la miniatura l'ha gia' vista nella mail,
- * qui c'e' per chi lo vuole guardare grande prima di confermare.
+ * In attesa: il disegno, e sotto i due pulsanti affiancati, di pari peso —
+ * il link della mail non dice quale dei due, e la pagina non deve suggerirlo.
+ * Il disegno ha le classi del sito drop-shadow e random-tilt (Daniele,
+ * 26/09/2026), definite in fondo a frmm_lavagna_rispondi_mail().
  */
-function frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto)
+function frmm_lavagna_corpo_mail($id, $scadenza, $fatto)
 {
     $stato = get_post_status($id);
     $img = wp_get_attachment_image_url((int) get_post_thumbnail_id($id), 'large');
-    $disegno = $img ? '<img src="' . esc_url($img) . '" alt="">' : '';
+    $disegno = $img ? '<img class="disegno drop-shadow random-tilt" src="' . esc_url($img) . '" alt="">' : '';
 
     $esito = null;
     if ($fatto === 'approva') {
@@ -199,31 +207,21 @@ function frmm_lavagna_corpo_mail($id, $scadenza, $evidenza, $fatto)
         $esito = ['rifiuta', __('Questo disegno è già stato rifiutato.', 'frmm-lavagna')];
     }
     if ($esito) {
-        return '<p class="esito">' . frmm_lavagna_icona_mail($esito[0]) . '<span>' . esc_html($esito[1]) . '</span></p>'
-            . $disegno;
+        return $disegno
+            . '<p class="esito">' . frmm_lavagna_icona_mail($esito[0]) . '<span>' . esc_html($esito[1]) . '</span></p>';
     }
 
-    $altra = $evidenza === 'approva' ? 'rifiuta' : 'approva';
-    $testi = [
-        'approva' => [__('Approva il disegno', 'frmm-lavagna'), __('oppure rifiutalo', 'frmm-lavagna')],
-        'rifiuta' => [__('Rifiuta il disegno', 'frmm-lavagna'), __('oppure approvalo', 'frmm-lavagna')],
-    ];
-
     // L'azione del modulo e' la stessa pagina, col suo link firmato.
-    return '<form method="post" action="' . esc_url(add_query_arg([])) . '" class="scelta">'
-        . sprintf(
-            '<button type="submit" name="azione" value="%1$s" class="%1$s pieno">%2$s<span>%3$s</span></button>',
-            esc_attr($evidenza),
-            frmm_lavagna_icona_mail($evidenza),
-            esc_html($testi[$evidenza][0])
-        )
-        . sprintf(
-            '<button type="submit" name="azione" value="%1$s" class="%1$s">%2$s</button>',
-            esc_attr($altra),
-            esc_html($testi[$evidenza][1])
-        )
-        . '</form>'
-        . $disegno
+    $h = $disegno . '<form method="post" action="' . esc_url(add_query_arg([])) . '" class="scelta">';
+    foreach (['approva' => __('Approva', 'frmm-lavagna'), 'rifiuta' => __('Rifiuta', 'frmm-lavagna')] as $azione => $testo) {
+        $h .= sprintf(
+            '<button type="submit" name="azione" value="%1$s" class="%1$s">%2$s<span>%3$s</span></button>',
+            esc_attr($azione),
+            frmm_lavagna_icona_mail($azione),
+            esc_html($testo)
+        );
+    }
+    return $h . '</form>'
         . '<p class="nota">' . esc_html(sprintf(
             /* translators: %s: data e ora di scadenza del link */
             __('Approvato, il disegno comparirà nella galleria del sito; rifiutato, non lo vedrà nessuno. Questo link vale fino al %s.', 'frmm-lavagna'),
@@ -248,9 +246,15 @@ function frmm_lavagna_icona_mail($azione)
  *
  * L'aspetto e' quello della Fondazione: fondo arancione istituzionale
  * (#FF6000, lo stesso del tutorial della lavagna), SebinoSoft, tasti squadrati
- * col bordo di 2px come sul sito. I testi sono nero lavagna e non bianchi:
- * il bianco sull'arancione ha contrasto 3:1, che regge un titolo grande ma
- * non una riga a 13px; il #1F2225 ha 5,3:1.
+ * col bordo di 2px come sul sito, testi bianchi (Daniele, 26/09/2026; il
+ * bianco sull'arancione ha contrasto 3:1, per questo i corpi sono generosi).
+ *
+ * ⚠️ drop-shadow e random-tilt SONO UNA COPIA. Nel sito stanno nel codice
+ * personalizzato stampato dentro ogni pagina del tema, non in un file che si
+ * possa collegare; e questa pagina non passa dal tema (ne' deve: si porterebbe
+ * dietro header, footer e la cache di SiteGround). Copiati il 26/09/2026 dal
+ * sito: ombra 0 0 20px 5px rgba(0,0,0,.44), rotazione casuale fra -4 e +4
+ * gradi. Se il sito li cambia, qui restano com'erano.
  *
  * I font sono quelli che l'app ha gia' nello zip (app/font/): se mancano, il
  * testo esce in un carattere di sistema e la pagina funziona uguale.
@@ -278,41 +282,54 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
         . '<title>' . esc_html($titolo) . '</title><style>' . $font
         . ':root{--arancio:#FF6000;--ink:#1F2225;--bianco:#FFFFFF;--si:#2f6b4a;--no:#9a3b32}'
         . '*{box-sizing:border-box}'
-        . 'body{margin:0;min-height:100vh;background:var(--arancio);color:var(--ink);'
+        // overflow-x: il disegno ruotato e la sua ombra sporgono di qualche
+        // pixel oltre il margine; senza, su telefono la pagina scorrerebbe di lato.
+        . 'body{margin:0;min-height:100vh;overflow-x:hidden;background:var(--arancio);color:var(--bianco);'
         . "font:17px/1.45 'SebinoSoft',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}"
         . 'main{max-width:560px;margin:0 auto;padding:28px 16px 40px}'
-        . '.sito{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}'
+        . '.sito{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}'
         . 'h1{margin:0;font-size:30px;line-height:1.1;font-weight:700}'
-        . '.sotto{margin:6px 0 0;font-size:15px}'
-        . '.scelta{display:flex;flex-direction:column;align-items:center;gap:4px;margin:24px 0}'
-        . 'button{-webkit-appearance:none;appearance:none;font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}'
-        . '.pieno{display:flex;align-items:center;justify-content:center;gap:.6em;width:100%;min-height:64px;padding:0 22px;'
-        . 'background:var(--bianco);border:2px solid var(--bianco);border-radius:0;'
-        . 'font-size:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}'
-        . '.scelta button:not(.pieno){background:none;border:0;padding:12px;font-size:15px;'
-        . 'text-decoration:underline;text-underline-offset:3px}'
+        . '.sotto{margin:6px 0 0;font-size:16px}'
+        // Il disegno: alto al massimo meta' schermo, perche' i pulsanti sotto
+        // si vedano senza scorrere anche con un disegno fatto col telefono in
+        // verticale, che e' piu' alto che largo.
+        . '.disegno{display:block;max-width:100%;max-height:50vh;width:auto;height:auto;margin:32px auto;background:#1F2225}'
+        . '.scelta{display:flex;gap:12px;margin:0}'
+        . 'button{-webkit-appearance:none;appearance:none;font:inherit;cursor:pointer;touch-action:manipulation;'
+        . 'flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:.5em;min-height:60px;padding:0 12px;'
+        . 'background:var(--bianco);color:var(--ink);border:2px solid var(--bianco);border-radius:0;'
+        . 'font-size:17px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}'
         . 'button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}'
         . '.icona{width:1.2em;height:1.2em;flex:0 0 auto}.icona.approva{color:var(--si)}.icona.rifiuta{color:var(--no)}'
-        . '.esito{display:flex;gap:.6em;align-items:flex-start;margin:24px 0;padding:18px;background:var(--bianco);'
+        . '.esito{display:flex;gap:.6em;align-items:flex-start;margin:0;padding:18px;background:var(--bianco);color:var(--ink);'
         . 'font-size:19px;font-weight:700;line-height:1.3}'
         . '.esito .icona{margin-top:.05em}'
-        . 'img{display:block;width:100%;height:auto;background:#1F2225}'
-        . '.nota{margin:16px 0 0;font-size:13px}'
-        . '.messaggio{margin:24px 0 0;font-size:17px}'
+        . '.nota{margin:18px 0 0;font-size:15px}'
+        . '.messaggio{margin:24px 0 0;font-size:18px}'
+        // Le due classi del sito, copiate (vedi sopra).
+        . '.drop-shadow{box-shadow:0px 0px 20px 5px rgba(0,0,0,0.44)!important}'
+        . '.random-tilt{will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}'
         . '</style></head><body><main>'
         . '<p class="sito">' . esc_html($sito) . '</p>'
         . '<h1>' . esc_html($titolo) . '</h1>'
         . ($sotto !== '' ? '<p class="sotto">' . esc_html($sotto) . '</p>' : '')
         . $corpo
-        . '</main></body></html>';
+        . '</main>'
+        // La rotazione di random-tilt, copiata dal sito: uno script, perche'
+        // l'angolo e' casuale a ogni apertura. Non tocca l'azione: fa solo
+        // girare l'immagine.
+        . '<script>(function(){var A=-4,B=4;document.querySelectorAll(".random-tilt").forEach(function(e){'
+        . 'if(e.dataset.tilted)return;var d=(Math.random()*(B-A)+A).toFixed(2);'
+        . 'e.style.transition="none";e.style.transform="rotate("+d+"deg) translateZ(0)";e.dataset.tilted="true";});})();</script>'
+        . '</body></html>';
     exit;
 }
 
 /* --- per le prove ------------------------------------------------------------- */
 
 /**
- * I link di un disegno, e com'e' stato moderato. Solo amministratore: serve a
- * .lavoro/prova-mail.py, che la posta non la legge.
+ * Il link di un disegno, e com'e' stato moderato. Solo amministratore: serve
+ * a .lavoro/prova-mail.py, che la posta non la legge.
  */
 add_action('rest_api_init', function () {
     register_rest_route(FRMM_LAVAGNA_REST_NS, '/link-mail', [
@@ -322,11 +339,9 @@ add_action('rest_api_init', function () {
             if (get_post_type($id) !== FRMM_LAVAGNA_CPT) {
                 return new WP_Error('frmm_disegno', 'non e\' un disegno', ['status' => 404]);
             }
-            $scadenza = time() + FRMM_LAVAGNA_MAIL_DURATA;
             return [
                 'stato'         => get_post_status($id),
-                'approva'       => frmm_lavagna_link_mail($id, 'approva', $scadenza),
-                'rifiuta'       => frmm_lavagna_link_mail($id, 'rifiuta', $scadenza),
+                'link'          => frmm_lavagna_link_mail($id, time() + FRMM_LAVAGNA_MAIL_DURATA),
                 'moderato_via'  => get_post_meta($id, '_frmm_moderato_via', true) ?: null,
                 'approvato_il'  => get_post_meta($id, '_frmm_approvato_il', true) ?: null,
                 'destinatario'  => frmm_lavagna_destinatario(),

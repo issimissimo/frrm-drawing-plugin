@@ -157,22 +157,23 @@ Cose da non disfare per sbaglio:
 
 Prove: `python .lavoro/prova-invio.py` contro lo staging (40 controlli; lascia tre disegni in attesa a ogni giro, e azzera i contatori del rate limit all'inizio).
 
-### Approva / Rifiuta dalla mail (dalla 1.10.0)
+### Approvare o rifiutare dalla mail (dalla 1.10.0; nella forma attuale dalla 1.11.0)
 
-La mail di ogni disegno nuovo ha due tasti, **Approva** e **Rifiuta**, e non ha piu' il link alla bacheca: la riceve il cliente, che in WordPress non entra (Daniele, 26/09/2026). Il destinatario si imposta in **Impostazioni → Generali → Notifiche dei disegni** (vuoto: `admin_email`, che non si tocca perche' porta con se' tutte le altre notifiche di WordPress). Codice in `includes/moderazione-mail.php`.
+La mail di ogni disegno nuovo è di tre righe: «È arrivato un disegno dalla lavagna», il link **«Guardalo per approvarlo o rifiutarlo»**, «Valido fino al …». Niente miniatura, niente tasti, niente link alla bacheca: la riceve il cliente, che in WordPress non entra (Daniele, 26/09/2026). Il destinatario si imposta in **Impostazioni → Generali → Notifiche dei disegni** (vuoto: `admin_email`, che non si tocca perché porta con sé tutte le altre notifiche di WordPress). Codice in `includes/moderazione-mail.php` e `includes/notifica.php`.
 
-I due tasti portano allo stesso link firmato (HMAC su id del disegno e scadenza), che vale **7 giorni** e apre una pagina con il disegno grande e i due pulsanti: quello del tasto premuto viene per primo. **Agisce solo il pulsante, in POST.** Decisioni: un disegno gia' moderato non si ri-modera dalla pagina (un errore lo corregge Daniele dalla bacheca), la pagina non propone il disegno successivo, i disegni rimasti in attesa li smaltisce Daniele dalla bacheca.
+Il link è firmato (HMAC su id del disegno e scadenza), vale **7 giorni** e apre una pagina con il disegno e i due pulsanti **Approva** e **Rifiuta**, di pari peso. **Agisce solo il pulsante, in POST.** Decisioni: un disegno già moderato non si ri-modera dalla pagina (un errore lo corregge Daniele dalla bacheca), la pagina non propone il disegno successivo, i disegni rimasti in attesa li smaltisce Daniele dalla bacheca.
 
 Cose da non disfare per sbaglio:
 
-- **Aprire il link non deve cambiare niente.** Antispam, Safe Links e anteprime aprono da soli i link delle mail: con l'azione sul GET, uno scanner che li segue tutti e due approverebbe e rifiuterebbe senza che nessuno guardi.
+- **Aprire il link non deve cambiare niente.** Antispam, Safe Links e anteprime aprono da soli i link delle mail, dai loro server e prima che il destinatario legga: per il nostro server quella richiesta e il tocco di una persona sono la stessa cosa. Discusso a lungo il 26/09/2026, con le alternative scartate e perché, in cima a `moderazione-mail.php`. La strada rimasta aperta è **misurare in produzione** chi apre i link prima del cliente.
+- **La miniatura non è più nella mail, ed è voluto** (1.11.0): la pagina mostra il disegno, e un disegno inappropriato non finisce nella casella di nessuno.
 - **Chi ha la mail modera**, senza login e senza il controllo per ruolo della bacheca. Con un indirizzo personale va bene; con una casella condivisa, chiunque la legga pubblica sul sito. Cambiare l'opzione `frmm_lavagna_segreto_mail` (o cancellarla: si rigenera) invalida tutti i link in giro, senza toccare i login.
-- **La pagina sta sotto `/wp-admin/admin-post.php`**, dove SiteGround non mette cache. Ma il suo firewall filtra `/wp-admin/` per user agent: `python-requests` prende 403, un browser vero passa (misurato sullo staging il 26/09/2026). Per i clienti di posta e' un bene; per gli script vuol dire usare lo user agent di un browser. **In produzione, dietro la CDN, va riprovato da telefono prima di dare la funzione al cliente.**
+- **La pagina sta sotto `/wp-admin/admin-post.php`**, dove SiteGround non mette cache. Ma il suo firewall filtra `/wp-admin/` per user agent: `python-requests` prende 403, un browser vero passa (misurato sullo staging il 26/09/2026). **In produzione, dietro la CDN, va riprovato da telefono prima di dare la funzione al cliente.**
+- **`drop-shadow` e `random-tilt` sull'immagine sono una COPIA** delle classi del sito (ombra `0 0 20px 5px`, nera al 44%; rotazione casuale fra −4° e +4° con uno script). Nel sito stanno nel codice personalizzato stampato dentro ogni pagina del tema, non in un file collegabile, e questa pagina non passa dal tema. Se il sito le cambia, qui restano com'erano.
+- Aspetto: fondo arancione istituzionale `#FF6000`, SebinoSoft da `app/font/`, testi bianchi (scelta di Daniele: il bianco sull'arancione ha contrasto 3:1, per questo i corpi sono generosi), disegno alto al massimo metà schermo perché i pulsanti si vedano senza scorrere.
 - La pagina non va in cache, non si indicizza e non manda referrer: l'URL contiene la firma.
-- **La pagina è fatta per un tocco** (1.10.1): subito sotto il titolo il pulsante dell'azione scelta nella mail, l'altra come link piccolo, il disegno dopo. Fondo arancione istituzionale `#FF6000`, SebinoSoft da `app/font/`, testi nero lavagna e non bianchi: il bianco sull'arancione ha contrasto 3:1, il `#1F2225` 5,3:1.
-- **I tasti della mail sono celle di tabella** (1.10.1): bordo, fondo e padding sulla `<td>`. Con gli stili sull'`<a>` Gmail teneva i colori e buttava bordo, padding e margine.
 
-Prove: `php plugin/test/validazione.php` (firma e scadenza) e `python .lavoro/prova-mail.py` sullo staging (31 controlli: link aperti senza effetto, link manomessi, approva, rifiuta, disegni gia' moderati; imposta il destinatario dello staging all'indirizzo di prova).
+Prove: `php plugin/test/validazione.php` (firma e scadenza) e `python .lavoro/prova-mail.py` sullo staging (28 controlli: link aperto senza effetto, link manomessi, approva, rifiuta, disegni già moderati, link della 1.10.x ancora validi; imposta il destinatario dello staging all'indirizzo di prova).
 
 ### Il cestino: un disegno eliminato si porta via la sua immagine (dalla 1.9.0)
 
