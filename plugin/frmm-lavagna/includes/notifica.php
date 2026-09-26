@@ -63,6 +63,15 @@ function frmm_lavagna_notifica($post_id, $att_id)
         )) . '</p>'
         . '</div>';
 
+    // Il mittente: il nome del sito e non "WordPress", che e' il default di
+    // wp_mail (Daniele, 26/09/2026). Solo il NOME: l'indirizzo resta quello
+    // di WordPress, wordpress@<dominio>, perche' le mail escono dai server
+    // di SiteGround che l'SPF del dominio autorizza; un indirizzo scelto a
+    // mano rischierebbe lo spam. Il filtro si aggancia solo per QUESTA mail.
+    $nome = function () use ($sito) {
+        return $sito;
+    };
+    add_filter('wp_mail_from_name', $nome);
     $ok = wp_mail(
         $a,
         /* translators: %s: nome del sito */
@@ -70,6 +79,7 @@ function frmm_lavagna_notifica($post_id, $att_id)
         $corpo,
         ['Content-Type: text/html; charset=UTF-8']
     );
+    remove_filter('wp_mail_from_name', $nome);
 
     // Un'email che non parte non deve far fallire l'invio del bambino: il
     // disegno e' gia' in bacheca. Resta traccia nel log.
