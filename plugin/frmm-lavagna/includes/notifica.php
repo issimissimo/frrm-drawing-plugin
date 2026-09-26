@@ -46,9 +46,16 @@ function frmm_lavagna_notifica($post_id, $att_id)
 
     $corpo = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#222">'
         . '<p style="margin:0 0 18px">' . esc_html__('È arrivato un disegno dalla lavagna.', 'frmm-lavagna') . '</p>'
+        // Colore e sottolineatura stanno sullo <span>, non sull'<a>: Gmail
+        // (tema scuro) ignorava il colore dell'<a> e metteva il suo, con la
+        // sottolineatura di un altro colore ancora (screenshot di Daniele,
+        // 26/09/2026). Cosi' testo e riga li disegna lo stesso elemento.
+        // Arancione istituzionale: si legge sul bianco e sul tema scuro; il
+        // nero lavagna sul tema scuro sparirebbe.
         . '<p style="margin:0 0 6px"><a href="' . esc_url(frmm_lavagna_link_mail($post_id, $scadenza)) . '"'
-        . ' style="font-size:17px;font-weight:bold;color:#1F2225;text-decoration:underline">'
-        . esc_html__('Guardalo per approvarlo o rifiutarlo', 'frmm-lavagna') . '</a></p>'
+        . ' style="color:#FF6000;text-decoration:none">'
+        . '<span style="font-size:17px;font-weight:bold;color:#FF6000;text-decoration:underline">'
+        . esc_html__('Guardalo per approvarlo o rifiutarlo', 'frmm-lavagna') . '</span></a></p>'
         . '<p style="margin:0;font-size:13px;color:#777">' . esc_html(sprintf(
             /* translators: %s: data e ora di scadenza del link */
             __('Valido fino al %s', 'frmm-lavagna'),
