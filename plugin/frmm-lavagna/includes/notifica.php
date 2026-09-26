@@ -74,8 +74,10 @@ function frmm_lavagna_notifica($post_id, $att_id)
     add_filter('wp_mail_from_name', $nome);
     $ok = wp_mail(
         $a,
-        /* translators: %s: nome del sito */
-        sprintf(__('[%s] Un nuovo disegno da guardare', 'frmm-lavagna'), $sito),
+        // Niente "[nome del sito]" in testa all'oggetto (Daniele, 26/09/2026):
+        // il nome c'e' gia' nel mittente, e ripeterlo spingeva fuori dalla
+        // colonna dei programmi di posta proprio le parole che contano.
+        __('Un nuovo disegno da guardare', 'frmm-lavagna'),
         $corpo,
         ['Content-Type: text/html; charset=UTF-8']
     );

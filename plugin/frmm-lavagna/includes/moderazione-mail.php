@@ -171,7 +171,7 @@ function frmm_lavagna_pagina_mail()
 
     frmm_lavagna_rispondi_mail(
         200,
-        __('Un disegno dalla lavagna', 'frmm-lavagna'),
+        __('Nuovo disegno', 'frmm-lavagna'),
         frmm_lavagna_corpo_mail($id, $scadenza, $fatto),
         sprintf(
             /* translators: 1: data, 2: ora dell'invio */
@@ -230,8 +230,10 @@ function frmm_lavagna_corpo_mail($id, $scadenza, $fatto)
 }
 
 /**
- * Il segno di spunta o la croce. Il colore e' l'unico posto in cui la pagina
- * dice "approva" o "rifiuta" col colore: il resto lo dicono le parole.
+ * Il segno di spunta o la croce, nel colore del testo. Fino alla 1.11.2 erano
+ * verde e rosso su tasti bianchi; sui tasti del sito, bianchi e trasparenti
+ * sull'arancione, un verde e un rosso scuri non si leggevano: approva e
+ * rifiuta li dicono la forma del segno e le parole.
  */
 function frmm_lavagna_icona_mail($azione)
 {
@@ -245,9 +247,19 @@ function frmm_lavagna_icona_mail($azione)
  * l'URL contiene la firma, e non deve finire nei log di nessuno.
  *
  * L'aspetto e' quello della Fondazione: fondo arancione istituzionale
- * (#FF6000, lo stesso del tutorial della lavagna), SebinoSoft, tasti squadrati
- * col bordo di 2px come sul sito, testi bianchi (Daniele, 26/09/2026; il
- * bianco sull'arancione ha contrasto 3:1, per questo i corpi sono generosi).
+ * (#FF6000, lo stesso del tutorial della lavagna), SebinoSoft, testi bianchi
+ * (Daniele, 26/09/2026; il bianco sull'arancione ha contrasto 3:1, per questo
+ * i corpi sono generosi).
+ *
+ * ⚠️ ANCHE I TASTI SONO UNA COPIA, dal kit di Elementor del sito
+ * (.elementor-kit-15, letto il 26/09/2026 dal CSS combinato di produzione):
+ * fondo bianco al 10% (--e-global-color-3a0fda2), bordo 2px bianco al 33%
+ * (--e-global-color-34c2569), raggio 0, SebinoSoft Medium maiuscolo con
+ * spaziatura 0.3px, padding 1.1em 1.2em, corpo clamp(0.8rem, 0.9vw, 1rem),
+ * 16px sotto i 1025, 14px sotto i 768. Al passaggio: fondo al 33% e bordo
+ * trasparente, in .3s. Scostamento voluto: l'altezza minima di 56px, che sul
+ * sito non c'e', perche' qui il tasto pubblica un disegno e va preso col dito
+ * al primo colpo. Se il sito cambia i suoi tasti, qui restano com'erano.
  *
  * ⚠️ drop-shadow e random-tilt SONO UNA COPIA. Nel sito stanno nel codice
  * personalizzato stampato dentro ogni pagina del tema, non in un file che si
@@ -269,7 +281,7 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
 
     $principale = dirname(__DIR__) . '/frmm-lavagna.php';
     $font = '';
-    foreach ([400 => 'Regular', 700 => 'Bold'] as $peso => $nome) {
+    foreach ([400 => 'Regular', 500 => 'Medium', 700 => 'Bold'] as $peso => $nome) {
         $font .= "@font-face{font-family:'SebinoSoft';font-weight:$peso;font-display:swap;src:url('"
             . esc_url(plugins_url("app/font/SebinoSoft-$nome.woff2", $principale)) . "') format('woff2')}";
     }
@@ -280,7 +292,10 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
         . '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">'
         . '<meta name="theme-color" content="#FF6000">'
         . '<title>' . esc_html($titolo) . '</title><style>' . $font
-        . ':root{--arancio:#FF6000;--ink:#1F2225;--bianco:#FFFFFF;--si:#2f6b4a;--no:#9a3b32}'
+        . ':root{--arancio:#FF6000;--ink:#1F2225;--bianco:#FFFFFF;--tasto:#FFFFFF1A;--tasto-bordo:#FFFFFF54;'
+        . "--tasto-corpo:clamp(0.8rem,0.9vw,1rem);--tasto-riga:16px}"
+        . '@media(max-width:1024px){:root{--tasto-corpo:16px}}'
+        . '@media(max-width:767px){:root{--tasto-corpo:14px;--tasto-riga:18px}}'
         . '*{box-sizing:border-box}'
         // overflow-x: il disegno ruotato e la sua ombra sporgono di qualche
         // pixel oltre il margine; senza, su telefono la pagina scorrerebbe di lato.
@@ -296,12 +311,15 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
         . '.disegno{display:block;max-width:100%;max-height:50vh;width:auto;height:auto;margin:32px auto;background:#1F2225}'
         . '.scelta{display:flex;gap:12px;margin:0}'
         . 'button{-webkit-appearance:none;appearance:none;font:inherit;cursor:pointer;touch-action:manipulation;'
-        . 'flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:.5em;min-height:60px;padding:0 12px;'
-        . 'background:var(--bianco);color:var(--ink);border:2px solid var(--bianco);border-radius:0;'
-        . 'font-size:17px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}'
+        . 'flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:.6em;min-height:56px;padding:1.1em 1.2em;'
+        . 'background:var(--tasto);color:var(--bianco);border:2px solid var(--tasto-bordo);border-radius:0;'
+        . 'font-size:var(--tasto-corpo);font-weight:500;line-height:var(--tasto-riga);letter-spacing:.3px;'
+        . 'text-transform:uppercase;transition:all .3s}'
+        . 'button:hover,button:focus{background:var(--tasto-bordo);border-color:transparent}'
         . 'button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}'
-        . '.icona{width:1.2em;height:1.2em;flex:0 0 auto}.icona.approva{color:var(--si)}.icona.rifiuta{color:var(--no)}'
-        . '.esito{display:flex;gap:.6em;align-items:flex-start;margin:0;padding:18px;background:var(--bianco);color:var(--ink);'
+        . '.icona{width:1.2em;height:1.2em;flex:0 0 auto}'
+        // Senza fondo (Daniele, 26/09/2026): e' una frase, non un riquadro.
+        . '.esito{display:flex;gap:.6em;align-items:flex-start;margin:0;'
         . 'font-size:19px;font-weight:700;line-height:1.3}'
         . '.esito .icona{margin-top:.05em}'
         . '.nota{margin:18px 0 0;font-size:15px}'
