@@ -169,9 +169,21 @@ function frmm_lavagna_pagina_mail()
         }
     }
 
+    // Il titolo dice lo stato, anche subito dopo il tasto (Daniele, 26/09/2026):
+    // stessa lettura di frmm_lavagna_corpo_mail(), fuori da pending e da
+    // publish e' rifiutato (cestino, o eliminato dalla bacheca).
+    $stato = get_post_status($id);
+    if ($stato === 'pending') {
+        $titolo = __('Nuovo disegno', 'frmm-lavagna');
+    } elseif ($stato === 'publish') {
+        $titolo = __('Disegno approvato', 'frmm-lavagna');
+    } else {
+        $titolo = __('Disegno rifiutato', 'frmm-lavagna');
+    }
+
     frmm_lavagna_rispondi_mail(
         200,
-        __('Nuovo disegno', 'frmm-lavagna'),
+        $titolo,
         frmm_lavagna_corpo_mail($id, $scadenza, $fatto),
         sprintf(
             /* translators: 1: data, 2: ora dell'invio */
@@ -185,8 +197,11 @@ function frmm_lavagna_pagina_mail()
 /**
  * Il corpo della pagina, secondo lo stato del disegno.
  *
- * In attesa: il disegno, e sotto i due pulsanti affiancati, di pari peso —
- * il link della mail non dice quale dei due, e la pagina non deve suggerirlo.
+ * In attesa: il disegno, e sotto i due pulsanti affiancati. Rifiuta e'
+ * senza bordo (Daniele, 26/09/2026), quindi pesa meno di Approva: fino alla
+ * 1.11.3 erano di pari peso, perche' il link della mail non dice quale dei
+ * due e la pagina non doveva suggerirlo. Obiezione registrata: l'errore
+ * piu' costoso e' pubblicare per distrazione, non scartare.
  * Il disegno ha le classi del sito drop-shadow e random-tilt (Daniele,
  * 26/09/2026), definite in fondo a frmm_lavagna_rispondi_mail().
  */
@@ -316,6 +331,10 @@ function frmm_lavagna_rispondi_mail($status, $titolo, $corpo, $sotto = '')
         . 'font-size:var(--tasto-corpo);font-weight:500;line-height:var(--tasto-riga);letter-spacing:.3px;'
         . 'text-transform:uppercase;transition:all .3s}'
         . 'button:hover,button:focus{background:var(--tasto-bordo);border-color:transparent}'
+        // Rifiuta senza bordo: trasparente e non tolto, cosi' i due tasti
+        // restano alti uguale. E' anche una variante del sito (fondo al 10%,
+        // nessun bordo).
+        . 'button.rifiuta{border-color:transparent}'
         . 'button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}'
         . '.icona{width:1.2em;height:1.2em;flex:0 0 auto}'
         // Senza fondo (Daniele, 26/09/2026): e' una frase, non un riquadro.

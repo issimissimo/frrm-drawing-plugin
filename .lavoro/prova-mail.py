@@ -71,6 +71,12 @@ def invia():
     return r.json()["id"]
 
 
+def titolo(risposta):
+    """L'<h1> della pagina: dal 1.11.4 dice lo stato del disegno."""
+    m = re.search(r"<h1>(.*?)</h1>", risposta.text, re.S)
+    return html.unescape(m.group(1)) if m else None
+
+
 def ritocca(url, **campi):
     """Lo stesso link con qualche parametro cambiato."""
     u = urlparse(url)
@@ -101,8 +107,9 @@ def main():
     esito("il link apre la pagina (200)", p.status_code == 200, p.status_code)
     esito("  ... col disegno, con le classi del sito drop-shadow e random-tilt",
           re.search(r'<img class="[^"]*drop-shadow[^"]*random-tilt', p.text) is not None)
-    esito("  ... e i due pulsanti, Approva e Rifiuta, di pari peso",
+    esito("  ... e i due pulsanti, Approva e Rifiuta",
           'value="approva" class="approva"' in p.text and 'value="rifiuta" class="rifiuta"' in p.text)
+    esito("  ... col titolo 'Nuovo disegno'", titolo(p) == "Nuovo disegno", titolo(p))
     esito("  ... non indicizzabile e senza referrer",
           "noindex" in p.headers.get("X-Robots-Tag", "") and p.headers.get("Referrer-Policy") == "no-referrer")
     anon.get(la, timeout=60)
@@ -127,12 +134,14 @@ def main():
     print("\n  -- 3. approvare e rifiutare, come il cliente\n")
     p = anon.post(la, data={"azione": "approva"}, timeout=60)
     esito("A: conferma Approva -> 'approvato'", p.status_code == 200 and "è approvato" in p.text)
+    esito("  ... col titolo 'Disegno approvato', subito", titolo(p) == "Disegno approvato", titolo(p))
     x = info(adm, a)
     esito("A e' pubblicato", x["stato"] == "publish", x["stato"])
     esito("A registra 'via email'", x["moderato_via"] == "email", x["moderato_via"])
     esito("A ha la data di approvazione (la galleria lo ordina con quella)", bool(x["approvato_il"]))
     p = anon.post(lb, data={"azione": "rifiuta"}, timeout=60)
     esito("B: conferma Rifiuta -> 'rifiutato'", p.status_code == 200 and "è rifiutato" in p.text)
+    esito("  ... col titolo 'Disegno rifiutato', subito", titolo(p) == "Disegno rifiutato", titolo(p))
     y = info(adm, b)
     esito("B e' nel cestino", y["stato"] == "trash", y["stato"])
     esito("B registra 'via email'", y["moderato_via"] == "email", y["moderato_via"])
@@ -146,6 +155,8 @@ def main():
     esito("  ... e resta nel cestino", info(adm, b)["stato"] == "trash")
     p = anon.get(la, timeout=60)
     esito("riaprire il link di A: nessun pulsante", 'name="azione"' not in p.text)
+    esito("  ... e il titolo 'Disegno approvato'", titolo(p) == "Disegno approvato", titolo(p))
+    esito("riaprire il link di B: titolo 'Disegno rifiutato'", titolo(anon.get(lb, timeout=60)) == "Disegno rifiutato")
     p = adm.get(lb, timeout=60)
     esito("aperto da chi e' collegato a WordPress, il link funziona uguale", p.status_code == 200 and "già stato rifiutato" in p.text,
           p.status_code)
