@@ -208,6 +208,20 @@ for ($i = 0; $i < 4; $i++) {
 }
 prova('limite 3: ne passano 3', 3, $passati);
 
+// --- Approva/Rifiuta dalla mail: la firma del link --------------------------
+
+$f = frmm_lavagna_firma_mail(11, 5000, 'segreto');
+prova('firma: 64 caratteri esadecimali', 1, preg_match('/^[0-9a-f]{64}$/', $f));
+prova('link valido', 'ok', frmm_lavagna_verifica_mail(11, 5000, $f, 'segreto', 4999));
+prova('link scaduto allo scoccare', 'scaduto', frmm_lavagna_verifica_mail(11, 5000, $f, 'segreto', 5000));
+prova('firma di un altro disegno', 'firma', frmm_lavagna_verifica_mail(12, 5000, $f, 'segreto', 100));
+prova('scadenza allungata a mano: manomesso, non scaduto', 'firma', frmm_lavagna_verifica_mail(11, 9999, $f, 'segreto', 6000));
+prova('segreto cambiato: tutti i link vecchi muoiono', 'firma', frmm_lavagna_verifica_mail(11, 5000, $f, 'altro', 100));
+prova('firma troncata', 'firma', frmm_lavagna_verifica_mail(11, 5000, substr($f, 0, 63), 'segreto', 100));
+prova('firma in maiuscolo', 'firma', frmm_lavagna_verifica_mail(11, 5000, strtoupper($f), 'segreto', 100));
+prova('firma mancante', 'firma', frmm_lavagna_verifica_mail(11, 5000, null, 'segreto', 100));
+prova('firma come array', 'firma', frmm_lavagna_verifica_mail(11, 5000, [$f], 'segreto', 100));
+
 array_map('unlink', glob("$tmp/*"));
 @rmdir($tmp);
 

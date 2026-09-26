@@ -157,6 +157,21 @@ Cose da non disfare per sbaglio:
 
 Prove: `python .lavoro/prova-invio.py` contro lo staging (40 controlli; lascia tre disegni in attesa a ogni giro, e azzera i contatori del rate limit all'inizio).
 
+### Approva / Rifiuta dalla mail (dalla 1.10.0)
+
+La mail di ogni disegno nuovo ha due tasti, **Approva** e **Rifiuta**, e non ha piu' il link alla bacheca: la riceve il cliente, che in WordPress non entra (Daniele, 26/09/2026). Il destinatario si imposta in **Impostazioni → Generali → Notifiche dei disegni** (vuoto: `admin_email`, che non si tocca perche' porta con se' tutte le altre notifiche di WordPress). Codice in `includes/moderazione-mail.php`.
+
+I due tasti portano allo stesso link firmato (HMAC su id del disegno e scadenza), che vale **7 giorni** e apre una pagina con il disegno grande e i due pulsanti: quello del tasto premuto viene per primo. **Agisce solo il pulsante, in POST.** Decisioni: un disegno gia' moderato non si ri-modera dalla pagina (un errore lo corregge Daniele dalla bacheca), la pagina non propone il disegno successivo, i disegni rimasti in attesa li smaltisce Daniele dalla bacheca.
+
+Cose da non disfare per sbaglio:
+
+- **Aprire il link non deve cambiare niente.** Antispam, Safe Links e anteprime aprono da soli i link delle mail: con l'azione sul GET, uno scanner che li segue tutti e due approverebbe e rifiuterebbe senza che nessuno guardi.
+- **Chi ha la mail modera**, senza login e senza il controllo per ruolo della bacheca. Con un indirizzo personale va bene; con una casella condivisa, chiunque la legga pubblica sul sito. Cambiare l'opzione `frmm_lavagna_segreto_mail` (o cancellarla: si rigenera) invalida tutti i link in giro, senza toccare i login.
+- **La pagina sta sotto `/wp-admin/admin-post.php`**, dove SiteGround non mette cache. Ma il suo firewall filtra `/wp-admin/` per user agent: `python-requests` prende 403, un browser vero passa (misurato sullo staging il 26/09/2026). Per i clienti di posta e' un bene; per gli script vuol dire usare lo user agent di un browser. **In produzione, dietro la CDN, va riprovato da telefono prima di dare la funzione al cliente.**
+- La pagina non va in cache, non si indicizza e non manda referrer: l'URL contiene la firma.
+
+Prove: `php plugin/test/validazione.php` (firma e scadenza) e `python .lavoro/prova-mail.py` sullo staging (31 controlli: link aperti senza effetto, link manomessi, approva, rifiuta, disegni gia' moderati; imposta il destinatario dello staging all'indirizzo di prova).
+
 ### Il cestino: un disegno eliminato si porta via la sua immagine (dalla 1.9.0)
 
 Un disegno rifiutato va nel cestino e ci resta `EMPTY_TRASH_DAYS` giorni (30, misurato su staging e produzione), poi WordPress lo elimina da solo. **Eliminare un post non cancella i suoi allegati: li stacca.** Fino alla 1.8.0 l'immagine di un disegno rifiutato sopravviveva senza disegno, usciva dal filtro della Libreria (che guarda il disegno a cui e' attaccata), ricompariva nei selettori di Elementor, e `/wp-json/wp/v2/media/<id>` la mostrava **a chiunque**, originale e miniature. Riprodotto sullo staging il 26/09/2026, prima che capitasse davvero: nessun disegno era ancora rimasto 30 giorni nel cestino.

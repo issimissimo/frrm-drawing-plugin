@@ -291,6 +291,42 @@ function frmm_lavagna_contatore_piu_uno($stato, $ora, $durata)
     return [$c, max(1, $c['t0'] + $durata - $ora)];
 }
 
+/* --- Approva/Rifiuta dalla mail: la firma del link ---------------------------- */
+
+/**
+ * Il link della mail vale per UN disegno e fino a una scadenza (7 giorni,
+ * Daniele 26/09/2026). La firma copre tutti e due: cambiare l'id o allungare
+ * la scadenza la invalida. Non copre l'azione (approva / rifiuta), che nella
+ * pagina e' solo il tasto messo in evidenza: chi ha il link puo' l'una e
+ * l'altra, e la sceglie confermando.
+ *
+ * Il prefisso nel messaggio separa questa firma da qualunque altro HMAC fatto
+ * un giorno con lo stesso segreto.
+ */
+function frmm_lavagna_firma_mail($id, $scadenza, $segreto)
+{
+    return hash_hmac('sha256', 'frmm-mail|' . (int) $id . '|' . (int) $scadenza, (string) $segreto);
+}
+
+/**
+ * 'ok', oppure perche' no: 'firma' (manomesso, o di un altro disegno) o
+ * 'scaduto'. La firma si guarda PRIMA della scadenza: una scadenza allungata a
+ * mano deve risultare manomessa, non scaduta. hash_equals perche' un confronto
+ * normale si ferma al primo carattere diverso, e il tempo che ci mette dice
+ * quanti ne hai indovinati.
+ */
+function frmm_lavagna_verifica_mail($id, $scadenza, $firma, $segreto, $ora)
+{
+    if (!is_string($firma) || !preg_match('/^[0-9a-f]{64}$/', $firma)
+        || !hash_equals(frmm_lavagna_firma_mail($id, $scadenza, $segreto), $firma)) {
+        return 'firma';
+    }
+    if ((int) $scadenza <= $ora) {
+        return 'scaduto';
+    }
+    return 'ok';
+}
+
 /** Un array PHP con chiavi 0..n-1, cioe' un array JSON e non un oggetto. */
 function frmm_lavagna_e_lista($a)
 {

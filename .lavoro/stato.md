@@ -1,5 +1,5 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 26/09/2026 (passo 5 chiuso)
+Ultimo aggiornamento: 26/09/2026 (passo 5 chiuso; Approva/Rifiuta dalla mail sullo staging, manca la prova da telefono)
 Versione corrente: `frmm-lavagna` **1.9.0** (retention, 26/09/2026; rate limit dalla 1.8.0) e `custom-marquee` **1.2.1**, sullo staging **e in produzione**. Prototipo online: `temp/frmm-drawing-plugin-18/`. **Stato approvato dal cliente salvato il 25/09/2026**: tag `approvato-cliente-25092026` su `0d6df7c` (pushato), zip installati in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
@@ -53,26 +53,29 @@ Rischi aperti:
 
 Costo stimato: 4 passi, una versione, poco codice (l'aggancio sono una decina di righe), mezza sessione.
 
-### Sotto-piano — Approva/Rifiuta dalla mail (PROPOSTO 26/09/2026; viene DOPO il passo 5, decisione di Daniele)
-Anticipato sui passi 5 e 6 per decisione di Daniele. **Solo staging.**
+### Sotto-piano — Approva/Rifiuta dalla mail (1.10.0 SULLO STAGING il 26/09/2026; aperta solo la prova da telefono)
+Anticipato sul passo 6 per decisione di Daniele. **Solo staging.** Decisioni del 26/09/2026: **il link scade dopo 7 giorni**; **la pagina NON propone il disegno successivo**.
+
+**Il destinatario sarà il cliente, che non ha accesso a WordPress** (Daniele, 26/09/2026). Poi, nello stesso giorno, Daniele ha semplificato: **niente rimedio dalla pagina** (un errore lo corregge lui dalla bacheca), **niente link alla bacheca nella mail**, i disegni in attesa li smaltisce lui. **L'indirizzo del cliente è personale.** Indirizzo di prova sullo staging: `danielesuppo@gmail.com`, impostato in Impostazioni → Generali → Notifiche dei disegni (opzione nuova: `admin_email` non si tocca). La rete di sicurezza per link scaduti o mail perse è Daniele dalla bacheca. **Da decidere prima della produzione**: se l'indirizzo del cliente è personale o condiviso (con una casella condivisa, chiunque la legga pubblica sul sito), e un'impostazione del plugin per il destinatario (oggi è `admin_email`, che porta con sé tutte le notifiche di WordPress). Un account WordPress limitato ai soli disegni è possibile ma non ora: oggi i disegni usano i permessi degli articoli.
 
 Obiettivo: moderare un disegno dal telefono, partendo dalla mail di notifica, senza fare il login a WordPress.
 
 Criterio di finito (staging):
 - la mail vera ha due tasti, Approva e Rifiuta; dal telefono il tasto apre una pagina col disegno a grandezza piena e un pulsante di conferma; confermato, il disegno è approvato (compare su `/playground/`) o nel cestino;
 - **aprire i link non cambia niente**: solo la conferma (POST) agisce. Lo script apre tutti i link come farebbe uno scanner di posta e verifica che lo stato non cambi;
-- un link manomesso, scaduto o di un altro disegno non fa niente e lo dice; un link di un disegno già moderato dice com'è andata e non fa niente;
+- un link manomesso, scaduto o di un altro disegno non fa niente e lo dice; un link di un disegno già moderato dice com'è andata e offre l'azione contraria (togli un approvato, approva un rifiutato ancora nel cestino);
+- il link alla bacheca nella mail c'è solo se il destinatario è un utente che può moderare;
 - l'azione resta registrata come «via mail» nel disegno;
 - test PHP delle funzioni pure (firma, scadenza) verdi, `prova-invio.py` e `prova-bacheca.py` ancora verdi.
 
 Fuori perimetro: produzione · la coda (dopo un disegno, il successivo) · più destinatari · la mail riassuntiva.
 
 Passi:
-1. [ ] **Funzioni pure** in `validazione.php`: firma HMAC di (id del disegno, scadenza) e verifica, con i loro test. Il segreto è **un'opzione a sé** generata a caso, non il salt del sito: cambiarla invalida tutti i link in giro senza toccare i login di nessuno.
-2. [ ] **La pagina** (`admin-post.php`, azione aperta anche agli anonimi): in GET mostra il disegno, il suo stato e i due pulsanti, con quello del tasto premuto in evidenza; in POST esegue (`wp_publish_post` / `wp_trash_post`, le stesse di oggi, quindi la data di approvazione e la cache della galleria seguono da sole) e scrive `_frmm_moderato_via = email`. Un solo link per disegno, per tutte e due le azioni: chi ha premuto Approva può ancora cambiare idea sulla pagina.
-3. [ ] **La mail**: i due tasti sotto la miniatura, il link alla bacheca resta. Versione 1.9.0, solo staging.
-4. [ ] **Prova**: `prova-mail.py` (i link li dà una rotta per il solo amministratore, perché lo script non legge la posta) più la prova vera di Daniele dal telefono, dalla mail vera.
-5. [ ] README, `stato.md`, commit e push.
+1. [x] **Fatto**: 10 test nuovi, 81 in tutto. — **Funzioni pure** in `validazione.php`: firma HMAC di (id del disegno, scadenza) e verifica, con i loro test. Il segreto è **un'opzione a sé** generata a caso, non il salt del sito: cambiarla invalida tutti i link in giro senza toccare i login di nessuno.
+2. [x] **Fatto** (`includes/moderazione-mail.php`; senza rimedio, per la semplificazione di Daniele). — **La pagina** (`admin-post.php`, azione aperta anche agli anonimi): in GET mostra il disegno, il suo stato e i due pulsanti, con quello del tasto premuto in evidenza; in POST esegue (`wp_publish_post` / `wp_trash_post`, e per un rifiutato da riapprovare `wp_untrash_post` e poi pubblica, le stesse di oggi, quindi la data di approvazione e la cache della galleria seguono da sole) e scrive `_frmm_moderato_via = email`. Un solo link per disegno, per tutte e due le azioni: chi ha premuto Approva può ancora cambiare idea sulla pagina.
+3. [x] **Fatto**: 1.10.0 sullo staging, destinatario come impostazione a sé. — **La mail**: i due tasti sotto la miniatura, il link alla bacheca resta. Versione 1.9.0, solo staging.
+4. [~] **`prova-mail.py` 31/31**; non regressione 81 PHP, 9 galleria, 68 JS, `prova-invio` 40, `prova-bacheca` 14. **Trovato**: il firewall di SiteGround dà 403 a `/wp-admin/` se lo user agent è `python-requests`; un browser passa (lo script ora si presenta come Safari su iPhone). **Aperta: la prova di Daniele dal telefono**, con le mail vere dei disegni 11734 e 11736 (in attesa, link validi fino al 03/10/2026). — **Prova**: `prova-mail.py` (i link li dà una rotta per il solo amministratore, perché lo script non legge la posta) più la prova vera di Daniele dal telefono, dalla mail vera.
+5. [x] README, `stato.md`, commit e push.
 
 Rischi aperti:
 - **Chi ha la mail modera**: inoltrarla vuol dire dare il potere di pubblicare. Oggi il destinatario è Daniele; il giorno che diventa la Fondazione o una casella condivisa, va ripensato.
@@ -194,6 +197,6 @@ Rischi: **l'endpoint in produzione è aperto senza testi per i genitori** finch�
 - **PHP non è installato su questa macchina.** I test PHP girano con la copia rimasta nella scratchpad di una sessione precedente (`%LOCALAPPDATA%\Temp\claude\e--Claude-Workspace-frrm-drawing-plugin3a19454-...\scratchpad\php\php.exe`, PHP 8.3), cartella temporanea che può sparire. Per GD serve anche `-d extension_dir=<quella cartella>\ext`, altrimenti cerca in `C:\php\ext` e salta i test sui JPEG.
 
 ## Prossimo passo
-Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). **Passo 4 chiuso il 25/09/2026, passo 5 il 26/09/2026** (1.9.0 su staging e produzione). **Prossimo: Approva/Rifiuta dalla mail, solo staging** (sotto-piano sopra, due domande aperte: scadenza del link, proposta 7 giorni; coda del disegno successivo, proposta no). Il 6 è sospeso. Da fare quando Daniele vuole: un SALVA E INVIA dal telefono sullo staging, per vedere il flusso vero con la 1.8.0 (l'app non è cambiata, il server sì). Poi, nell'ordine del piano: passo 5 (retention) e 6 (testi per i genitori, che devono dire anche dell'impronta dell'IP tenuta 24 ore).
+Passo 8 chiuso e in produzione. **Da verificare in produzione quando ci sarà la pagina della galleria**: approvato un disegno, da anonimo e senza query string deve comparire al primo ricaricamento (è il purge di Speed Optimizer, non provabile sullo staging). Sullo staging restano i disegni di prova 11649, 11651, 11653 pubblicati su `/playground/` (`python .lavoro/prova-galleria.py pulisci` li toglie). **Passo 4 chiuso il 25/09/2026, passo 5 il 26/09/2026** (1.9.0 su staging e produzione). **Approva/Rifiuta dalla mail: 1.10.0 sullo staging, manca solo la prova di Daniele dal telefono** (mail dei disegni 11734 e 11736). **Prima della produzione**: impostare il destinatario del cliente, e riprovare il link da telefono in produzione, perché lì c'è la CDN e il firewall di SiteGround filtra `/wp-admin/` per user agent. Il 6 è sospeso. Da fare quando Daniele vuole: un SALVA E INVIA dal telefono sullo staging, per vedere il flusso vero con la 1.8.0 (l'app non è cambiata, il server sì). Poi, nell'ordine del piano: passo 5 (retention) e 6 (testi per i genitori, che devono dire anche dell'impronta dell'IP tenuta 24 ore).
 
 **Proposta in attesa, dopo il passo 4 — Approva/Rifiuta dalla mail** (discussa il 25/09/2026, non decisa). Fattibile, ma non con i link della bacheca: il loro nonce nascerebbe nella richiesta anonima del bambino (utente 0) e richiede il login. Serve un link firmato (HMAC, per disegno e per azione, con scadenza) verso un endpoint pubblico. **Il link NON deve eseguire l'azione con un GET**: gli scanner di posta (Safe Links, gateway antispam, anteprime) aprono i link da soli e approverebbero e rifiuterebbero senza che nessuno guardi — apre una pagina col disegno a grandezza piena e un pulsante che fa POST. Da dichiarare: chi ha la mail modera (inoltro, casella condivisa), salta il controllo per ruolo di PublishPress, l'azione va registrata come «via email» perché non c'è un utente. Variante: dopo l'azione la pagina propone il disegno successivo in attesa (ma allora un link vale per tutta la coda).

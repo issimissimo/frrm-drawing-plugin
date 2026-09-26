@@ -7,11 +7,15 @@
  * dice "mostra immagini", e l'email si riduce a un riquadro vuoto — che per
  * chi deve decidere se aprire la bacheca e' come non averla.
  *
- * A chi: admin_email del sito. Sullo staging e' l'indirizzo di Daniele, in
- * produzione sara' quello della Fondazione. Per mandarla altrove senza
- * toccare admin_email:
+ * A chi: dalla 1.10.0 l'impostazione "Notifiche dei disegni" in Impostazioni
+ * > Generali (moderazione-mail.php); vuota, admin_email. Il filtro resta:
  *
  *   add_filter('frmm_lavagna_destinatari', fn () => 'moderazione@...');
+ *
+ * Dalla 1.10.0 la mail ha i tasti Approva e Rifiuta e NON ha piu' il link
+ * alla bacheca: la riceve il cliente, che in WordPress non entra (Daniele,
+ * 26/09/2026). Per lo stesso motivo non dice piu' quanti disegni ci sono "in
+ * bacheca".
  *
  * Una email per disegno. Il tetto lo mette il rate limit dell'invio (passo 4
  * del piano): senza, 500 invii sarebbero 500 email.
@@ -25,24 +29,34 @@ add_action('frmm_lavagna_nuovo_disegno', 'frmm_lavagna_notifica', 10, 2);
 
 function frmm_lavagna_notifica($post_id, $att_id)
 {
-    $a = apply_filters('frmm_lavagna_destinatari', get_option('admin_email'), $post_id);
+    $a = apply_filters('frmm_lavagna_destinatari', frmm_lavagna_destinatario(), $post_id);
     if (!$a) {
         return false;
     }
 
     $sito = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
-    $link = admin_url('edit.php?post_type=' . FRMM_LAVAGNA_CPT . '&post_status=pending');
-    $attesa = (int) wp_count_posts(FRMM_LAVAGNA_CPT)->pending;
     $mini = frmm_lavagna_file_miniatura($att_id);
+    $scadenza = time() + FRMM_LAVAGNA_MAIL_DURATA;
+
+    // Tasti fatti di <a> con gli stili in linea: e' quel che i programmi di
+    // posta mostrano tutti. Aprono una pagina, non agiscono: il perche' e' in
+    // cima a moderazione-mail.php.
+    $tasto = '<a href="%s" style="display:inline-block;padding:12px 24px;margin:0 8px 8px 0;border-radius:8px;'
+        . 'font-weight:bold;text-decoration:none;border:2px solid %s;background:%s;color:%s">%s</a>';
+    $tasti = sprintf($tasto, esc_url(frmm_lavagna_link_mail($post_id, 'approva', $scadenza)),
+            '#2f6b4a', '#2f6b4a', '#ffffff', esc_html__('Approva', 'frmm-lavagna'))
+        . sprintf($tasto, esc_url(frmm_lavagna_link_mail($post_id, 'rifiuta', $scadenza)),
+            '#9a3b32', '#ffffff', '#9a3b32', esc_html__('Rifiuta', 'frmm-lavagna'));
 
     $corpo = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#222">'
         . '<p>' . esc_html__('È arrivato un disegno dalla lavagna.', 'frmm-lavagna') . '</p>'
         . ($mini ? '<p><img src="cid:frmm-disegno" alt="" width="300" style="display:block;max-width:100%;height:auto;background:#1F2225"></p>' : '')
-        . '<p>' . esc_html(sprintf(
-            _n('In bacheca c\'è %d disegno da guardare.', 'In bacheca ci sono %d disegni da guardare.', $attesa, 'frmm-lavagna'),
-            $attesa
+        . '<p style="margin:20px 0 4px">' . $tasti . '</p>'
+        . '<p style="font-size:13px;color:#666">' . esc_html(sprintf(
+            /* translators: %s: data e ora di scadenza dei tasti */
+            __('I tasti aprono una pagina dove il disegno si vede grande e si conferma la scelta. Valgono fino al %s.', 'frmm-lavagna'),
+            wp_date('d/m/Y H:i', $scadenza)
         )) . '</p>'
-        . '<p><a href="' . esc_url($link) . '">' . esc_html__('Apri i disegni in attesa', 'frmm-lavagna') . '</a></p>'
         . '</div>';
 
     // L'immagine incorporata passa da PHPMailer, a cui wp_mail non da'
