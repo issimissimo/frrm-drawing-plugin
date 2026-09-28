@@ -24,8 +24,9 @@
  *
  *   add_filter('frmm_lavagna_destinatari', fn () => 'moderazione@...');
  *
- * Una email per disegno. Il tetto lo mette il rate limit dell'invio
- * (limiti.php): 3 per dispositivo, 20 per IP in 24 ore.
+ * Una email per disegno, SENZA TETTO dalla 1.12.0: il rate limit che lo
+ * metteva e' stato tolto su richiesta del cliente (diagnostica.php). Un ciclo
+ * di invii diventa un ciclo di mail.
  */
 
 if (!defined('ABSPATH')) {

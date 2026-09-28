@@ -2,13 +2,17 @@
 """
 Quale IP vede PHP per chi manda un disegno? (passo 4 del piano, anti-abuso)
 
+Il rate limit per cui e' nato e' stato tolto nella 1.12.0 (28/09/2026), su
+richiesta del cliente. Lo script resta: e' la prima cosa da rilanciare se un
+giorno si rimette un limite per IP, o se cambia l'hosting o la CDN.
+
     python .lavoro/diagnostica-ip.py                # staging
     python .lavoro/diagnostica-ip.py --produzione   # il sito ufficiale
 
 Il rate limit conta per IP, e la produzione sta dietro la CDN di SiteGround
 mentre lo staging no. Se PHP, in produzione, vedesse l'indirizzo della CDN,
 il limite varrebbe per tutti insieme. Questo script chiede al plugin (rotta
-GET /limiti, solo amministratore, dalla 1.7.1) cosa vede, e lo confronta con
+GET /diagnostica, solo amministratore, dalla 1.12.0) cosa vede, e lo confronta con
 l'IP pubblico di questo PC.
 
 Solo lettura: non scrive niente sul sito, non manda disegni. Per questo si
@@ -33,9 +37,9 @@ if "--produzione" in sys.argv:
 mio = requests.get("https://api.ipify.org", timeout=20).text.strip()
 
 s = staging.collegata()
-r = s.get(staging.base() + "wp-json/frmm-lavagna/v1/limiti", timeout=30)
+r = s.get(staging.base() + "wp-json/frmm-lavagna/v1/diagnostica", timeout=30)
 if r.status_code != 200:
-    sys.exit(f"La rotta risponde {r.status_code}: il plugin e' almeno alla 1.7.1? {r.text[:200]}")
+    sys.exit(f"La rotta risponde {r.status_code}: il plugin e' almeno alla 1.12.0? {r.text[:200]}")
 d = r.json()
 
 print(f"sito          {'PRODUZIONE' if '--produzione' in sys.argv else 'staging'}, plugin {d['versione']}")
@@ -59,7 +63,7 @@ print("OK: PHP vede l'IP vero di chi chiede.")
 # 203.0.113.7 e' della documentazione (RFC 5737): non e' di nessuno.
 FALSO = "203.0.113.7"
 r = s.get(
-    staging.base() + "wp-json/frmm-lavagna/v1/limiti",
+    staging.base() + "wp-json/frmm-lavagna/v1/diagnostica",
     headers={"X-Forwarded-For": FALSO, "X-Real-IP": FALSO, "Forwarded": f"for={FALSO}"},
     timeout=30,
 )

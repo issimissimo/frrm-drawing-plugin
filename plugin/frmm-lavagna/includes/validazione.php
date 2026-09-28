@@ -41,8 +41,9 @@ const FRMM_LAVAGNA_MAX_JPEG = 5 * 1024 * 1024;
 
 /**
  * Il client_id e' un UUID v4 (D5), generato dall'app al primo accesso.
- * Minuscolo: lo normalizziamo noi, cosi' il rate limit per client_id non si
- * aggira cambiando le maiuscole.
+ * Minuscolo: lo normalizziamo noi, cosi' lo stesso id scritto in due modi
+ * resta uno (lo usava il rate limit, tolto nella 1.12.0; lo usa la
+ * deduplica di invio_id, che passa di qui).
  *
  * Eccezione alla regola del file: restituisce null e non un codice, perche'
  * un codice d'errore e' una stringa e lo sarebbe anche l'UUID.
@@ -215,80 +216,6 @@ function frmm_lavagna_valida_jpeg($percorso, $dimensione, $board_h)
     }
 
     return [$info[0], $info[1]];
-}
-
-/* --- Il rate limit (passo 4): la parte che non ha bisogno di WordPress ------ */
-
-/**
- * L'IP su cui si conta, normalizzato, oppure null se non e' un IP.
- *
- * IPv6 si conta per /64: a una casa o a un telefono il fornitore da' di norma
- * un /64 intero, e i sistemi operativi cambiano da soli gli ultimi 64 bit per
- * privacy. Contando l'indirizzo esatto, chi e' in IPv6 ripartirebbe da zero
- * senza nemmeno volerlo. Oggi il sito non ha record AAAA (25/09/2026), quindi
- * arriva solo IPv4: e' qui per il giorno in cui cambia.
- *
- * Un IPv4 scritto come IPv6 (::ffff:1.2.3.4) torna IPv4: e' lo stesso
- * indirizzo e deve avere lo stesso contatore.
- */
-function frmm_lavagna_ip_da_contare($ip)
-{
-    if (!is_string($ip) || !filter_var($ip, FILTER_VALIDATE_IP)) {
-        return null;
-    }
-    $bin = inet_pton($ip);
-    if (strlen($bin) === 4) {
-        return inet_ntop($bin);
-    }
-    if (substr($bin, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
-        return inet_ntop(substr($bin, 12));
-    }
-    return inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
-}
-
-/**
- * L'impronta con cui un valore diventa il nome di un contatore.
- *
- * Per l'IP e' la ragione per cui esiste: nel database non resta l'indirizzo
- * ma un HMAC, che senza il segreto del sito non si inverte — nemmeno provando
- * tutti i quattro miliardi di IPv4, cosa che con un hash semplice si fa in
- * un pomeriggio. Per il client_id e' solo per avere chiavi tutte uguali.
- */
-function frmm_lavagna_impronta($valore, $segreto)
-{
-    return substr(hash_hmac('sha256', (string) $valore, (string) $segreto), 0, 32);
-}
-
-/**
- * Un contatore, riportato al presente: ['n' => invii, 't0' => primo invio].
- *
- * La finestra comincia al PRIMO invio e dura $durata secondi; scaduta, si
- * riparte da zero. Tutto quel che non ha quella forma — il false di un
- * transient che non c'e', un valore rovinato — vale come contatore vuoto.
- */
-function frmm_lavagna_contatore($stato, $ora, $durata)
-{
-    if (!is_array($stato) || !isset($stato['n'], $stato['t0'])
-        || !is_numeric($stato['n']) || !is_numeric($stato['t0'])
-        || (int) $stato['t0'] + $durata <= $ora) {
-        return ['n' => 0, 't0' => $ora];
-    }
-    return ['n' => (int) $stato['n'], 't0' => (int) $stato['t0']];
-}
-
-/**
- * Il contatore dopo un invio, e per quanti secondi tenerlo.
- *
- * La durata e' quel che resta della finestra, non $durata intera. A
- * azzerare il contatore basta t0; ma rinnovando ogni volta le 24 ore
- * l'impronta dell'IP resterebbe nel database finche' si continua a
- * mandare, e il testo per i genitori (passo 6) dira' 24 ore.
- */
-function frmm_lavagna_contatore_piu_uno($stato, $ora, $durata)
-{
-    $c = frmm_lavagna_contatore($stato, $ora, $durata);
-    $c['n']++;
-    return [$c, max(1, $c['t0'] + $durata - $ora)];
 }
 
 /* --- Approva/Rifiuta dalla mail: la firma del link ---------------------------- */

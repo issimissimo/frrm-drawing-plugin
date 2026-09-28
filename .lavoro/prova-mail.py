@@ -87,7 +87,6 @@ def ritocca(url, **campi):
 
 def main():
     adm = staging.collegata()
-    staging.azzera_limiti(adm)
     r = adm.post(BASE + "wp-json/wp/v2/settings", json={"frmm_lavagna_destinatario": DESTINATARIO}, timeout=30)
     esito(f"destinatario delle notifiche impostato a {DESTINATARIO}",
           r.status_code == 200 and r.json().get("frmm_lavagna_destinatario") == DESTINATARIO, r.text[:120])

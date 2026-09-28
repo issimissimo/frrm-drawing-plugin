@@ -108,8 +108,7 @@ def guarda(adm, att, urls, titolo):
 
 def giro():
     adm = staging.collegata()
-    staging.azzera_limiti(adm)
-    print(f"\n  staging, plugin {adm.get(BASE + 'wp-json/frmm-lavagna/v1/limiti', timeout=30).json()['versione']}")
+    print(f"\n  staging, plugin {adm.get(BASE + 'wp-json/frmm-lavagna/v1/diagnostica', timeout=30).json()['versione']}")
 
     r = staging.anonima().post(BASE + "wp-json/frmm-lavagna/v1/invio",
                                data={"client_id": str(uuid.uuid4()), "disegno": json.dumps(pi.disegno())},

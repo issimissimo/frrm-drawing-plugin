@@ -135,7 +135,7 @@ Cambia la query string e **non il percorso**, e anche questo e' voluto: il tutor
 | `invio_id` | facoltativo, UUID v4 dell'invio, **uguale a ogni tentativo**: il secondo arrivo risponde `200 {doppio: true}` e non scrive niente (dalla 1.5.0) |
 | `tentativo` | facoltativo, 1, 2, 3...: si salva in `_frmm_tentativo`, e serve a misurare quanto spesso la ripresa dell'app e' servita |
 
-Risponde `201 {ok, id}` se il disegno e' in attesa, altrimenti `400` / `413` / `415` con un `code` (`frmm_client_id`, `frmm_disegno`, `frmm_disegno_vuoto`, `frmm_disegno_grande`, `frmm_immagine`, `frmm_immagine_tipo`, `frmm_immagine_misure`, `frmm_immagine_grande`), o `429 frmm_troppi` oltre il rate limit (dalla 1.8.0, vedi sotto). L'app sceglie la frase da mostrare dal codice, mai dal messaggio.
+Risponde `201 {ok, id}` se il disegno e' in attesa, altrimenti `400` / `413` / `415` con un `code` (`frmm_client_id`, `frmm_disegno`, `frmm_disegno_vuoto`, `frmm_disegno_grande`, `frmm_immagine`, `frmm_immagine_tipo`, `frmm_immagine_misure`, `frmm_immagine_grande`). Fra la 1.8.0 e la 1.11.5 c'era anche `429 frmm_troppi`, il rate limit, tolto (vedi sotto). L'app sceglie la frase da mostrare dal codice, mai dal messaggio.
 
 Il codice sta in `includes/`:
 
@@ -143,8 +143,8 @@ Il codice sta in `includes/`:
 - `invio.php` — l'endpoint. Scrive l'immagine in `uploads/frmm-lavagna/` con un **nome casuale a 128 bit**, crea il post `pending`, lo collega all'allegato e lo mette come immagine in evidenza. Se un pezzo fallisce, toglie i pezzi gia' scritti.
 - `bacheca.php` — la moderazione: miniatura al posto del titolo, **Approva / Rifiuta** come pulsanti nella riga, Approva in blocco, il numero dei disegni in attesa nel menu, la colonna Tentativo. Toglie i disegni **non approvati** dalla Libreria media e da ogni selettore d'immagine, perche' nessuno ne inserisca uno in una pagina prima che sia stato guardato. L'approvato ci resta, perche' la galleria dovra' poterlo prendere.
 - `notifica.php` — l'email a ogni disegno arrivato, ad `admin_email` o a quel che dice il filtro `frmm_lavagna_destinatari`. La miniatura e' **incorporata** nel messaggio e non linkata: le immagini remote i programmi di posta le bloccano, e l'email diventerebbe un riquadro vuoto.
-- `limiti.php` — il rate limit e la sua diagnostica (dalla 1.8.0, sezione qui sotto).
-- `validazione.php` — i controlli, **senza WordPress**, cosi' si provano in locale: `php -d extension=gd plugin/test/validazione.php`. Dalla 1.8.0 anche la parte del rate limit che non ha bisogno di WordPress: IP da contare, impronta, finestra.
+- `diagnostica.php` — cosa vede PHP, solo amministratore (era `limiti.php`, che conteneva il rate limit tolto nella 1.12.0).
+- `validazione.php` — i controlli, **senza WordPress**, cosi' si provano in locale: `php -d extension=gd plugin/test/validazione.php`.
 
 Cose da non disfare per sbaglio:
 
@@ -155,7 +155,7 @@ Cose da non disfare per sbaglio:
 - **La risposta non contiene l'URL dell'immagine.** Il nome casuale protegge solo finche' nessuno lo dice.
 - **Il CPT resta `public => false` e `show_in_rest => false`** (D3). Verificato da anonimo il 23/09/2026: `?attachment_id=`, `?p=`, `/wp/v2/media` chiusi (404/401), cartella non elencabile (403), niente sitemap degli allegati in Yoast.
 
-Prove: `python .lavoro/prova-invio.py` contro lo staging (40 controlli; lascia tre disegni in attesa a ogni giro, e azzera i contatori del rate limit all'inizio).
+Prove: `python .lavoro/prova-invio.py` contro lo staging (40 controlli; lascia tre disegni in attesa a ogni giro).
 
 ### Approvare o rifiutare dalla mail (dalla 1.10.0; nella forma attuale dalla 1.11.0)
 
@@ -185,24 +185,23 @@ Dalla 1.9.0 `disegni.php`, su `before_delete_post`, cancella allegato, file e mi
 - **Cancella solo gli allegati in `uploads/frmm-lavagna/`**: chi mettesse a mano una foto della Libreria come immagine in evidenza di un disegno non deve vedersela sparire.
 - Vale anche per un disegno approvato che qualcuno toglie e poi elimina: la sua immagine se ne va, ed e' irreversibile.
 
-Prove: `python .lavoro/prova-retention.py` (un disegno: invia, rifiuta, elimina, e guarda Libreria, REST da anonimo e file), `svuota` («Svuota cestino» dei disegni), `orfani` (sola lettura). La diagnostica (`GET /limiti`) riporta anche i giorni del cestino e il prossimo svuotamento.
+Prove: `python .lavoro/prova-retention.py` (un disegno: invia, rifiuta, elimina, e guarda Libreria, REST da anonimo e file), `svuota` («Svuota cestino» dei disegni), `orfani` (sola lettura). La diagnostica (`GET /diagnostica`) riporta anche i giorni del cestino e il prossimo svuotamento.
 
-### Il rate limit (dalla 1.8.0)
+### Il rate limit: tolto nella 1.12.0
 
-Al massimo **3 disegni per dispositivo** (`client_id`) e **20 per IP** in **24 ore dal primo invio** (Daniele, 25/09/2026). Oltre, `429 frmm_troppi` e niente scritto. L'app lo sa (`motivoDaStatus` → `troppi`) e lascia perdere **senza dire niente al bambino** e senza riprovare.
+Dalla 1.8.0 alla 1.11.5 c'erano **3 disegni per dispositivo e 20 per IP in 24 ore**, oltre `429 frmm_troppi`. **Tolto il 28/09/2026 su richiesta esplicita del cliente**, contro il consiglio di tenere almeno il tetto per IP.
 
-Due limiti perche' il `client_id` lo genera chi manda: un ciclo con curl ne inventa uno a giro, e lo ferma solo l'IP. Ma 3 per IP farebbe perdere in silenzio i disegni di una classe dietro la stessa rete. **Chi cambia rete non e' coperto, per scelta**: si riapre se ne arrivano a centinaia, e l'allarme e' la casella di posta.
+Cosa vuol dire, perche' chi legge fra sei mesi lo sappia:
 
-Cose da non disfare per sbaglio:
+- **L'endpoint anonimo non ha piu' un tetto.** Ogni disegno valido e' un post, un JPEG in `uploads/frmm-lavagna/` e **una mail al destinatario delle notifiche**. Un ciclo con curl diventa un ciclo di mail, e SiteGround puo' bloccare la posta in uscita di tutto il sito oltre una certa soglia. L'allarme e' la casella di posta.
+- **Restano** le difese di `validazione.php` (dimensioni, forma del JSON, JPEG ricodificato) e la moderazione a mano: niente arriva in galleria senza Approva.
+- **Per rimetterlo** c'e' il tag `rate-limit-1.11.5`: contatori in transient con impronta HMAC dell'IP, funzioni pure con i loro test, `prova-abuso.py`. Il limite andava **dopo la deduplica di `invio_id` e prima del JSON e di GD**, e contava **solo a disegno archiviato**.
+- **Solo `REMOTE_ADDR`, mai le intestazioni**, se si rimette un limite per IP. Misurato il 25/09/2026 con `.lavoro/diagnostica-ip.py`: in produzione, dietro la CDN di SiteGround, `REMOTE_ADDR` e' gia' l'IP vero e un `X-Forwarded-For` falso non lo cambia; sullo staging `X-Forwarded-For` arriva **cosi' come lo scrive il client**.
+- L'app gestisce ancora il `429` (lascia perdere senza riprovare): puo' venire dal firewall dell'hosting.
+- In produzione resta l'opzione `frmm_lavagna_limiti_gen` (un numero, non la legge nessuno); i contatori sono transient e scadono da soli entro 24 ore.
+- **PHP legge corpi fino a 256 MB prima del nostro codice** (`post_max_size` misurato su staging e produzione). Si cambia solo nella configurazione del sito. Fuori perimetro, si sa.
 
-- **Solo `REMOTE_ADDR`, mai le intestazioni.** Misurato il 25/09/2026 con `.lavoro/diagnostica-ip.py`: in produzione, dietro la CDN di SiteGround, `REMOTE_ADDR` e' gia' l'IP vero e un `X-Forwarded-For` falso non lo cambia; sullo staging `X-Forwarded-For` arriva **cosi' come lo scrive il client**. Leggerlo "per sicurezza" darebbe a chiunque il modo di ricominciare da zero a ogni invio.
-- **L'ordine nell'endpoint**: dimensione dichiarata → `client_id` → doppione di `invio_id` → **limite** → JSON, JPEG, GD. Il doppione viene prima perche' la ripresa di un disegno arrivato deve sentirsi dire "c'e' gia'" (200), non "troppi". Il limite viene prima del JSON e di GD perche' sono le due cose che costano.
-- **Si conta solo a disegno archiviato.** Una ripresa o un invio respinto non consumano: un bambino con la rete che va e viene non deve giocarsi i suoi tre disegni sul primo.
-- **Contatori in transient, con un'impronta HMAC nel nome e non l'IP**, che scadono con la finestra: dell'IP non resta niente dopo 24 ore, e mai nei meta del disegno. Va detto nel testo per i genitori (passo 6). Con la cache a oggetti un transient puo' sparire prima (il limite si azzera in anticipo), e due invii simultanei possono prendersi entrambi l'ultimo posto: accettati tutti e due.
-- **Azzerare e' incrementare un numero di generazione** (opzione `frmm_lavagna_limiti_gen`), non cancellare: con la cache a oggetti i transient non si possono elencare.
-- **PHP legge corpi fino a 256 MB prima del nostro codice** (`post_max_size` misurato su staging e produzione). "Limiti prima di leggere il corpo" in un plugin non si puo': si cambia solo nella configurazione del sito. Fuori perimetro, si sa.
-
-`GET /wp-json/frmm-lavagna/v1/limiti` (solo amministratore) dice che IP vede PHP, il suo contatore e i limiti; `DELETE` azzera tutto. Prove: `php plugin/test/validazione.php` (le funzioni pure), `python .lavoro/diagnostica-ip.py [--produzione]` (solo lettura) e `python .lavoro/prova-abuso.py` sullo staging (20 disegni e 20 email a giro: per vedere respinto il 21° bisogna farne passare 20; `raffica` rifà solo la raffica con 3, `pulisci` li rifiuta).
+`GET /wp-json/frmm-lavagna/v1/diagnostica` (solo amministratore, era `/limiti`) dice che IP vede PHP, le intestazioni di inoltro, il cestino e i limiti di PHP sul corpo. Prova: `python .lavoro/diagnostica-ip.py [--produzione]` (solo lettura).
 
 ### Dall'app (dalla 1.4.0; domanda prima di salvare dalla 1.5.0)
 

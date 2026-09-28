@@ -35,13 +35,14 @@ import { esportaJpeg, EXPORT_W } from './export.js';
 /* --- il client_id (D5) -----------------------------------------------------
 
    Un UUID v4 generato al primo invio e tenuto in localStorage. Non e' un
-   account e non identifica una persona: serve al rate limit del server e,
-   in Fase 5, a collegare la bozza locale all'invio.
+   account e non identifica una persona: finisce nei meta del disegno e,
+   in Fase 5, servira' a collegare la bozza locale all'invio. Serviva anche
+   al rate limit del server, tolto nella 1.12.0 del plugin.
 
    La chiave NON contiene il percorso, a differenza di quella del tutorial:
    identifica il dispositivo, non la pagina, e la Fase 5 la leggera' da qui.
-   Chi la cambiasse spezzerebbe il rate limit — ogni cartella numerata
-   sarebbe un dispositivo nuovo. */
+   Chi la cambiasse farebbe di ogni cartella numerata un dispositivo nuovo:
+   oggi non rompe niente, ma romperebbe un rate limit rimesso. */
 
 export const CHIAVE_CLIENT = 'frmm-lavagna:client_id';
 
@@ -60,8 +61,7 @@ export function nuovoUuid(c = globalThis.crypto) {
  * Il client_id di questo dispositivo, creato la prima volta che serve.
  *
  * In Safari privato localStorage lancia: allora l'id vive in memoria per la
- * sessione. Il rate limit lo vede come un dispositivo nuovo a ogni
- * ricarica — per quello c'e' anche il limite per IP.
+ * sessione, e a ogni ricarica e' un dispositivo nuovo.
  */
 export function clientId(store = globalThis.localStorage, c = globalThis.crypto) {
   try {
@@ -142,7 +142,8 @@ export function firma(drawing) {
  *   rete       non si sa se e' arrivato: si riprova
  *   server     5xx, un guasto di passaggio: si riprova
  *   grande     413: riprovare non cambierebbe niente
- *   troppi     429: il rate limit, si lascia perdere
+ *   troppi     429: si lascia perdere. Il rate limit del plugin e' tolto dalla
+ *              1.12.0, ma un 429 puo' ancora venire dal firewall dell'hosting
  *   rifiutato  qualunque altro 4xx: un difetto dell'app, non della rete
  */
 export function motivoDaStatus(status) {

@@ -196,7 +196,6 @@ def controlla(adm, url, attesi, massimo, titolo):
 
 def prova(url):
     adm = staging.collegata()
-    staging.azzera_limiti(adm)
     prima = pubblicati(adm)
     massimo = int(input_massimo(url))
     print(f"\n  pagina {url}\n  pubblicati prima: {prima}  (immagini al massimo: {massimo})")

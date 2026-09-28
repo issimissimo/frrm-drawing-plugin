@@ -36,7 +36,8 @@
  * nonce di WordPress per un visitatore non collegato e' uguale per tutti e
  * dura ore: non ferma nessuno, e in cambio la pagina in cache di SiteGround
  * lo serve scaduto e fa fallire gli invii veri. La difesa sta nei limiti di
- * questo file e, dalla 1.8.0, nel rate limit di limiti.php.
+ * questo file e nella moderazione a mano. Il rate limit (1.8.0 - 1.11.5) e'
+ * stato tolto su richiesta del cliente: vedi in cima a diagnostica.php.
  */
 
 if (!defined('ABSPATH')) {
@@ -88,10 +89,6 @@ function frmm_lavagna_invio($req)
 
     // Facoltativo, ma se c'e' dev'essere giusto: un invio_id storto non si
     // ignora, perche' la deduplica ci si appoggia.
-    //
-    // PRIMA del limite: la ripresa di un disegno gia' arrivato deve sentirsi
-    // dire "c'e' gia'" (200), non "troppi" (429), anche se quel disegno era
-    // proprio l'ultimo che il limite concedeva.
     $invio_id = null;
     if ($req->get_param('invio_id') !== null) {
         $invio_id = frmm_lavagna_valida_client_id($req->get_param('invio_id'));
@@ -102,15 +99,6 @@ function frmm_lavagna_invio($req)
         if ($gia) {
             return new WP_REST_Response(['ok' => true, 'id' => $gia, 'doppio' => true], 200);
         }
-    }
-
-    // Il rate limit (limiti.php), PRIMA di decodificare il JSON e di toccare
-    // GD: sono le due cose che costano, e chi e' oltre il limite non deve
-    // costarle. Prima di leggere il corpo non si puo' — quando parte questo
-    // codice PHP il multipart l'ha gia' letto — ma dopo, questo e' il primo
-    // punto utile.
-    if (frmm_lavagna_limite_superato($client_id)) {
-        return frmm_lavagna_errore('troppi');
     }
 
     $disegno = frmm_lavagna_valida_disegno($req->get_param('disegno'));
@@ -143,7 +131,6 @@ function frmm_lavagna_invio($req)
     if (is_wp_error($id)) {
         return $id;
     }
-    frmm_lavagna_conta_invio($client_id);
 
     // Niente URL dell'immagine, niente id dell'allegato: all'app basta
     // sapere che e' arrivato. L'id del disegno serve solo a riconoscerlo nei
@@ -321,7 +308,6 @@ function frmm_lavagna_errore($codice)
         'immagine_misure' => [400, "le misure dell'immagine non corrispondono al disegno"],
         'immagine_grande' => [413, 'immagine troppo grande'],
         'troppo_grande'   => [413, 'richiesta troppo grande'],
-        'troppi'          => [429, 'troppi invii da questo dispositivo o da questa rete'],
         'server'          => [500, 'errore del server'],
     ];
     $v = isset($tabella[$codice]) ? $tabella[$codice] : $tabella['server'];
