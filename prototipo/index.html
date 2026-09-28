@@ -72,7 +72,10 @@
 
   @media (max-width: 700px) {
     :root {
-      --stick-w: 22px;
+      /* 20 e non 22 dal 28/09/2026: col nero i gessetti sono dieci, e a
+         22px a 360 restavano 4px fra una stecca e l'altra. A 20 sono ~6,
+         quasi i 7 di quando erano nove. */
+      --stick-w: 20px;
       --stick-h: 64px;
       --lift:    18px;
       --slot:    34px;
@@ -165,6 +168,32 @@
     grid-template-areas: "widths tools . cmds save";
     column-gap: 26px;
     padding: 0 34px 22px;
+  }
+
+  /* Fra 701 e 1099px la mensola a una riga non ci sta: gessetti e cancellino
+     chiedono ~1050px, e sotto si sovrapponevano — 38px a 1024 (iPad in
+     orizzontale), 242 a 820 (iPad in verticale). Era aperto dal 26/09/2026 e
+     il decimo gessetto (il nero, 28/09/2026) l'ha peggiorato. Due righe:
+     sopra gli strumenti, sotto spessori, comandi e SALVA. Le misure restano
+     quelle desktop: e' la disposizione che cambia, non la scala. */
+  @media (min-width: 701px) and (max-width: 1099px) {
+    .ledge {
+      grid-template-columns: auto 1fr auto auto;
+      grid-template-areas:
+        "tools  tools tools tools"
+        "widths .     cmds  save";
+      row-gap: 4px;
+      padding-top: 6px;
+    }
+    /* Il cancellino resta accanto ai gessetti: con #chalks che cresce
+       finiva in fondo alla riga, a 500px dal gruppo. */
+    .tools #chalks { flex: 0 0 auto; }
+    /* La seconda riga non ha stecche: alta quanto una stecca (94px) lascia
+       un vuoto sotto i gessetti e ruba altezza alla lavagna. 56 resta un
+       bersaglio comodo per il dito; SALVA (50) ci sta centrato.
+       Specificita' alzata con .ledge: le regole base stanno piu' in basso. */
+    .ledge .wbtn, .ledge .cmds { height: 56px; }
+    .ledge #btn-save { margin-bottom: 3px; }
   }
 
   @media (max-width: 700px) {
@@ -331,6 +360,12 @@
   }
   @media (max-width: 700px) { .wbtn i { width: 30px; } }
   .wbtn[aria-pressed="true"] i { opacity: 1; transform: translateY(-6px); }
+  /* Col gessetto nero il segno ha il colore della mensola, o quasi: senza
+     bordo i tre spessori spariscono. Il bordo e' il grigio spento dei
+     comandi, e l'opacita' dei non scelti sale perche' a 0.28 il bordo non
+     si vedrebbe. */
+  .segni-scuri .wbtn i { box-shadow: 0 0 0 1px var(--dim); opacity: 0.45; }
+  .segni-scuri .wbtn[aria-pressed="true"] i { opacity: 1; }
 
   /* ---------- comandi ----------
      Registro opposto agli strumenti: icone di linea, monocrome, piu' piccole. */

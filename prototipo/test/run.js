@@ -9,7 +9,7 @@
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN, BOARD_W, boardHeight, freezeBoardHeight,
-         unfreezeBoardHeight } from '../src/palette.js';
+         unfreezeBoardHeight, CHALKS, BOARD_BG } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
@@ -839,6 +839,16 @@ test('lavagna: il Drawing vuoto segue il rapporto nuovo, quello pieno no', () =>
   unfreezeBoardHeight(); freezeBoardHeight(BOARD_W / 1200);
   assert(!adattaLavagna(d) && d.board.h === h, 'con un tratto non si tocca');
   unfreezeBoardHeight(); freezeBoardHeight(BOARD_W / 1200);
+});
+
+test('palette: dieci gessetti, il nero subito dopo il bianco', () => {
+  assert(CHALKS.length === 10, `${CHALKS.length} gessetti`);
+  assert(CHALKS[0].id === 'bianco' && CHALKS[1].id === 'nero', CHALKS.map((c) => c.id).join(','));
+  assert(new Set(CHALKS.map((c) => c.hex)).size === 10, 'due gessetti con lo stesso colore');
+  assert(CHALKS.every((c) => /^#[0-9A-F]{6}$/.test(c.hex)), 'hex non valido (il server vuole #RRGGBB)');
+  // Il nero NON e' il colore della lavagna: sul vuoto non si vedrebbe.
+  assert(CHALKS[1].hex !== BOARD_BG, "il nero e' il colore della lavagna");
+  assert(CHALKS.filter((c) => c.scuro).map((c) => c.id).join() === 'nero', 'solo il nero borda i segni');
 });
 
 /* ---------------- esito ---------------- */

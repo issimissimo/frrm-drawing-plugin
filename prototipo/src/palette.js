@@ -80,8 +80,8 @@ export const SOGLIA_STRETTA = 700;
 export const BOARD_BG = '#1F2225';
 
 /**
- * Sette gessetti a luminanza e croma costanti (L 0.780 / C 0.120), cosi' che
- * nessuno pesi piu' degli altri. Tre stanno fuori serie, e ognuno per un
+ * Dieci gessetti; sei a luminanza e croma costanti (L 0.780 / C 0.120), cosi' che
+ * nessuno pesi piu' degli altri. Quattro stanno fuori serie, e ognuno per un
  * motivo suo:
  *
  *   bianco    piu' chiaro: e' il default, deve leggersi come "il gesso".
@@ -90,15 +90,26 @@ export const BOARD_BG = '#1F2225';
  *   marrone   piu' scuro:  il marrone E' un arancione scuro. A L 0.780 non
  *             esiste, viene beige.
  *
- * Richiesti dal cliente il 15/09/2026. Costano contrasto sul fondo nero —
+ * Rosso e marrone, richiesti dal cliente il 15/09/2026, costano contrasto sul fondo nero —
  * 4,6 e 4,3 contro i 7,6-8,4 degli altri — ed e' il minimo che si possa
  * pagare tenendoli riconoscibili: un rosso piu' pieno (#F90F0D) scende a
  * 3,9 e un marrone piu' scuro (#9E6F43) a 3,7, dove un tratto sottile
  * comincia a sparire.
+ *
+ *   nero      il quarto fuori serie, chiesto dal cliente il 28/09/2026 (i
+ *             bambini lo cercavano; il cancellino non era una risposta). NON
+ *             e' il colore della lavagna, che era la richiesta iniziale:
+ *             provato, #1F2225 sul fondo vuoto non lascia alcun segno e
+ *             sopra i colori appena un graffio, perche' il tratto e' al 35%.
+ *             Un bambino lo prova sul vuoto e conclude che e' rotto. Il nero
+ *             vero sul vuoto fa una macchia scura (contrasto 1,27) e sopra i
+ *             colori taglia. `scuro` fa bordare i segni degli spessori, che
+ *             sono nel colore corrente e sulla mensola sparirebbero.
  */
 export const CHALKS = [
   { id: 'bianco',  hex: '#FAF8F3', L: 0.980, C: 0.008, H: 95  },
-  { id: 'giallo',  hex: '#C9B957', L: 0.780, C: 0.120, H: 100 },
+  { id: 'nero',    hex: '#050506', L: 0.116, C: 0.003, H: 286, scuro: true },
+  { id: 'giallo', hex: '#C9B957', L: 0.780, C: 0.120, H: 100 },
   { id: 'arancio', hex: '#F1A366', L: 0.780, C: 0.120, H: 58  },
   { id: 'rosso',   hex: '#FE4335', L: 0.660, C: 0.225, H: 29  },
   { id: 'rosa',    hex: '#F197C2', L: 0.780, C: 0.120, H: 350 },

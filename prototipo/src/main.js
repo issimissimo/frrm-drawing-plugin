@@ -175,7 +175,7 @@ function mix(hex, target, t) {
 
 /**
  * Il gessetto e' un cilindro visto di lato: scuro ai bordi, chiaro al centro.
- * E' modellazione della forma, non decorazione — senza, sono nove rettangoli.
+ * E' modellazione della forma, non decorazione — senza, sono dieci rettangoli.
  */
 function gradiente(hex) {
   const chiaro = mix(hex, '#FFFFFF', 0.30);
@@ -222,8 +222,10 @@ function syncTools() {
   // Col cancellino in mano nessun gessetto e' alzato: senza questo la
   // palette intera si spegnerebbe, e non e' il momento di nasconderla.
   chalksEl.classList.toggle('chalks-idle', tool !== 'chalk');
-  // Gli spessori sono segni nel colore corrente: seguono il gessetto.
+  // Gli spessori sono segni nel colore corrente: seguono il gessetto. Col
+  // nero, sulla mensola scura, sparirebbero: allora prendono un bordo.
   widthsEl.style.setProperty('--c', ink);
+  widthsEl.classList.toggle('segni-scuri', !!CHALKS.find((c) => c.hex === ink)?.scuro);
 }
 
 chalksEl.addEventListener('click', (e) => {

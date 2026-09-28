@@ -69,7 +69,7 @@ La galleria dei disegni è il widget **Custom Marquee** già presente sul sito, 
 - **Il sito non genera `medium_large`, `1536x1536`, `2048x2048`**: chiesta una misura mancante, WordPress serve l'originale. Il marquee ripiega sulla misura esistente più vicina.
 - **Il purge di Speed Optimizer all'approvazione si verifica solo in produzione**: sullo staging è spento.
 
-**Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche.
+**Fase 0 chiusa.** Specifiche in `fase-0-specifiche.md`: fondo nero carbone `#1F2225`, palette di 9 gessetti isoluminanti (L 0.780 / C 0.120), 3 spessori, costanti tecniche. **Dal 28/09/2026 i gessetti sono 10**: il nero (`#050506`, non il colore della lavagna: sul vuoto non si vedrebbe), subito dopo il bianco, chiesto dal cliente. Plugin 1.13.0, solo staging. Nella stessa versione la mensola fra 701 e 1099px è su due righe: a una riga chiede ~1050px.
 
 **Fase 1 chiusa.** Codice in `prototipo/` (avvio: vedi `prototipo/README.md`).
 
