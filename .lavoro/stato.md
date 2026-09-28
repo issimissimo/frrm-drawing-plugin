@@ -29,6 +29,7 @@ Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · e
 - **Disegni anonimi, niente nickname. CPT `frmm_disegno`**, non pubblico, non in REST.
 
 ## Trappole
+- **Due disegni in produzione hanno un Drawing finto**: post **11973 e 11975** (28/09/2026), respinti a suo tempo dal rate limit e caricati a mano dall'endpoint partendo da ritagli JPEG 1128x1280 ingranditi a 1600. Il loro `_frmm_disegno` è un segnaposto (un punto del colore del fondo): oggi non lo legge nessuno, ma un render dai tratti (alta risoluzione) li darebbe vuoti. L'immagine è quella vera.
 - **La mensola non ci sta fra 701 e ~1046px, in tutti i browser**: il layout desktop chiede ~1046px; a 1024 gessetti e cancellino si toccano, a 820 (iPad verticale) si sovrappongono. Strade: mensola su due righe in quella fascia (solo CSS, preferita) o soglia mobile più alta (è la stessa `SOGLIA_STRETTA` che sceglie la misura del logo).
 - **Firefox misura una fila flex dal contenuto dei figli, non dal `flex-basis`**: per questo `.tools .chalk` ha anche `width`. Chrome non mostra il difetto.
 - **Chrome/Edge headless hanno una larghezza minima di finestra ~500px**: per gli screenshot da telefono si mette la pagina in un iframe da 390. Firefox headless scatta allo `load` e usa la cache del profilo: profilo nuovo a ogni giro.
