@@ -1,9 +1,9 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 28/09/2026
-Versione corrente: `frmm-lavagna` **1.12.0 su staging** (rate limit tolto), **1.11.5 in produzione** (aggiornata il 26/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-19/`. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
+Versione corrente: `frmm-lavagna` **1.12.0 su staging e produzione** (rate limit tolto; produzione aggiornata il 28/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-19/`. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
-In produzione: la lavagna salva e manda il disegno; arriva in bacheca; la mail di notifica ha un link a una pagina con Approva / Rifiuta, senza login; la galleria (Custom Marquee) mostra gli approvati. Ci sono rate limit (3 per dispositivo, 20 per IP in 24 ore) e retention; **il rate limit è tolto nella 1.12.0, per ora solo sullo staging** (sotto). La mail in produzione va ancora ad `admin_email` (`d.suppo@issimissimo.com`): l'impostazione «Notifiche dei disegni» è vuota.
+In produzione: la lavagna salva e manda il disegno; arriva in bacheca; la mail di notifica ha un link a una pagina con Approva / Rifiuta, senza login; la galleria (Custom Marquee) mostra gli approvati. Ci sono rate limit (3 per dispositivo, 20 per IP in 24 ore) e retention; **il rate limit è tolto nella 1.12.0, anche in produzione dal 28/09/2026** (sotto). La mail in produzione va ancora ad `admin_email` (`d.suppo@issimissimo.com`): l'impostazione «Notifiche dei disegni» è vuota.
 
 ## Piano attivo — Fasi 6, 7, 9, 10 (approvato 23/09/2026)
 Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · email ✅ · moderazione ✅ (bacheca e mail) · approvato in galleria, rifiutato mai e sparisce dal server immagine compresa ✅ · abuso respinto ✅ (**poi tolto**, 1.12.0, cliente) · nessuna immagine in attesa a URL indovinabile ✅ · **bozze legali consegnate ✗ (passo 6, sospeso da Daniele)**.
