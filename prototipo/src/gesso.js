@@ -13,13 +13,15 @@
  *                 direzione del gesto. I filamenti restano allineati da un
  *                 capo all'altro del tratto: e' la grana allungata che si vede
  *                 nel gesso vero, e che le impronte tonde non possono fare.
- *   2. LAVAGNA    il deposito si moltiplica per una trama fine (destination-in):
- *                 il gesso resta sulle creste e salta le valli. La trama e'
- *                 spostata a caso per ogni tratto, cosi' ripassare riempie i
- *                 buchi lasciati dalla passata prima invece di schiarire
- *                 sempre gli stessi granelli.
- *   3. SOGLIA     max(0, X - c), poi un guadagno: il bordo resta netto invece
- *                 di sfumare in un alone.
+ *   2. LAVAGNA    dal deposito si SOTTRAE la profondita' delle valli di una
+ *                 trama fine: con poco gesso si accendono solo le creste, con
+ *                 tanto si riempiono anche le valli. Ripassare riempie i
+ *                 buchi anche senza staccare il dito, perche' e' il deposito
+ *                 accumulato a riempirli. (Fino al 30/09 si MOLTIPLICAVA per
+ *                 la cresta: una valle a zero restava zero per qualunque
+ *                 deposito, e i buchi sparivano solo staccando il dito.)
+ *   3. SOGLIA     con la stessa sottrazione, meno una costante; poi un
+ *                 guadagno: il bordo resta netto invece di sfumare.
  *   4. COLORE     una passata copre solo in parte (GESSO.opacita): i bambini
  *                 ripassano per avere il colore pieno, e due colori sovrapposti
  *                 si mescolano. Non c'e' una pressione vera da cui ricavarlo.
@@ -122,6 +124,9 @@ export function cresta(u, v) {
  * La tessera renderizzata a `k` pixel per unita' di lavagna, campionata al
  * centro di ogni pixel: a risoluzioni diverse e' la stessa trama, campionata
  * piu' o meno fitta.
+ *
+ * Nell'alfa c'e' la PROFONDITA' della valle (1 - cresta), non la cresta: e'
+ * quel che si sottrae al deposito.
  */
 function tessera(k) {
   const lato = Math.max(1, Math.round(TRAMA * k));
@@ -136,7 +141,7 @@ function tessera(k) {
     for (let x = 0; x < lato; x++) {
       const i = (y * lato + x) * 4;
       d[i] = d[i + 1] = d[i + 2] = 255;
-      d[i + 3] = Math.round(cresta((x + 0.5) * passo, v) * 255);
+      d[i + 3] = Math.round((1 - cresta((x + 0.5) * passo, v)) * 255);
     }
   }
   ctx.putImageData(img, 0, 0);
@@ -459,7 +464,7 @@ export function disegnaGesso(ctx, stroke, pts) {
   dep.globalAlpha = 1;
 
   // 1b. Il velo: il gesso lascia polvere anche nelle valli, poca. Si prende
-  //     dal deposito prima che la trama lo buchi.
+  //     dal deposito prima che le valli lo buchino.
   fin.setTransform(1, 0, 0, 1, 0, 0);
   fin.globalCompositeOperation = 'source-over';
   fin.globalAlpha = 1;
@@ -468,25 +473,19 @@ export function disegnaGesso(ctx, stroke, pts) {
   fin.globalAlpha = GESSO.velo;
   fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
 
-  // 2. Creste: deposito x trama. La trama si sposta a caso per ogni tratto:
-  //    con la stessa trama per tutti, ripassare schiarirebbe sempre gli
-  //    stessi granelli e i buchi resterebbero buchi per sempre.
-  //    destination-in azzera anche fuori dal rettangolo: sul canvas
-  //    d'appoggio c'e' solo questo tratto.
-  const pat = patternTrama(a, dep, k);
+  // 2-3. Valli e soglia: X = max(0, D - profondita' x valle - c).
+  //    Canvas 2D non sottrae, ma sa invertire (destination-out sopra un pieno
+  //    da' 1 - a) e sommare con tetto a 1 (lighter). Quindi:
+  //      1 - min(1, (1 - D) + p x valle + c) = max(0, D - p x valle - c)
+  //    La costante c toglie i valori bassi: senza, restano pixel fiochi e
+  //    attorno al tratto c'e' un alone morbido.
+  //
+  //    La trama si sposta a caso per ogni tratto: due tratti diversi hanno
+  //    le valli in posti diversi, e sovrapposti si completano.
+  const pat = patternTrama(a, aux, k);
   const s = TRAMA / tesseraPer(k).width;
   const sp = mulberry32((seed ^ 0x1B873593) >>> 0);
   pat.setTransform(new DOMMatrix([s, 0, 0, s, sp() * TRAMA, sp() * TRAMA]));
-  dep.globalCompositeOperation = 'destination-in';
-  dep.fillStyle = pat;
-  dep.fillRect(r.x, r.y, r.w, r.h);
-  dep.globalCompositeOperation = 'source-over';
-
-  // 3. Soglia: max(0, X - c). Canvas 2D non sottrae, ma sa invertire
-  //    (destination-out sopra un pieno da' 1 - a) e sommare con tetto a 1
-  //    (lighter). Quindi: 1 - min(1, (1 - X) + c) = max(0, X - c).
-  //    Senza, i valori bassi restano pixel fiochi invece di sparire, e
-  //    attorno al tratto c'e' un alone morbido.
   const pieno = (c) => {
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
@@ -497,8 +496,14 @@ export function disegnaGesso(ctx, stroke, pts) {
   aux.setTransform(1, 0, 0, 1, 0, 0);
   pieno(aux);
   aux.globalCompositeOperation = 'destination-out';
-  aux.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);     // 1 - X
+  aux.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);     // 1 - D
   aux.globalCompositeOperation = 'lighter';
+  aux.globalAlpha = GESSO.profondita;
+  aux.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+  aux.fillStyle = pat;
+  aux.fillRect(r.x, r.y, r.w, r.h);                                   // + p x valle
+  aux.setTransform(1, 0, 0, 1, 0, 0);
+  aux.fillStyle = '#ffffff';
   aux.globalAlpha = GESSO.soglia;
   aux.fillRect(px0, py0, pw, ph);                                     // + c
   pieno(dep);

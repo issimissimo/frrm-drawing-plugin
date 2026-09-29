@@ -257,14 +257,23 @@ export const ERASER_ALPHA = 0.85;
  *
  * Il valore di ciascun pixel e', in ordine:
  *
- *   X = deposito della punta trascinata x cresta della lavagna
- *   min(1, guadagno x max(0, X - soglia)) + velo x deposito
+ *   X = max(0, deposito - profondita x valle - soglia)
+ *   min(1, guadagno x X) + velo x deposito
  *   ... x opacita, nel colore del gessetto
+ *
+ * La valle si SOTTRAE: con poco gesso si accendono solo le creste, con tanto
+ * si riempiono anche le valli. E' cio' che fa sparire i buchi ripassando
+ * anche SENZA staccare il dito (Daniele, 30/09/2026). Fino ad allora la
+ * cresta si moltiplicava: una valle a zero restava zero per qualunque
+ * deposito, e i buchi sparivano solo staccando.
  *
  *   deposito   opacita' di ciascuna striscia della punta: quanto gesso
  *              arriva a ogni passaggio.
  *   soglia     il deposito sotto cui non resta niente. E' cio' che fa il
  *              bordo netto invece che sfumato: a 0 torna l'alone.
+ *   profondita quanto deposito chiede la valle piu' profonda per riempirsi.
+ *              Piu' alta = piu' buchi alla prima passata e piu' passate per
+ *              il pieno.
  *   guadagno   quanto in fretta, sopra la soglia, il gesso diventa pieno.
  *   opacita    il tetto: quanto copre il gesso quando ce n'e' tanto.
  *              Quanto copre UNA passata lo decidono deposito e guadagno
@@ -272,8 +281,10 @@ export const ERASER_ALPHA = 0.85;
  *              fa il pieno, e due colori si mescolano (Daniele, 29/09/2026).
  *              Fino al 30/09 era un 0,7 applicato al tratto intero, e
  *              ripassare SENZA staccare il dito non aumentava niente.
- *   valle      altezza della lavagna sotto cui non attacca niente,
- *   picco      e sopra cui attacca tutto: il contrasto della grana.
+ *   valle      altezza della lavagna che conta come valle piena,
+ *   picco      e come cresta piena. Larghi (0,15-0,85) di proposito: con le
+ *              valli tutte della stessa profondita' si riempivano tutte
+ *              insieme, e alla seconda passata non restava niente in mezzo.
  *   velo       la polvere che resta nelle valli, come frazione del deposito.
  *              Sopra 0,15 torna l'alone grigio attorno ai tratti.
  *   filamenti  quanto si vedono i filamenti lungo il gesto: 0 punta liscia,
@@ -295,16 +306,19 @@ export const ERASER_ALPHA = 0.85;
  *                     lento    inchiostro   veloce (p 0,2): inchiostro, larghezza
  *   vecchio (-20)     25 px    3252         -30%, -28%
  *   -22               24 px    2056         -29%,  -8%
- *   questi            23 px    2047         -31%,  -4%
+ *   -23               23 px    2047         -31%,  -4%
+ *   questi            22 px    2428         -45%, -18%
  *
- * E la luminosita' media di una zona scarabocchiata, 1 / 2 / 3 passate,
- * media su sei semi (confronto-gesso.html, le sei zone in alto a sinistra):
+ * E una linea ripassata N volte, al centro del tratto: opacita' media / pixel
+ * con meno di un quarto di gesso ("buchi"). Media su quattro semi:
  *
- *   tratti separati        63 / 83 / 93
- *   un tratto, senza staccare  64 / 73 / 79
+ *   passate                      1        2        3        4        6
+ *   un tratto, senza staccare  46/36%   87/1%    91/0%    93/0%    94/0%
+ *   tratti separati            45/37%   72/10%   83/3%    92/0%    97/0%
+ *   la -23, senza staccare     buchi che restavano a ogni passata
  *
- * Senza staccare si accumula meno perche' dentro lo stesso tratto la trama
- * della lavagna e' la stessa: si riempiono le valli solo per deposito.
+ * Staccando serve una passata in piu': ogni tratto passa la sua soglia
+ * prima di sommarsi agli altri, mentre dentro un tratto si somma il deposito.
  *
  * L'inchiostro e' due terzi del vecchio di proposito: e' la passata
  * semitrasparente. Sul gesto veloce il gesso nuovo diventa piu' rado, non
@@ -314,12 +328,13 @@ export const ERASER_ALPHA = 0.85;
  * Le combinazioni scartate, e perche', in .lavoro/stato.md.
  */
 export const GESSO = {
-  deposito: 0.55,
-  soglia: 0.06,
-  guadagno: 2,
+  deposito: 0.8,
+  soglia: 0.03,
+  profondita: 0.9,
+  guadagno: 3,
   opacita: 0.95,
-  valle: 0.25,
-  picco: 0.72,
+  valle: 0.15,
+  picco: 0.85,
   velo: 0.1,
   filamenti: 0.4,
   bordo: 0.04,

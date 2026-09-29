@@ -406,20 +406,26 @@ test('gesso: le ottave dividono la tessera e pesano 1 in tutto', () => {
   assert(Math.abs(somma - 1) < 1e-9, `pesi a ${somma}: la cresta non starebbe in [0, 1]`);
 });
 
-test('gesso: la lavagna ha creste e valli, non solo una delle due', () => {
-  // Se la taratura di valle/picco spingesse tutta la lavagna da una parte,
-  // il gesso diventerebbe pittura piena o sparirebbe. Un campione largo.
-  let creste = 0, valli = 0, fuori = 0;
+test('gesso: la lavagna ha creste, valli e profondita intermedie', () => {
+  // Dal 30/09/2026 la valle si SOTTRAE al deposito: ripassare la riempie.
+  // Servono tutte e tre le cose: creste (la prima passata si accende),
+  // valli profonde (restano buchi), e profondita' intermedie. Con la trama
+  // quasi a due livelli le valli si riempivano tutte insieme alla seconda
+  // passata, e fra una e l'altra non c'era niente.
+  let creste = 0, valli = 0, mezzo = 0, fuori = 0;
   const N = 20000, r = mulberry32(99);
   for (let i = 0; i < N; i++) {
     const c = cresta(r() * TRAMA, r() * TRAMA);
     if (c < 0 || c > 1) fuori++;
-    if (c > 0.9) creste++;
-    if (c < 0.1) valli++;
+    if (c > 0.7) creste++;
+    else if (c < 0.3) valli++;
+    else mezzo++;
   }
+  const pc = (x) => (100 * x / N).toFixed(1);
   assert(fuori === 0, `${fuori} valori fuori da [0, 1]`);
-  assert(creste / N > 0.05, `creste piene al ${(100 * creste / N).toFixed(1)}%: il gesso non si fisserebbe`);
-  assert(valli / N > 0.05, `valli vuote al ${(100 * valli / N).toFixed(1)}%: non resterebbero buchi`);
+  assert(creste / N > 0.1, `creste al ${pc(creste)}%: la prima passata non si accenderebbe`);
+  assert(valli / N > 0.1, `valli al ${pc(valli)}%: una passata non lascerebbe buchi`);
+  assert(mezzo / N > 0.25, `intermedie al ${pc(mezzo)}%: le valli si riempirebbero tutte insieme`);
 });
 
 test('gesso: la trama e la stessa a ogni avvio', () => {

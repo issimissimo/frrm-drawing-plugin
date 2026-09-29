@@ -199,7 +199,7 @@ scelta('disp', (d) => { document.getElementById('coppia').classList.toggle('affi
 const tar = document.getElementById('taratura');
 if (new URLSearchParams(location.search).has('taratura')) {
   tar.classList.add('on');
-  const campi = { deposito: [0.05, 1, 0.01], soglia: [0, 0.6, 0.01], guadagno: [1, 8, 0.1],
+  const campi = { deposito: [0.05, 1, 0.01], soglia: [0, 0.6, 0.01], profondita: [0, 1.5, 0.05], guadagno: [1, 8, 0.1],
                   opacita: [0.2, 1, 0.01], valle: [0, 0.7, 0.01], picco: [0.3, 1, 0.01],
                   velo: [0, 1, 0.01], filamenti: [0, 1, 0.05], bordo: [0, 0.2, 0.01],
                   inclinazione: [0, 0.4, 0.01], sfrangia: [0, 0.2, 0.01], ventaglio: [0, 1, 0.05] };
