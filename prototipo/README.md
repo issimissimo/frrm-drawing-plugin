@@ -145,10 +145,10 @@ Il gesso di sopra leggeva come **pastello morbido**: bordo sfumato con un alone,
 
 `src/gesso.js`, tutto in GPU (niente `getImageData`, che su Safari riporterebbe i pixel dalla GPU a ogni frame):
 
-1. **punta trascinata**: una striscia sottile con un profilo di filamenti attraverso la larghezza, posata ogni 0,4 della sua lunghezza e ruotata nella direzione del gesto. I filamenti restano allineati da un capo all'altro: è la grana **allungata** del gesso vero. Capi arrotondati, un tremolio laterale lento;
+1. **punta trascinata**: una striscia sottile con un profilo di filamenti attraverso la larghezza, posata ogni 0,4 della sua lunghezza e ruotata nella direzione del gesto. I filamenti restano allineati da un capo all'altro: è la grana **allungata** del gesso vero. Capi arrotondati; ciascun bordo si allarga e si stringe per conto suo, lentamente (il gesso inclinato) e con un'irregolarità fine (il bordo organico);
 2. **lavagna**: `destination-in` con una trama finissima (cella di 1 unità) più nuvole larghe, **spostata a caso per ogni tratto**: ripassare riempie i buchi della passata prima;
 3. **soglia vera**: `max(0, X − c)`. Canvas 2D non sottrae, ma inverte (`destination-out` sopra un pieno dà 1 − a) e somma con tetto (`lighter`): 1 − min(1, (1 − X) + c). Senza, resta l'alone;
-4. **guadagno**, **velo** di polvere, colore in `source-in` al **70%**: una passata è semitrasparente, ripassando si arriva al pieno e due colori si mescolano.
+4. **guadagno**, **velo** di polvere, colore in `source-in`. **L'opacità nasce dal deposito**, non da un tetto sul tratto: una passata copre ~60%, e ripassare aumenta, **anche senza staccare il dito**. Due colori si mescolano.
 
 La gomma resta quella di prima; un tocco senza trascinare usa il timbro tondo di `chalk.js`. `?gesso=vecchio` rimette il gesso della -20, anche nell'immagine salvata. Tutti i numeri sono in `GESSO` in `palette.js`, con il perché.
 
@@ -156,8 +156,10 @@ La gomma resta quella di prima; un tocco senza trascinare usa il timbro tondo di
 
 Cose da sapere prima di toccarlo:
 
-- **La larghezza percepita è tarata sul vecchio**: 24 px contro 25 (profilo medio a metà altezza, spessore 27, export 1600). Con l'opacità al 70% il rischio «tratti sottili» è più alto di prima: chi ritocca `bordo`, `soglia` o `opacita` rimisuri.
-- **Sul gesto veloce il tratto diventa più rado, non più stretto**: inchiostro −29% come il vecchio, larghezza −8% contro −28%. È il gesso vero, ma non è la variazione di spessore chiesta dal cliente il 15/09. Aperto.
+- **La larghezza percepita è tarata sul vecchio**: 23 px contro 25 (profilo medio a metà altezza, spessore 27, export 1600). Con la passata semitrasparente il rischio «tratti sottili» è più alto di prima: chi ritocca `bordo`, `soglia`, `deposito` o `guadagno` rimisuri.
+- **Ripassare senza staccare deve accumulare.** Fino al 30/09 l'opacità era un tetto (0,7) sul tratto intero: dove il gesto ripassava su se stesso il deposito cresceva, ma il tetto lo riportava al 70%. Ora `opacita` è 0,95 e la passata singola la fanno deposito e guadagno. Chi rimettesse un tetto basso riaprirebbe il difetto. Le zone in alto a sinistra del confronto lo verificano: sopra tratti separati, sotto un tratto solo.
+- **Sul gesto veloce il tratto diventa più rado, non più stretto**: inchiostro −31% come il vecchio, larghezza −4% contro −28%. È il gesso vero, ma non è la variazione di spessore chiesta dal cliente il 15/09. Aperto.
+- **Le strisce del ventaglio pesano un terzo** (`ventaglio`): da quando il deposito si accumula dentro il tratto, a peso pieno ogni inversione dello scarabocchio era un punto bianco.
 - **Nelle curve strette si posano strisce in più** (una ogni 0,15 radianti). Senza, alle inversioni dello scarabocchio le strisce si aprivano a ventaglio e i filamenti facevano un pettine.
 - **Il filamento «medio» è a 2 unità, non di più**: a 3,2 disegnava corsie, e un'ellisse sembrava un binario.
 - **La trama NON è ancorata alla lavagna.** Era la prima idea (le valli sempre nello stesso posto) e ha un difetto grave: ripassare schiariva sempre gli stessi granelli e i buchi restavano buchi.

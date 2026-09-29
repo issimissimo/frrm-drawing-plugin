@@ -69,13 +69,15 @@ export const TRAMA = 512;
  *
  * Il 29/09/2026 la cella piu' fine era 2 e pesava insieme alla 4: grana
  * giudicata "troppo uniforme e grossolana" da Daniele sul confronto con una
- * foto di gesso vero.
+ * foto di gesso vero. Il 30/09 le nuvole (16 e 64) sono scese da 0,32 a
+ * 0,26: con l'opacita' che nasce dal deposito, una nuvola sfortunata faceva
+ * sembrare un tratto molto piu' debole di un altro.
  */
 export const OTTAVE = [
-  { cella: 1, peso: 0.46 },
-  { cella: 2, peso: 0.22 },
-  { cella: 16, peso: 0.18 },
-  { cella: 64, peso: 0.14 },
+  { cella: 1, peso: 0.50 },
+  { cella: 2, peso: 0.24 },
+  { cella: 16, peso: 0.15 },
+  { cella: 64, peso: 0.11 },
 ];
 
 /** Il reticolo di un'ottava, calcolato una volta sola. */
@@ -281,28 +283,42 @@ function trascina(ctx, m, stroke) {
   // Lento e non a ogni striscia, o i filamenti si sfalserebbero e si
   // confonderebbero fra loro.
   const lato = rumore1(seed ^ 0x6A09E667, 40);
-  const largo = rumore1(seed ^ 0x3C6EF372, 25);
   const dose = rumore1(seed ^ 0x510E527F, 18);
+
+  // I due bordi, ciascuno per conto suo (Daniele, 30/09/2026: "il gessetto
+  // viene inclinato, in ogni direzione"). Due scale:
+  //  - l'INCLINAZIONE, lenta (70 unita'): il tratto si allarga da un lato e
+  //    poi dall'altro, come nella "I" e nella "S" della foto di riferimento.
+  //    Veloce leggerebbe come una mano che trema, non come un gesso inclinato;
+  //  - la SFRANGIATURA, fine (5 unita'): il bordo organico, non tirato.
+  const inclSx = rumore1(seed ^ 0x3C6EF372, 70);
+  const inclDx = rumore1(seed ^ 0xA54FF53A, 70);
+  const sfrSx = rumore1(seed ^ 0x9B05688C, 5);
+  const sfrDx = rumore1(seed ^ 0x1F83D9AB, 5);
+  const bordoSx = (s) => 1 + GESSO.inclinazione * (2 * inclSx(s) - 1) + GESSO.sfrangia * (2 * sfrSx(s) - 1);
+  const bordoDx = (s) => 1 + GESSO.inclinazione * (2 * inclDx(s) - 1) + GESSO.sfrangia * (2 * sfrDx(s) - 1);
 
   const L = (n - 1) * passo;
   const r = w / 2;
 
-  // Una striscia nel punto (x, y), ruotata di `ang`, a distanza `s` dall'inizio.
-  const posa = (x, y, ang, p, s) => {
+  // Una striscia nel punto (x, y), ruotata di `ang`, a distanza `s`
+  // dall'inizio, con una frazione `peso` del deposito.
+  const posa = (x, y, ang, p, s, peso = 1) => {
     // Le estremita' si arrotondano: vicino ai capi la striscia si stringe
     // come un semicerchio. Senza, ogni tratto finirebbe tagliato netto.
     const dal = Math.min(s, L - s);
     const capo = dal >= r ? 1 : Math.max(0.2, Math.sqrt(1 - (1 - dal / r) ** 2));
-    const meta = r * PRESSIONE_BANDA(p) * capo * (0.95 + 0.1 * largo(s));
-    const off = (lato(s) - 0.5) * 0.08 * w;
+    const meta = r * PRESSIONE_BANDA(p) * capo;
+    const sx = meta * bordoSx(s), dx = meta * bordoDx(s);
+    const off = (lato(s) - 0.5) * 0.06 * w;
     const c = Math.cos(ang), sn = Math.sin(ang);
     ctx.setTransform(k * c, k * sn, -k * sn, k * c, k * x + m.e, k * y + m.f);
     // La pressione toglie anche deposito, come in timbra(): e' cio' che fa
     // leggere la variazione di spessore col gesto (tarata il 17/09/2026).
     // Senza, la soglia la schiacciava al 9%.
-    ctx.globalAlpha = GESSO.deposito * (0.75 + 0.25 * dose(s))
+    ctx.globalAlpha = GESSO.deposito * peso * (0.75 + 0.25 * dose(s))
       * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
-    ctx.drawImage(img, -lungo / 2, off - meta, lungo, 2 * meta);
+    ctx.drawImage(img, -lungo / 2, off - sx, lungo, sx + dx);
   };
 
   let prec = null;   // [x, y, angolo, p] della striscia precedente
@@ -317,6 +333,10 @@ function trascina(ctx, m, stroke) {
     // curva le strisce si aprono a ventaglio: un pettine di filamenti come
     // raggi. Si riempie il ventaglio con strisce intermedie, un passo ogni
     // 0,15 radianti. Costa solo nelle curve strette.
+    //
+    // Piu' leggere delle altre: dal 30/09/2026 il deposito si accumula dentro
+    // lo stesso tratto, e le strisce del ventaglio si sovrappongono tutte
+    // vicino al perno. A peso pieno ogni inversione diventava un punto bianco.
     if (prec) {
       let d = ang - prec[2];
       d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -324,7 +344,7 @@ function trascina(ctx, m, stroke) {
       for (let e = 1; e <= extra; e++) {
         const t = e / (extra + 1);
         posa(prec[0] + (x - prec[0]) * t, prec[1] + (y - prec[1]) * t,
-          prec[2] + d * t, prec[3] + (p - prec[3]) * t, s - passo * (1 - t));
+          prec[2] + d * t, prec[3] + (p - prec[3]) * t, s - passo * (1 - t), GESSO.ventaglio);
       }
     }
     posa(x, y, ang, p, s);

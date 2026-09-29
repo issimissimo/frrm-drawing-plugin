@@ -135,8 +135,14 @@ const disegno = {
     tratto(c('marrone'), 27, retta(1355, 850, 1425, 850)),
     tratto(c('nero'), 27, retta(1080, 250, 1440, 470)),
     // Ripassare: la stessa zona una, due e tre volte (colonne da sinistra).
+    // Sopra con tratti separati, sotto con UN tratto solo che va avanti e
+    // indietro senza staccare: le due file devono somigliarsi.
     ...[0, 1, 2].flatMap((col) => Array.from({ length: col + 1 }, (_, v) =>
-      tratto(c('bianco'), 50, scarabocchio(40 + col * 120, 40 + v * 3, 140 + col * 120, 170, 22)))),
+      tratto(c('bianco'), 50, scarabocchio(40 + col * 130, 30 + v * 3, 120 + col * 130, 90, 22)))),
+    ...[0, 1, 2].map((col) => tratto(c('bianco'), 50, Array.from({ length: col + 1 }, (_, v) => {
+      const giro = scarabocchio(40 + col * 130, 150 + v * 3, 120 + col * 130, 210, 22);
+      return v % 2 ? giro.reverse() : giro;
+    }).flat())),
     // Mescolare: giallo e azzurro, poi rosa sopra verde.
     tratto(c('giallo'), 50, scarabocchio(430, 40, 560, 160, 22)),
     tratto(c('azzurro'), 50, scarabocchio(500, 90, 630, 210, 22)),
@@ -195,7 +201,8 @@ if (new URLSearchParams(location.search).has('taratura')) {
   tar.classList.add('on');
   const campi = { deposito: [0.05, 1, 0.01], soglia: [0, 0.6, 0.01], guadagno: [1, 8, 0.1],
                   opacita: [0.2, 1, 0.01], valle: [0, 0.7, 0.01], picco: [0.3, 1, 0.01],
-                  velo: [0, 1, 0.01], filamenti: [0, 1, 0.05], bordo: [0, 0.2, 0.01] };
+                  velo: [0, 1, 0.01], filamenti: [0, 1, 0.05], bordo: [0, 0.2, 0.01],
+                  inclinazione: [0, 0.4, 0.01], sfrangia: [0, 0.2, 0.01], ventaglio: [0, 1, 0.05] };
   for (const [nome, [min, max, step]] of Object.entries(campi)) {
     const l = document.createElement('label');
     l.innerHTML = `${nome} <input type="range" min="${min}" max="${max}" step="${step}" value="${GESSO[nome]}"> <output>${GESSO[nome]}</output>`;

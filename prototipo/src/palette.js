@@ -266,9 +266,12 @@ export const ERASER_ALPHA = 0.85;
  *   soglia     il deposito sotto cui non resta niente. E' cio' che fa il
  *              bordo netto invece che sfumato: a 0 torna l'alone.
  *   guadagno   quanto in fretta, sopra la soglia, il gesso diventa pieno.
- *   opacita    quanto copre UNA passata. Sotto 1 di proposito (Daniele,
- *              29/09/2026): senza pressione vera, e' ripassando che il
- *              bambino fa il colore pieno, e due colori si mescolano.
+ *   opacita    il tetto: quanto copre il gesso quando ce n'e' tanto.
+ *              Quanto copre UNA passata lo decidono deposito e guadagno
+ *              (~60%): senza pressione vera, e' ripassando che il bambino
+ *              fa il pieno, e due colori si mescolano (Daniele, 29/09/2026).
+ *              Fino al 30/09 era un 0,7 applicato al tratto intero, e
+ *              ripassare SENZA staccare il dito non aumentava niente.
  *   valle      altezza della lavagna sotto cui non attacca niente,
  *   picco      e sopra cui attacca tutto: il contrasto della grana.
  *   velo       la polvere che resta nelle valli, come frazione del deposito.
@@ -277,6 +280,13 @@ export const ERASER_ALPHA = 0.85;
  *              1 punta a righe.
  *   bordo      quanto e' largo il bordo sfumato della punta, come frazione
  *              della larghezza. Piu' largo = tratto che SEMBRA piu' sottile.
+ *   inclinazione  quanto il gesso inclinato allarga o stringe ciascun bordo,
+ *              lentamente (su ~70 unita'). Frazione della meta' larghezza.
+ *   sfrangia   l'irregolarita' fine del bordo (su ~5 unita'): organico,
+ *              non tirato. Frazione della meta' larghezza.
+ *   ventaglio  il deposito delle strisce aggiunte nelle curve strette, come
+ *              frazione di quelle normali: a 1 ogni inversione dello
+ *              scarabocchio diventa un punto bianco.
  *
  * Tarati il 29/09/2026 su una foto di disegni a gesso (dreamstime 189200205,
  * scelta da Daniele) e sulla larghezza percepita del vecchio, misurata sul
@@ -284,7 +294,17 @@ export const ERASER_ALPHA = 0.85;
  *
  *                     lento    inchiostro   veloce (p 0,2): inchiostro, larghezza
  *   vecchio (-20)     25 px    3252         -30%, -28%
- *   questi            24 px    2056         -29%,  -8%
+ *   -22               24 px    2056         -29%,  -8%
+ *   questi            23 px    2047         -31%,  -4%
+ *
+ * E la luminosita' media di una zona scarabocchiata, 1 / 2 / 3 passate,
+ * media su sei semi (confronto-gesso.html, le sei zone in alto a sinistra):
+ *
+ *   tratti separati        63 / 83 / 93
+ *   un tratto, senza staccare  64 / 73 / 79
+ *
+ * Senza staccare si accumula meno perche' dentro lo stesso tratto la trama
+ * della lavagna e' la stessa: si riempiono le valli solo per deposito.
  *
  * L'inchiostro e' due terzi del vecchio di proposito: e' la passata
  * semitrasparente. Sul gesto veloce il gesso nuovo diventa piu' rado, non
@@ -294,15 +314,18 @@ export const ERASER_ALPHA = 0.85;
  * Le combinazioni scartate, e perche', in .lavoro/stato.md.
  */
 export const GESSO = {
-  deposito: 0.9,
+  deposito: 0.55,
   soglia: 0.06,
-  guadagno: 1.6,
-  opacita: 0.7,
+  guadagno: 2,
+  opacita: 0.95,
   valle: 0.25,
   picco: 0.72,
   velo: 0.1,
   filamenti: 0.4,
   bordo: 0.04,
+  inclinazione: 0.12,
+  sfrangia: 0.05,
+  ventaglio: 0.35,
 };
 
 export const chalkById = (id) => CHALKS.find((c) => c.id === id) || CHALKS[0];
