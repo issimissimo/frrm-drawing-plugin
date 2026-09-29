@@ -25,10 +25,11 @@ import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
-import { render, renderStroke, strokeGeometry } from './render.js';
+import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
+import { precaricaTrama } from './gesso.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
-import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
+import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
 import { createDomanda, createCoda, endpointInvio, firma } from './invio.js';
 
@@ -39,6 +40,12 @@ const overlayCanvas = document.getElementById('overlay');
 const hud = document.getElementById('hud');
 
 const board = createBoard(baseCanvas, overlayCanvas, stage);
+
+/* Il gesso nuovo (gesso.js) e' il default dal 29/09/2026. `?gesso=vecchio`
+   rimette quello della -20, per confrontarli sullo stesso device. Vale per
+   tutto — schermo, annulla, immagine salvata — perche' e' uno stato del
+   modulo di render e non un parametro da passare in giro. */
+impostaGesso(new URLSearchParams(location.search).get('gesso'));
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -375,6 +382,9 @@ function relayout() {
   // I canvas sovrapposti hanno la stessa taglia: il contenitore la eredita.
   layers.style.width = `${lastLayout.cssW}px`;
   layers.style.height = `${lastLayout.cssH}px`;
+  // La trama della lavagna alla scala nuova, prima del ridisegno e prima del
+  // primo tocco: vedi precaricaTrama().
+  if (gessoAttuale() === 'nuovo') precaricaTrama(lastLayout.scale);
   repaint();
   paintLive();
 }
@@ -483,6 +493,7 @@ function tick(now = performance.now()) {
       `  timbri     ${disegnati}`,
       `  punta      ${punta}`,
       ``,
+      `gesso        ${gessoAttuale()}`,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,
       `stroke       ${history.count}`,
@@ -533,6 +544,10 @@ syncButtons();
    l'apertura della pagina e il primo salvataggio passano minuti; se anche non
    bastassero, l'immagine esce senza logo e il disegno si salva lo stesso. */
 precaricaLogo();
+
+// E la trama alla scala dell'immagine salvata, per la stessa ragione: al
+// click di SALVA l'export e' sincrono e non deve anche generarla.
+if (gessoAttuale() === 'nuovo') precaricaTrama(EXPORT_W / drawing.board.w);
 
 /**
  * Alla prima apertura il tutorial parte da solo, poi mai piu'.

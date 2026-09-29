@@ -139,6 +139,32 @@ Il prezzo di `eps 10` è il dettaglio fine: un tratto molto corto può venire ri
 
 La prima riga è la Definition of Done della fase. Regge **per costruzione**, non per attenzione: il contesto è trasformato in unità di lavagna una volta sola in `board.js`, quindi il codice di render non sa nulla di scala, pixel o DPR e non ha modo di dipenderne.
 
+## Il gesso nuovo (29/09/2026, branch `gesso-realistico`)
+
+Il gesso di sopra leggeva come **pastello morbido**: bordo sfumato con un alone, grana a macchie larghe e grigie, riempimenti piatti come un pennarello. Il limite era strutturale, non di taratura: la grana stava **nell'impronta**, e dieci impronte sovrapposte per punto la mediano via. Nel gesso vero la grana è della **lavagna**: il gesso resta sulle creste e salta le valli, sempre le stesse.
+
+`src/gesso.js` fa così, tutto in GPU (niente `getImageData`, che su Safari riporterebbe i pixel dalla GPU a ogni frame):
+
+1. **deposito**: i timbri di `chalk.js`, in bianco, su un canvas d'appoggio, più una dozzina di **striature** tracciate come linee sottili parallele al gesto;
+2. **creste**: `destination-in` con una trama fissa **in unità di lavagna**, ancorata all'origine (D1: stesso punto, stessa cresta, a ogni risoluzione);
+3. **soglia vera**: `max(0, X − c)`. Canvas 2D non sottrae, ma inverte (`destination-out` sopra un pieno dà 1 − a) e somma con tetto (`lighter`): 1 − min(1, (1 − X) + c). È la soglia a fare il bordo netto e rosicchiato; con la sola moltiplicazione restava l'alone;
+4. **guadagno** (copie in `lighter`), **velo** di polvere, colore in `source-in`.
+
+La gomma resta quella di prima. `?gesso=vecchio` rimette il gesso della -20, anche nell'immagine salvata. Tutti i numeri sono in `GESSO` in `palette.js`, con il perché.
+
+**`confronto-gesso.html`**: lo stesso disegno sintetico reso col vecchio e col nuovo, alle risoluzioni di telefono, export e desktop DPR 2, con una lente senza ammorbidimento. Con `?taratura` compaiono i cursori.
+
+Cose da sapere prima di toccarlo:
+
+- **La larghezza percepita è tarata sul vecchio, non a caso.** La soglia trasforma ogni calo di deposito in un calo di larghezza. La prima taratura, bella a vedersi, faceva tratti di **21 px contro 25** e il veloce si stringeva del **43% contro 28**: sarebbe tornata la lamentela del 15/09. Per questo il gesso nuovo non toglie deposito con la pressione (`pressioneAlfa: 1`) e deposito, soglia e guadagno sono scelti per 24 px e −25%. Chi ritocca l'aspetto rimisuri le due cifre.
+- **Striature solo in aggiunta.** Provati anche i solchi in `destination-out`: cancellano il gesso lasciato dallo *stesso* tratto alle passate precedenti, e negli scarabocchi diventano graffi.
+- **Striature spezzate alle curve strette**: alle inversioni dello scarabocchio la linea spostata di lato farebbe un uncino fuori dal tratto.
+- **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2.
+- **La tessera della trama si genera al layout** (`precaricaTrama()` in `main.js`), non al primo tocco: a DPR 2 sono decine di millisecondi.
+- **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato il 29/09/2026. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato.
+
+Misurato su Chrome desktop, headless: un tratto lungo quanto la lavagna a spessore da telefono costa **+15%** rispetto al vecchio (30 ms contro 26; 50 contro 43 con CPU rallentata 4x). Quasi tutto è nei timbri, identici. **Non è misurato su device**: è la prima cosa da fare, con `?debug=1` e FPS TRATTO.
+
 ## Il pannello Info
 
 Serve sul telefono, dove non c'è una console.
@@ -322,10 +348,13 @@ src/geom.js     Catmull-Rom, ricampionamento, RDP
 src/model.js    Drawing / Stroke, undo, redo
 src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
+src/chalk.js    le impronte e il timbro (il gesso vecchio, e il deposito del nuovo)
+src/gesso.js    il gesso nuovo: trama della lavagna, striature, soglia
 src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/tutorial.js i sette passi, il riquadro e il "gia visto"
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
+confronto-gesso.html  vecchio e nuovo affiancati (?taratura per i cursori)
 font/           i .woff2 della Fondazione, NON versionati (vedi sopra)
 images/logo.png il logo, solo per l'immagine che l'utente si porta via
 ```

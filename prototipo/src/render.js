@@ -15,6 +15,18 @@
 import { ERASER_ALPHA, CHALK_ALPHA } from './palette.js';
 import { resample, count } from './geom.js';
 import { timbra, passoTimbri } from './chalk.js';
+import { disegnaGesso } from './gesso.js';
+
+/**
+ * Quale gesso: 'nuovo' (gesso.js, dal 29/09/2026) o 'vecchio' (solo
+ * chalk.js). Il vecchio resta per il confronto: `?gesso=vecchio` nell'URL.
+ * Una variabile di modulo e non un parametro in giro per main.js, perche'
+ * deve valere per TUTTI i render — schermo, annulla, export — insieme: un
+ * disegno fatto col vecchio e salvato col nuovo non sarebbe quello visto.
+ */
+let modoGesso = 'nuovo';
+export const impostaGesso = (m) => { modoGesso = m === 'vecchio' ? 'vecchio' : 'nuovo'; };
+export const gessoAttuale = () => modoGesso;
 
 /**
  * I punti dove verra' posata un'impronta. Deterministica.
@@ -32,11 +44,16 @@ export const strokeGeometry = (stroke) => resample(stroke.pts, passoTimbri(strok
  * @returns {number} quanti timbri compongono il tratto, per sapere da dove
  *   riprendere alla chiamata successiva.
  */
-export function renderStroke(ctx, stroke, da = 0) {
+export function renderStroke(ctx, stroke, da = 0, modo = modoGesso) {
   const pts = strokeGeometry(stroke);
   if (count(pts) === 0) return 0;
 
   const cancella = stroke.tool === 'eraser';
+
+  // Il gesso nuovo passa dal canvas d'appoggio (gesso.js). La gomma no: resta
+  // quella di sempre, incrementale e direttamente sul livello dei tratti.
+  if (!cancella && modo === 'nuovo') return disegnaGesso(ctx, stroke, pts);
+
   ctx.save();
   if (cancella) {
     // Il cancellino toglie invece di aggiungere, ma resta granuloso: un
@@ -57,6 +74,6 @@ export function renderStroke(ctx, stroke, da = 0) {
 }
 
 /** Disegna l'intero Drawing sul contesto, che deve essere gia' vuoto. */
-export function render(drawing, ctx) {
-  for (const s of drawing.strokes) renderStroke(ctx, s);
+export function render(drawing, ctx, modo = modoGesso) {
+  for (const s of drawing.strokes) renderStroke(ctx, s, 0, modo);
 }

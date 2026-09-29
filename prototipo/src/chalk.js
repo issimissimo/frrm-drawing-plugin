@@ -240,7 +240,14 @@ export const bandaEffettiva = (width, p = 1) =>
  * il 16% dei pixel invece del 3%, perche' ogni micro-movimento ricalcolava
  * l'aspetto di tutte le impronte.
  */
-export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
+export function timbra(ctx, pts, {
+  color, width, seed, alpha = 0.42, da = 0,
+  // Quanto la pressione toglie opacita'. Il gesso nuovo (gesso.js) lo mette
+  // a 1, cioe' niente: la sua soglia amplifica ogni calo di deposito in un
+  // calo di larghezza, e col valore di sempre il tratto veloce si stringeva
+  // del 43% invece del 28%. Il vecchio e la gomma non lo passano.
+  alphaMinPressione = PRESSURE_ALPHA_MIN,
+}) {
   const n = pts.length / 3;
   if (n === 0) return;
 
@@ -327,7 +334,7 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
       // L'opacita' varia da timbro a timbro: e' l'irregolarita' che il gesso ha
       // quando la mano preme in modo non uniforme.
       ctx.globalAlpha = (alpha / strati) * pesi[j] * (0.7 + 0.3 * r3)
-        * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
+        * (alphaMinPressione + (1 - alphaMinPressione) * p);
       ctx.drawImage(set[(r4 * VARIANTI) | 0], cx - disegno / 2, cy - disegno / 2, disegno, disegno);
     }
   }

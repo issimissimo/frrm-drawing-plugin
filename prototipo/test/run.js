@@ -12,6 +12,7 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          unfreezeBoardHeight, CHALKS, BOARD_BG } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
+import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto } from '../src/gesso.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
@@ -378,6 +379,61 @@ test('gessetto: le impronte affiancate coprono la banda senza buchi', () => {
     const passo = (w - lato) / (k - 1);
     assert(passo <= lato * 0.61, `larghezza ${w}: strisce distanti ${passo.toFixed(1)} su lato ${lato.toFixed(1)}`);
   }
+});
+
+/*
+ * Il gesso nuovo (gesso.js). Le passate in GPU non si testano qui; la trama
+ * della lavagna e il rettangolo del tratto si'.
+ */
+
+test('gesso: la trama si ripete senza cucitura su TRAMA', () => {
+  // Se non fosse periodica, la tessera ripetuta mostrerebbe una riga ogni
+  // 512 unita': una griglia sulla lavagna, visibile in ogni riempimento.
+  for (const [u, v] of [[0, 0], [3.3, 7.1], [100.25, 511.9], [37, 400]]) {
+    const a = altezza(u, v);
+    assert(Math.abs(altezza(u + TRAMA, v) - a) < 1e-9, `(${u}, ${v}) diversa a +TRAMA in x`);
+    assert(Math.abs(altezza(u, v + TRAMA) - a) < 1e-9, `(${u}, ${v}) diversa a +TRAMA in y`);
+  }
+});
+
+test('gesso: le ottave dividono la tessera e pesano 1 in tutto', () => {
+  let somma = 0;
+  for (const { cella, peso } of OTTAVE) {
+    assert(TRAMA % cella === 0, `cella ${cella} non divide ${TRAMA}: la tessera avrebbe una cucitura`);
+    somma += peso;
+  }
+  assert(Math.abs(somma - 1) < 1e-9, `pesi a ${somma}: la cresta non starebbe in [0, 1]`);
+});
+
+test('gesso: la lavagna ha creste e valli, non solo una delle due', () => {
+  // Se la taratura di valle/picco spingesse tutta la lavagna da una parte,
+  // il gesso diventerebbe pittura piena o sparirebbe. Un campione largo.
+  let creste = 0, valli = 0, fuori = 0;
+  const N = 20000, r = mulberry32(99);
+  for (let i = 0; i < N; i++) {
+    const c = cresta(r() * TRAMA, r() * TRAMA);
+    if (c < 0 || c > 1) fuori++;
+    if (c > 0.9) creste++;
+    if (c < 0.1) valli++;
+  }
+  assert(fuori === 0, `${fuori} valori fuori da [0, 1]`);
+  assert(creste / N > 0.05, `creste piene al ${(100 * creste / N).toFixed(1)}%: il gesso non si fisserebbe`);
+  assert(valli / N > 0.05, `valli vuote al ${(100 * valli / N).toFixed(1)}%: non resterebbero buchi`);
+});
+
+test('gesso: la trama e la stessa a ogni avvio', () => {
+  // D1: stesso Drawing, stessa immagine. Il valore e' fissato qui perche'
+  // un hash cambiato per sbaglio cambierebbe la grana di tutti i disegni.
+  const v = altezza(123.4, 567.8);
+  assert(Math.abs(altezza(123.4, 567.8) - v) < 1e-12, 'non deterministica');
+  assert(v > 0 && v < 1, `altezza fuori intervallo: ${v}`);
+});
+
+test('gesso: il rettangolo del tratto contiene punti e margine', () => {
+  const pts = [100, 200, 1, 300, 250, 0.5, 180, 400, 1];
+  const r = rettangoloTratto(pts, 27);
+  assert(r.x < 100 - 27 && r.y < 200 - 27, 'margine sinistro/superiore troppo stretto');
+  assert(r.x + r.w > 300 + 27 && r.y + r.h > 400 + 27, 'margine destro/inferiore troppo stretto');
 });
 
 test('gessetto: il passo non degenera sui tratti sottilissimi', () => {

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confronto gesso</title>
+<style>
+  :root { --fondo: #15171a; --testo: #d8d6d0; --tenue: #8a8a86; --riga: #2c2f33; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--testo);
+         font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 16px 16px 8px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p { margin: 0 0 8px; color: var(--tenue); max-width: 70ch; }
+  .comandi { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
+             padding: 8px 16px 12px; border-bottom: 1px solid var(--riga); }
+  .comandi label { color: var(--tenue); }
+  .scelta button { background: none; border: 0; color: var(--tenue); font: inherit;
+                   padding: 4px 6px; cursor: pointer; }
+  .scelta button[aria-pressed="true"] { color: var(--testo); text-decoration: underline;
+                                         text-underline-offset: 4px; }
+  #taratura { display: none; gap: 4px 18px; flex-wrap: wrap; padding: 8px 16px;
+              border-bottom: 1px solid var(--riga); }
+  #taratura.on { display: flex; }
+  #taratura label { display: flex; gap: 6px; align-items: center; color: var(--tenue); }
+  #taratura output { color: var(--testo); min-width: 3.2em; font-variant-numeric: tabular-nums; }
+  .coppia { display: grid; gap: 0; }
+  .coppia.affiancati { grid-template-columns: 1fr 1fr; }
+  figure { margin: 0; overflow: auto; border-bottom: 1px solid var(--riga); }
+  figcaption { position: sticky; left: 0; padding: 10px 16px 6px; font-size: 9px;
+               font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tenue); }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Confronto gesso: vecchio e nuovo</h1>
+  <p>Lo stesso disegno, con gli stessi semi, reso due volte. «Telefono» e «desktop» sono le
+     risoluzioni vere della lavagna su quei device; la lente ingrandisce i pixel senza
+     ammorbidirli.</p>
+</header>
+
+<div class="comandi">
+  <label>Risoluzione</label>
+  <span class="scelta" id="scala">
+    <button data-k="0.4875">telefono</button>
+    <button data-k="1" aria-pressed="true">export 1600</button>
+    <button data-k="1.625">desktop DPR 2</button>
+  </span>
+  <label>Lente</label>
+  <span class="scelta" id="lente">
+    <button data-z="1" aria-pressed="true">1x</button>
+    <button data-z="2">2x</button>
+    <button data-z="3">3x</button>
+  </span>
+  <label>Disposizione</label>
+  <span class="scelta" id="disp">
+    <button data-d="sopra" aria-pressed="true">uno sopra l'altro</button>
+    <button data-d="fianco">affiancati</button>
+  </span>
+</div>
+
+<div id="taratura"></div>
+
+<div class="coppia" id="coppia">
+  <figure><figcaption>Vecchio — la -20</figcaption><canvas id="cv-vecchio"></canvas></figure>
+  <figure><figcaption>Nuovo</figcaption><canvas id="cv-nuovo"></canvas></figure>
+</div>
+
+<script type="module">
+import { render } from './src/render.js';
+import { GESSO, BOARD_BG, chalkById } from './src/palette.js';
+
+/* ---------- il disegno di prova ---------- */
+
+const c = (id) => chalkById(id).hex;
+let seme = 101;
+const tratto = (color, width, punti, tool = 'chalk') =>
+  ({ id: seme, tool, color, width, seed: seme++ * 2654435761 >>> 0, pts: punti.flat() });
+
+/** Campiona una curva parametrica ogni ~12 unita', con pressione p(t). */
+function curva(f, p = () => 1, n = 80) {
+  const out = [];
+  for (let i = 0; i <= n; i++) { const t = i / n; const [x, y] = f(t); out.push([x, y, p(t)]); }
+  return out;
+}
+const retta = (x0, y0, x1, y1, p) => curva((t) => [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t], p, 30);
+
+function cuore(cx, cy, s) {
+  return curva((t) => {
+    const a = t * Math.PI * 2;
+    const x = 16 * Math.sin(a) ** 3;
+    const y = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a);
+    return [cx + x * s, cy - y * s];
+  }, () => 1, 120);
+}
+
+/** Scarabocchio di riempimento: andata e ritorno come fa un bambino. */
+function scarabocchio(x0, y0, x1, y1, passo, dentro = () => true) {
+  const out = [];
+  let dir = 0;
+  for (let y = y0; y <= y1; y += passo) {
+    const riga = [];
+    for (let x = x0; x <= x1; x += 14) if (dentro(x, y)) riga.push([x, y + (dir ? 6 : -6) * Math.sin(x / 40), 0.9]);
+    if (dir) riga.reverse();
+    out.push(...riga);
+    dir ^= 1;
+  }
+  return out;
+}
+
+// Il cuore riempito: dentro il cuore di lato s.
+const dentroCuore = (cx, cy, s) => (x, y) => {
+  const u = (x - cx) / (s * 16), v = -(y - cy) / (s * 16) + 0.12;
+  return (u * u + v * v - 0.35) ** 3 - u * u * v ** 3 * 0.9 < 0;
+};
+
+const disegno = {
+  version: 1,
+  board: { w: 1600, h: 1200 },
+  strokes: [
+    tratto(c('bianco'), 27, retta(120, 1000, 420, 250)),
+    tratto(c('bianco'), 27, retta(200, 1040, 500, 290, () => 0.2)),
+    tratto(c('bianco'), 21, retta(290, 1080, 590, 330, () => 0.6)),
+    tratto(c('azzurro'), 27, curva((t) => [720 + 190 * Math.cos(t * 6.6), 330 + 120 * Math.sin(t * 6.6)])),
+    tratto(c('rosa'), 50, scarabocchio(1080, 170, 1440, 520, 26, dentroCuore(1260, 350, 11))),
+    tratto(c('rosa'), 27, cuore(1260, 350, 11)),
+    tratto(c('giallo'), 21, curva((t) => [80 + 700 * t, 1130 + 30 * Math.sin(t * 18)], (t) => 0.5 + 0.5 * Math.sin(t * 7))),
+    tratto(c('verde'), 50, scarabocchio(880, 700, 1230, 960, 30)),
+    tratto('#000', 90, retta(860, 860, 1260, 800), 'eraser'),
+    tratto(c('arancio'), 50, retta(900, 1100, 1520, 1080)),
+    tratto(c('lilla'), 27, retta(1000, 1010, 1420, 1160)),
+    tratto(c('rosso'), 21, curva((t) => [560 + (20 + 130 * t) * Math.cos(t * 16), 760 + (20 + 130 * t) * Math.sin(t * 16)], () => 1, 160)),
+    tratto(c('marrone'), 27, [[1330, 980, 1], [1390, 640, 1], [1450, 980, 1]]),
+    tratto(c('marrone'), 27, retta(1355, 850, 1425, 850)),
+    tratto(c('nero'), 27, retta(1080, 250, 1440, 470)),
+  ],
+};
+
+/* ---------- render ---------- */
+
+let k = 1, lente = 1;
+
+function disegna(id, modo) {
+  const cv = document.getElementById(id);
+  cv.width = Math.round(1600 * k);
+  cv.height = Math.round(1200 * k);
+  cv.style.width = `${(cv.width * lente) / devicePixelRatio}px`;
+  cv.style.height = `${(cv.height * lente) / devicePixelRatio}px`;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  const t0 = performance.now();
+  render(disegno, ctx, modo);
+  const ms = performance.now() - t0;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = BOARD_BG;
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.globalCompositeOperation = 'source-over';
+  return ms;
+}
+
+function tutto() {
+  const a = disegna('cv-vecchio', 'vecchio');
+  const b = disegna('cv-nuovo', 'nuovo');
+  document.title = `Confronto gesso — ${a.toFixed(0)} / ${b.toFixed(0)} ms`;
+}
+
+/* ---------- comandi ---------- */
+
+function scelta(id, fn) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    for (const x of el.children) x.setAttribute('aria-pressed', String(x === b));
+    fn(b.dataset);
+    tutto();
+  });
+}
+scelta('scala', (d) => { k = Number(d.k); });
+scelta('lente', (d) => { lente = Number(d.z); });
+scelta('disp', (d) => { document.getElementById('coppia').classList.toggle('affiancati', d.d === 'fianco'); });
+
+/* La taratura si vede solo con ?taratura: al cliente si mostra il confronto,
+   non i cursori. */
+const tar = document.getElementById('taratura');
+if (new URLSearchParams(location.search).has('taratura')) {
+  tar.classList.add('on');
+  const campi = { deposito: [0.05, 1, 0.01], soglia: [0, 0.6, 0.01], guadagno: [1, 8, 0.1],
+                  opacita: [0.3, 1, 0.01], valle: [0, 0.7, 0.01], picco: [0.3, 1, 0.01],
+                  velo: [0, 1, 0.01], strie: [0, 3, 0.05], pressioneAlfa: [0.5, 1, 0.01] };
+  for (const [nome, [min, max, step]] of Object.entries(campi)) {
+    const l = document.createElement('label');
+    l.innerHTML = `${nome} <input type="range" min="${min}" max="${max}" step="${step}" value="${GESSO[nome]}"> <output>${GESSO[nome]}</output>`;
+    const inp = l.querySelector('input'), out = l.querySelector('output');
+    inp.addEventListener('input', () => {
+      GESSO[nome] = Number(inp.value);
+      out.textContent = inp.value;
+      tutto();
+    });
+    tar.appendChild(l);
+  }
+}
+
+// Per la taratura automatica dal browser pilotato: nessun effetto sulla pagina.
+window.__prova = { GESSO, tutto, disegno };
+
+tutto();
+</script>
+</body>
+</html>
