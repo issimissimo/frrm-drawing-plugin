@@ -12,7 +12,8 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          unfreezeBoardHeight, CHALKS, BOARD_BG } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
-import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto } from '../src/gesso.js';
+import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
+         lunghezzaPunta, passoPunta } from '../src/gesso.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
@@ -427,6 +428,29 @@ test('gesso: la trama e la stessa a ogni avvio', () => {
   const v = altezza(123.4, 567.8);
   assert(Math.abs(altezza(123.4, 567.8) - v) < 1e-12, 'non deterministica');
   assert(v > 0 && v < 1, `altezza fuori intervallo: ${v}`);
+});
+
+test('gesso: la punta ha filamenti al centro e bordi che vanno a zero', () => {
+  // I filamenti sono la grana allungata: se il profilo fosse piatto, il
+  // tratto trascinato sarebbe una striscia uniforme. E ai bordi deve
+  // arrivare a zero, o il tratto avrebbe un filo netto come un nastro.
+  for (const w of [21, 27, 50, 108]) {
+    const p = profiloPunta(1234, w);
+    let min = 1, max = 0;
+    for (let v = w * 0.25; v <= w * 0.75; v += 0.1) { const x = p(v); min = Math.min(min, x); max = Math.max(max, x); }
+    assert(max - min > 0.2, `larghezza ${w}: profilo quasi piatto (${min.toFixed(2)}..${max.toFixed(2)})`);
+    assert(max <= 1 && min >= 0, `larghezza ${w}: profilo fuori da [0, 1]`);
+    assert(p(0) < 0.01 && p(w) < 0.01, `larghezza ${w}: i bordi non vanno a zero`);
+  }
+});
+
+test('gesso: la punta si posa abbastanza fitta da non lasciare buchi', () => {
+  // Le strisce sfumano ai capi (Hann): distanziate piu' di meta' della loro
+  // lunghezza, il tratto si spezzerebbe in trattini.
+  for (const w of [10, 21, 50, 108, 180]) {
+    assert(passoPunta(w) <= lunghezzaPunta(w) * 0.5, `larghezza ${w}: passo troppo lungo`);
+    assert(lunghezzaPunta(w) <= 12, `larghezza ${w}: striscia troppo lunga per seguire le curve`);
+  }
 });
 
 test('gesso: il rettangolo del tratto contiene punti e margine', () => {

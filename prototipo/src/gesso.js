@@ -1,74 +1,45 @@
 /**
- * Il gesso che attacca alla lavagna.
+ * Il gesso nuovo (dal 29/09/2026, branch gesso-realistico).
  *
- * chalk.js timbra il tratto con impronte che hanno la grana DENTRO. Funziona
- * finche' le impronte non si sovrappongono troppo — ma si sovrappongono una
- * decina per punto, e ogni grana fine si media via: per questo le macchie di
- * chalk.js sono larghe e il risultato legge come pastello morbido. Nei
- * riempimenti la grana sparisce del tutto.
+ * chalk.js timbra il tratto con impronte tonde che hanno la grana DENTRO.
+ * Si sovrappongono una decina per punto e ogni grana fine si media via: per
+ * questo le sue macchie sono larghe e il risultato legge come pastello
+ * morbido, con i riempimenti piatti come un pennarello.
  *
- * Nel gesso vero la grana e' della SUPERFICIE: il gesso resta sulle creste
- * della lavagna e salta le valli, e le valli sono sempre nello stesso posto.
- * Per questo resta fine e contrastata anche dopo dieci passate.
+ * Qui il tratto e' fatto come lo fa un gessetto vero:
  *
- * Qui si fa lo stesso, in tre passi e tutto in GPU (niente getImageData, che
- * su Safari costringerebbe a riportare i pixel dalla GPU a ogni frame):
+ *   1. PUNTA      una striscia sottile, con un profilo di filamenti lungo la
+ *                 larghezza, TRASCINATA lungo la curva e ruotata nella
+ *                 direzione del gesto. I filamenti restano allineati da un
+ *                 capo all'altro del tratto: e' la grana allungata che si vede
+ *                 nel gesso vero, e che le impronte tonde non possono fare.
+ *   2. LAVAGNA    il deposito si moltiplica per una trama fine (destination-in):
+ *                 il gesso resta sulle creste e salta le valli. La trama e'
+ *                 spostata a caso per ogni tratto, cosi' ripassare riempie i
+ *                 buchi lasciati dalla passata prima invece di schiarire
+ *                 sempre gli stessi granelli.
+ *   3. SOGLIA     max(0, X - c), poi un guadagno: il bordo resta netto invece
+ *                 di sfumare in un alone.
+ *   4. COLORE     una passata copre solo in parte (GESSO.opacita): i bambini
+ *                 ripassano per avere il colore pieno, e due colori sovrapposti
+ *                 si mescolano. Non c'e' una pressione vera da cui ricavarlo.
  *
- *   1. DEPOSITO   il tratto si timbra come prima, in bianco, su un canvas
- *                 d'appoggio: e' "quanto gesso e' arrivato" in ogni punto.
- *   2. CRESTE     destination-in con la trama della lavagna: deposito x cresta.
- *   3. SOGLIA     il risultato si somma a se stesso in 'lighter', cioe'
- *                 min(1, g * deposito * cresta). Dove il prodotto supera 1/g
- *                 il gesso e' pieno, sotto resta un velo. Canvas 2D non ha una
- *                 soglia vera: questa ne e' l'approssimazione che si puo' fare
- *                 senza leggere i pixel.
+ * Tutto in GPU, con operazioni di composizione: niente getImageData, che su
+ * Safari riporterebbe i pixel dalla GPU a ogni frame.
  *
- * Poi si colora (source-in) e si compone sul livello di destinazione.
- *
- * Ne vengono il bordo rosicchiato invece che sfumato, i puntini ad alto
- * contrasto invece del grigio, i riempimenti che restano porosi. E, gratis:
- * la grana dominante non dipende piu' dalla sequenza dei timbri, quindi dopo
- * annulla o resize il tratto ridisegnato cambia molto meno di prima.
- *
- * La trama e' in UNITA' DI LAVAGNA e ancorata all'origine: stesso punto della
- * lavagna, stessa cresta, a qualunque risoluzione. E' la condizione perche'
- * resti vero D1 — lo stesso Drawing da' la stessa immagine a scale diverse.
+ * Deterministico dal seme dello stroke (D1): stessa punta, stessa trama,
+ * stesso tremolio, a qualunque risoluzione.
  */
 
 import { timbra, mulberry32 } from './chalk.js';
-import { count } from './geom.js';
-import { GESSO, PRESSURE_MIN } from './palette.js';
+import { resample, count, length } from './geom.js';
+import { GESSO, PRESSURE_MIN, PRESSURE_ALPHA_MIN } from './palette.js';
 
 /** Come timbra(): la pressione stringe la banda fino a PRESSURE_MIN. */
 const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
 
-/* --- La trama della lavagna ------------------------------------------------ */
-
-/**
- * Lato della tessera che si ripete, in unita' di lavagna. Sulla lavagna larga
- * 1600 si ripete poco piu' di tre volte: abbastanza grande perche' la
- * ripetizione non si legga dentro un riempimento, abbastanza piccola da
- * generarla in qualche decina di millisecondi anche a DPR 2.
- */
-export const TRAMA = 512;
-
-/**
- * Le ottave della trama: lato della cella in unita' di lavagna e peso.
- * Ogni lato divide TRAMA, cosi' la tessera si ripete senza cucitura.
- *
- *   1   il pulviscolo: a DPR 1 e' un pixel, sul telefono si media in velo
- *   2   la grana vera, il puntinato che si vede nelle foto
- *   4   la tiene insieme in grumi, altrimenti e' rumore televisivo
- *  16   zone dove la lavagna "prende" meglio o peggio
- *  64   usura: un velo appena percettibile
- */
-export const OTTAVE = [
-  { cella: 1, peso: 0.22 },
-  { cella: 2, peso: 0.30 },
-  { cella: 4, peso: 0.24 },
-  { cella: 16, peso: 0.15 },
-  { cella: 64, peso: 0.09 },
-];
+const liscia = (t) => t * t * (3 - 2 * t);
+const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
 
 /** Hash intero -> [0, 1). Deterministico, senza stato. */
 function hash(x, y, o) {
@@ -78,6 +49,35 @@ function hash(x, y, o) {
   return (h >>> 0) / 4294967296;
 }
 
+/* --- La trama della lavagna ------------------------------------------------ */
+
+/**
+ * Lato della tessera che si ripete, in unita' di lavagna. Grande abbastanza
+ * che la ripetizione non si legga dentro un riempimento, piccola abbastanza da
+ * generarla in qualche decina di millisecondi anche a DPR 2.
+ */
+export const TRAMA = 512;
+
+/**
+ * Le ottave della trama: lato della cella in unita' di lavagna e peso. Ogni
+ * lato divide TRAMA, cosi' la tessera si ripete senza cucitura.
+ *
+ *     1   la grana: a DPR 1 e' un pixel, com'e' nel gesso vero
+ *     2   la tiene insieme appena, altrimenti e' rumore televisivo
+ *    16   nuvole: zone dove la lavagna "prende" meglio o peggio
+ *    64   e piu' larghe, perche' un riempimento non sia uniforme
+ *
+ * Il 29/09/2026 la cella piu' fine era 2 e pesava insieme alla 4: grana
+ * giudicata "troppo uniforme e grossolana" da Daniele sul confronto con una
+ * foto di gesso vero.
+ */
+export const OTTAVE = [
+  { cella: 1, peso: 0.46 },
+  { cella: 2, peso: 0.22 },
+  { cella: 16, peso: 0.18 },
+  { cella: 64, peso: 0.14 },
+];
+
 /** Il reticolo di un'ottava, calcolato una volta sola. */
 const reticoli = OTTAVE.map(({ cella }, o) => {
   const n = TRAMA / cella;
@@ -85,8 +85,6 @@ const reticoli = OTTAVE.map(({ cella }, o) => {
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) r[y * n + x] = hash(x, y, o);
   return { n, cella, r };
 });
-
-const liscia = (t) => t * t * (3 - 2 * t);
 
 /**
  * Altezza grezza della lavagna nel punto (u, v), in unita' di lavagna.
@@ -111,15 +109,36 @@ export function altezza(u, v) {
 }
 
 /**
- * Quanto il punto (u, v) trattiene il gesso: 0 valle, 1 cresta.
- *
- * Il contrasto e' la leva principale dell'effetto. Una trama morbida da'
- * l'aspetto del pastello su carta; il gesso su lavagna e' quasi binario —
- * gesso pieno o lavagna nuda, con pochi toni in mezzo.
+ * Quanto il punto (u, v) trattiene il gesso: 0 valle, 1 cresta. Il contrasto
+ * e' la leva che separa il gesso dal pastello.
  */
 export function cresta(u, v) {
-  const t = (altezza(u, v) - GESSO.valle) / (GESSO.picco - GESSO.valle);
-  return liscia(Math.min(1, Math.max(0, t)));
+  return tra(GESSO.valle, GESSO.picco, altezza(u, v));
+}
+
+/**
+ * La tessera renderizzata a `k` pixel per unita' di lavagna, campionata al
+ * centro di ogni pixel: a risoluzioni diverse e' la stessa trama, campionata
+ * piu' o meno fitta.
+ */
+function tessera(k) {
+  const lato = Math.max(1, Math.round(TRAMA * k));
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = lato;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(lato, lato);
+  const d = img.data;
+  const passo = TRAMA / lato;
+  for (let y = 0; y < lato; y++) {
+    const v = (y + 0.5) * passo;
+    for (let x = 0; x < lato; x++) {
+      const i = (y * lato + x) * 4;
+      d[i] = d[i + 1] = d[i + 2] = 255;
+      d[i + 3] = Math.round(cresta((x + 0.5) * passo, v) * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
 }
 
 /**
@@ -146,28 +165,172 @@ function tesseraPer(k) {
 }
 
 /**
- * La tessera renderizzata a `k` pixel per unita' di lavagna. Si campiona al
- * centro di ogni pixel, quindi a risoluzioni diverse la trama e' la stessa,
- * campionata piu' o meno fitta.
+ * Genera in anticipo la tessera per la scala `k`. La chiama main.js a ogni
+ * layout: senza, la prima tessera si genererebbe al primo tocco, e a DPR 2
+ * sono qualche decina di millisecondi proprio sul primo tratto.
  */
-function tessera(k) {
-  const lato = Math.max(1, Math.round(TRAMA * k));
+export const precaricaTrama = (k) => { tesseraPer(k); };
+
+/* --- La punta del gessetto -------------------------------------------------- */
+
+/** Rumore a una dimensione, liscio, in [0, 1]: celle di `cella` unita'. */
+function rumore1(seme, cella) {
+  return (s) => {
+    const g = s / cella, i = Math.floor(g);
+    const a = hash(i, seme, 7), b = hash(i + 1, seme, 7);
+    return a + (b - a) * liscia(g - i);
+  };
+}
+
+/**
+ * Il profilo della punta attraverso il tratto: quanto gesso deposita alla
+ * distanza `v` dal bordo sinistro, per un tratto largo `w`. In [0, 1].
+ *
+ *  - i FILAMENTI: rumore fine attraverso la larghezza, meno di un'unita' di
+ *    lavagna, piu' uno piu' largo che li raggruppa. Trascinato lungo la curva
+ *    diventa la striatura;
+ *  - i BORDI: il deposito cala nell'ultimo decimo della larghezza. Netti,
+ *    perche' un bordo morbido e' l'aerografo di prima.
+ */
+export function profiloPunta(seme, w) {
+  // Il medio a 3,2 unita' faceva corsie leggibili: l'ellisse di prova
+  // sembrava un binario. A 2 raggruppa senza disegnare righe.
+  const fine = rumore1(seme, 0.9);
+  const medio = rumore1(seme ^ 0x2545F491, 2);
+  const bordo = Math.min(w * 0.18, 1 + w * GESSO.bordo);
+  const f = GESSO.filamenti;
+  return (v) => {
+    const fil = 0.7 * fine(v) + 0.3 * medio(v);
+    const striato = 1 - f + f * tra(0.2, 0.75, fil);
+    return striato * tra(0, bordo, v) * tra(0, bordo, w - v);
+  };
+}
+
+/**
+ * La punta come immagine: `lungo` unita' nella direzione del gesto, `w`
+ * attraverso, a `k` pixel per unita'. Lungo il gesto la striscia sfuma ai due
+ * capi (finestra di Hann), cosi' le strisce successive si fondono senza
+ * cuciture.
+ *
+ * Attraverso si campiona tre volte per pixel: sul telefono un'unita' di
+ * lavagna e' mezzo pixel, e senza media i filamenti diventerebbero aliasing.
+ */
+function immaginePunta(seme, w, lungo, k) {
+  const W = Math.max(2, Math.round(lungo * k));
+  const H = Math.max(2, Math.round(w * k));
+  const prof = profiloPunta(seme, w);
+  const colonna = new Float32Array(H);
+  for (let y = 0; y < H; y++) {
+    let s = 0;
+    for (let q = 0; q < 3; q++) s += prof(((y + (q + 0.5) / 3) / H) * w);
+    colonna[y] = s / 3;
+  }
   const cv = document.createElement('canvas');
-  cv.width = cv.height = lato;
+  cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  const img = ctx.createImageData(lato, lato);
+  const img = ctx.createImageData(W, H);
   const d = img.data;
-  const passo = TRAMA / lato;
-  for (let y = 0; y < lato; y++) {
-    const v = (y + 0.5) * passo;
-    for (let x = 0; x < lato; x++) {
-      const i = (y * lato + x) * 4;
+  for (let x = 0; x < W; x++) {
+    const hann = 0.5 - 0.5 * Math.cos((2 * Math.PI * (x + 0.5)) / W);
+    for (let y = 0; y < H; y++) {
+      const i = (y * W + x) * 4;
       d[i] = d[i + 1] = d[i + 2] = 255;
-      d[i + 3] = Math.round(cresta((x + 0.5) * passo, v) * 255);
+      d[i + 3] = Math.round(colonna[y] * hann * 255);
     }
   }
   ctx.putImageData(img, 0, 0);
   return cv;
+}
+
+/**
+ * L'ultima punta generata. Il tratto in corso si ridisegna a ogni frame con
+ * la stessa punta: rigenerarla ogni volta sarebbe lavoro buttato. Per gli
+ * altri tratti costa poco — qualche centinaio di pixel — e non si conserva.
+ */
+let puntaInCache = { chiave: '', cv: null };
+function punta(seme, w, lungo, k) {
+  const chiave = `${seme}:${w}:${lungo}:${k}:${GESSO.filamenti}:${GESSO.bordo}`;
+  if (puntaInCache.chiave !== chiave) puntaInCache = { chiave, cv: immaginePunta(seme, w, lungo, k) };
+  return puntaInCache.cv;
+}
+
+/**
+ * Lunghezza della striscia lungo il gesto. Lunga abbastanza da posarne poche
+ * (il costo e' una drawImage ciascuna), corta abbastanza da seguire le curve:
+ * a 12 unita' su un raggio di 20 la corda si scosta dalla curva di 0,9.
+ */
+export const lunghezzaPunta = (w) => Math.min(12, Math.max(4, w * 0.3));
+
+/** Distanza fra due strisce: 0,4 della lunghezza, cosi' si coprono. */
+export const passoPunta = (w) => lunghezzaPunta(w) * 0.4;
+
+/**
+ * Trascina la punta lungo il tratto, sul contesto `ctx` gia' ripulito.
+ * `m` e' la trasformazione della lavagna.
+ */
+function trascina(ctx, m, stroke) {
+  const { width: w, seed } = stroke;
+  const lungo = lunghezzaPunta(w);
+  const passo = passoPunta(w);
+  const pts = resample(stroke.pts, passo);
+  const n = count(pts);
+  const k = m.a;
+  const img = punta(seed, w, lungo, k);
+
+  // Il tremolio della mano: la striscia si sposta di poco di lato, lentamente.
+  // Lento e non a ogni striscia, o i filamenti si sfalserebbero e si
+  // confonderebbero fra loro.
+  const lato = rumore1(seed ^ 0x6A09E667, 40);
+  const largo = rumore1(seed ^ 0x3C6EF372, 25);
+  const dose = rumore1(seed ^ 0x510E527F, 18);
+
+  const L = (n - 1) * passo;
+  const r = w / 2;
+
+  // Una striscia nel punto (x, y), ruotata di `ang`, a distanza `s` dall'inizio.
+  const posa = (x, y, ang, p, s) => {
+    // Le estremita' si arrotondano: vicino ai capi la striscia si stringe
+    // come un semicerchio. Senza, ogni tratto finirebbe tagliato netto.
+    const dal = Math.min(s, L - s);
+    const capo = dal >= r ? 1 : Math.max(0.2, Math.sqrt(1 - (1 - dal / r) ** 2));
+    const meta = r * PRESSIONE_BANDA(p) * capo * (0.95 + 0.1 * largo(s));
+    const off = (lato(s) - 0.5) * 0.08 * w;
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    ctx.setTransform(k * c, k * sn, -k * sn, k * c, k * x + m.e, k * y + m.f);
+    // La pressione toglie anche deposito, come in timbra(): e' cio' che fa
+    // leggere la variazione di spessore col gesto (tarata il 17/09/2026).
+    // Senza, la soglia la schiacciava al 9%.
+    ctx.globalAlpha = GESSO.deposito * (0.75 + 0.25 * dose(s))
+      * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
+    ctx.drawImage(img, -lungo / 2, off - meta, lungo, 2 * meta);
+  };
+
+  let prec = null;   // [x, y, angolo, p] della striscia precedente
+  for (let i = 0; i < n; i++) {
+    const x = pts[i * 3], y = pts[i * 3 + 1], p = pts[i * 3 + 2];
+    const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+    const ang = Math.atan2(pts[b * 3 + 1] - pts[a * 3 + 1], pts[b * 3] - pts[a * 3]);
+    const s = i * passo;
+
+    // Dove il gesto gira stretto — le inversioni dello scarabocchio — fra
+    // una striscia e la successiva l'angolo salta, e sul lato esterno della
+    // curva le strisce si aprono a ventaglio: un pettine di filamenti come
+    // raggi. Si riempie il ventaglio con strisce intermedie, un passo ogni
+    // 0,15 radianti. Costa solo nelle curve strette.
+    if (prec) {
+      let d = ang - prec[2];
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      const extra = Math.min(24, Math.floor(Math.abs(d) / 0.15));
+      for (let e = 1; e <= extra; e++) {
+        const t = e / (extra + 1);
+        posa(prec[0] + (x - prec[0]) * t, prec[1] + (y - prec[1]) * t,
+          prec[2] + d * t, prec[3] + (p - prec[3]) * t, s - passo * (1 - t));
+      }
+    }
+    posa(x, y, ang, p, s);
+    prec = [x, y, ang, p];
+  }
+  return n;
 }
 
 /* --- Il canvas d'appoggio -------------------------------------------------- */
@@ -199,111 +362,26 @@ function appoggio(w, h) {
 }
 
 /**
- * Il pattern della trama per il contesto `ctx`, a `k` pixel per unita'.
- * Il pattern si disegna nello spazio utente — gia' in unita' di lavagna — e
- * la sua trasformazione riporta la tessera da pixel a unita': cosi' e'
- * ancorato alla lavagna, non allo schermo.
+ * Il pattern della trama per il contesto `ctx`, a `k` pixel per unita'. Si
+ * disegna nello spazio utente — gia' in unita' di lavagna — e la sua
+ * trasformazione riporta la tessera da pixel a unita' (vedi disegnaGesso).
  */
 function patternTrama(a, ctx, k) {
-  // Valle e picco nella chiave: la pagina di confronto li muove dal vivo.
   const chiave = chiaveTessera(k);
   let p = a.pattern.get(chiave);
   if (p) return p;
-  const t = tesseraPer(k);
-  p = ctx.createPattern(t, 'repeat');
-  const s = TRAMA / t.width;
-  p.setTransform(new DOMMatrix([s, 0, 0, s, 0, 0]));
+  p = ctx.createPattern(tesseraPer(k), 'repeat');
   if (a.pattern.size >= 4) a.pattern.delete(a.pattern.keys().next().value);
   a.pattern.set(chiave, p);
   return p;
 }
 
-/**
- * Genera in anticipo la tessera per la scala `k`. La chiama main.js a ogni
- * layout: senza, la prima tessera si genererebbe al primo tocco, e a DPR 2
- * sono qualche decina di millisecondi proprio sul primo tratto.
- */
-export const precaricaTrama = (k) => { tesseraPer(k); };
-
 /* --- Il tratto ------------------------------------------------------------- */
 
 /**
- * Le striature: linee sottili parallele al gesto, dove la punta del gessetto
- * deposita di piu'. Fra una e l'altra il deposito resta piu' basso, ed e'
- * quello che si legge come solco.
- *
- * Nel gesso largo sono la cosa che si nota per prima (vedi la barra del "%"
- * nella foto di riferimento), e le impronte affiancate di chalk.js non
- * riescono a farle: ogni impronta e' larga il doppio della distanza fra le
- * corsie e le corsie si fondono. Provato il 29/09/2026 a stringerle (punta 8,
- * sei corsie): il doppio dei timbri, e le striature non si vedevano comunque.
- *
- * Una linea tracciata e' coerente per tutta la lunghezza del tratto come un
- * solco vero, e costa uno stroke() invece di centinaia di drawImage. Il
- * tratteggio a lunghezze casuali le fa nascere e morire lungo il gesto: una
- * riga continua da un capo all'altro sembrerebbe tirata col righello.
- *
- * Solo in aggiunta, mai in sottrazione. Provati il 29/09/2026 anche i solchi
- * in destination-out: toglievano il gesso lasciato dallo STESSO tratto alle
- * passate precedenti, e nei riempimenti a scarabocchio diventavano graffi.
- *
- * Deterministiche dal seme dello stroke, come tutto il resto (D1).
- */
-function striature(ctx, pts, width, seed) {
-  const n = pts.length / 3;
-  if (n < 2 || GESSO.strie <= 0) return;
-  const r = mulberry32((seed ^ 0x51A7E) >>> 0);
-
-  // Le normali una volta sola, per tutte le linee.
-  const nx = new Float32Array(n), ny = new Float32Array(n), sc = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const a = i === 0 ? 0 : i - 1, b = i === n - 1 ? i : i + 1;
-    const tx = pts[b * 3] - pts[a * 3], ty = pts[b * 3 + 1] - pts[a * 3 + 1];
-    const len = Math.hypot(tx, ty) || 1;
-    nx[i] = -ty / len; ny[i] = tx / len;
-    // Le linee seguono la banda, che la pressione stringe: vedi timbra().
-    sc[i] = PRESSIONE_BANDA(pts[i * 3 + 2]);
-  }
-
-  // Dove il gesto gira stretto — le inversioni dello scarabocchio — la linea
-  // spostata di lato farebbe un uncino fuori dal tratto: li' si interrompe.
-  const spezza = new Uint8Array(n);
-  for (let i = 1; i < n; i++) spezza[i] = nx[i] * nx[i - 1] + ny[i] * ny[i - 1] < 0.8 ? 1 : 0;
-
-  // Una linea ogni ~2,5 unita' di larghezza: il gessetto ha solchi fitti.
-  const quante = Math.min(24, Math.max(3, Math.round(width / 2.5)));
-  ctx.save();
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.globalCompositeOperation = 'lighter';
-  for (let j = 0; j < quante; j++) {
-    // Lontane dai bordi: una striscia sul filo del tratto si legge come un
-    // contorno, e il tratto sembra fatto con un pennino a piu' punte.
-    const off = (r() - 0.5) * 0.7 * width;
-    ctx.globalAlpha = Math.min(1, GESSO.strie * (0.12 + 0.3 * r()));
-    ctx.lineWidth = 0.5 + 1.0 * r();
-    // Tratti brevi e interruzioni frequenti: lunghe, sembrano fili.
-    const tratti = [];
-    for (let k = 0; k < 6; k++) tratti.push(12 + 80 * r(), 8 + 70 * r());
-    ctx.setLineDash(tratti);
-    ctx.lineDashOffset = r() * 300;
-    ctx.strokeStyle = '#ffffff';
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const o = off * sc[i];
-      const x = pts[i * 3] + nx[i] * o, y = pts[i * 3 + 1] + ny[i] * o;
-      if (i === 0 || spezza[i]) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/**
- * Il rettangolo del tratto in unita' di lavagna, con il margine che copre
- * impronte, jitter e polvere. Largo di proposito: fuori dal tratto le
- * passate costano solo pixel vuoti, mentre un margine stretto taglierebbe i
- * granelli piu' lontani.
+ * Il rettangolo del tratto in unita' di lavagna, con il margine che copre la
+ * punta e il suo tremolio. Largo di proposito: fuori dal tratto le passate
+ * costano solo pixel vuoti.
  */
 export function rettangoloTratto(pts, width) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -319,8 +397,8 @@ export function rettangoloTratto(pts, width) {
 /**
  * Disegna un tratto di gesso su `ctx`, che e' gia' in unita' di lavagna.
  *
- * @param {number[]} pts il tratto gia' ricampionato (strokeGeometry in
- *   render.js): la geometria e' la stessa del gesso vecchio.
+ * @param {number[]} pts il tratto ricampionato col passo di chalk.js
+ *   (strokeGeometry): serve al rettangolo e ai tratti-punto.
  * @returns {number} quanti punti ha il tratto ricampionato
  */
 export function disegnaGesso(ctx, stroke, pts) {
@@ -343,25 +421,25 @@ export function disegnaGesso(ctx, stroke, pts) {
   const pw = px1 - px0, ph = py1 - py0;
   if (pw <= 0 || ph <= 0) return n;
 
-  // 1. Deposito: il timbro di sempre, in bianco. Il colore arriva alla fine,
-  //    cosi' le somme della soglia lavorano su una maschera e non alterano la
-  //    tinta.
+  // 1. Deposito, in bianco: il colore arriva alla fine, cosi' le somme della
+  //    soglia lavorano su una maschera e non alterano la tinta.
   dep.setTransform(1, 0, 0, 1, 0, 0);
   dep.globalCompositeOperation = 'source-over';
   dep.globalAlpha = 1;
   dep.clearRect(0, 0, W, H);
+  if (length(stroke.pts) < width * 0.3) {
+    // Un tocco senza trascinare: non c'e' una direzione in cui trascinare la
+    // punta. Il timbro tondo di chalk.js fa il punto.
+    dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    timbra(dep, pts, { color: '#ffffff', width, seed, alpha: GESSO.deposito });
+  } else {
+    trascina(dep, m, stroke);
+  }
   dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-  timbra(dep, pts, {
-    color: '#ffffff', width, seed, alpha: GESSO.deposito,
-    alphaMinPressione: GESSO.pressioneAlfa,
-  });
-
-  // 1a. Le striature.
-  striature(dep, pts, width, seed);
+  dep.globalAlpha = 1;
 
   // 1b. Il velo: il gesso lascia polvere anche nelle valli, poca. Si prende
-  //     dal deposito prima che la trama lo buchi. Senza, fra un granello e
-  //     l'altro c'e' lavagna nuda e il tratto sembra stampato a retino.
+  //     dal deposito prima che la trama lo buchi.
   fin.setTransform(1, 0, 0, 1, 0, 0);
   fin.globalCompositeOperation = 'source-over';
   fin.globalAlpha = 1;
@@ -370,20 +448,25 @@ export function disegnaGesso(ctx, stroke, pts) {
   fin.globalAlpha = GESSO.velo;
   fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
 
-  // 2. Creste: deposito x trama. destination-in azzera anche fuori dal
-  //    rettangolo, ed e' giusto: sul canvas d'appoggio c'e' solo questo tratto.
+  // 2. Creste: deposito x trama. La trama si sposta a caso per ogni tratto:
+  //    con la stessa trama per tutti, ripassare schiarirebbe sempre gli
+  //    stessi granelli e i buchi resterebbero buchi per sempre.
+  //    destination-in azzera anche fuori dal rettangolo: sul canvas
+  //    d'appoggio c'e' solo questo tratto.
+  const pat = patternTrama(a, dep, k);
+  const s = TRAMA / tesseraPer(k).width;
+  const sp = mulberry32((seed ^ 0x1B873593) >>> 0);
+  pat.setTransform(new DOMMatrix([s, 0, 0, s, sp() * TRAMA, sp() * TRAMA]));
   dep.globalCompositeOperation = 'destination-in';
-  dep.fillStyle = patternTrama(a, dep, k);
+  dep.fillStyle = pat;
   dep.fillRect(r.x, r.y, r.w, r.h);
   dep.globalCompositeOperation = 'source-over';
 
   // 3. Soglia: max(0, X - c). Canvas 2D non sottrae, ma sa invertire
   //    (destination-out sopra un pieno da' 1 - a) e sommare con tetto a 1
   //    (lighter). Quindi: 1 - min(1, (1 - X) + c) = max(0, X - c).
-  //
-  //    Senza, i valori bassi restavano pixel fiochi invece di sparire, e
-  //    attorno a ogni tratto c'era un alone morbido: l'aerografo di prima,
-  //    solo piu' granuloso. Col gesso vero il bordo e' netto e rosicchiato.
+  //    Senza, i valori bassi restano pixel fiochi invece di sparire, e
+  //    attorno al tratto c'e' un alone morbido.
   const pieno = (c) => {
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
@@ -410,9 +493,7 @@ export function disegnaGesso(ctx, stroke, pts) {
     fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
   }
 
-  // Colore e opacita' finale. Il gesso vero non copre del tutto nemmeno sulle
-  // creste: un filo di lavagna in trasparenza e' parte di cio' che lo fa
-  // leggere come gesso e non come pittura.
+  // 5. Colore, e quanto copre una passata sola.
   fin.globalCompositeOperation = 'source-in';
   fin.globalAlpha = GESSO.opacita;
   fin.fillStyle = color;

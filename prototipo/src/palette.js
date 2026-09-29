@@ -248,8 +248,8 @@ export const CHALK_ALPHA = 0.35;
 export const ERASER_ALPHA = 0.85;
 
 /**
- * Il gesso che attacca alle creste della lavagna (gesso.js, dal 29/09/2026).
- * Col gesso nuovo CHALK_ALPHA non si usa piu': vale solo per `?gesso=vecchio`.
+ * Il gesso nuovo (gesso.js, dal 29/09/2026). Col gesso nuovo CHALK_ALPHA non
+ * si usa piu': vale solo per `?gesso=vecchio`.
  *
  * Un oggetto e non costanti sciolte perche' la pagina di confronto
  * (confronto-gesso.html?taratura) li muove dal vivo: nel prototipo nessuno
@@ -257,53 +257,52 @@ export const ERASER_ALPHA = 0.85;
  *
  * Il valore di ciascun pixel e', in ordine:
  *
- *   X = deposito accumulato x cresta della lavagna
+ *   X = deposito della punta trascinata x cresta della lavagna
  *   min(1, guadagno x max(0, X - soglia)) + velo x deposito
  *   ... x opacita, nel colore del gessetto
  *
- *   deposito  opacita' del singolo timbro sul canvas d'appoggio: quanto
- *             gesso arriva a ogni passaggio. Fa le veci di CHALK_ALPHA.
- *   soglia    il deposito sotto cui non resta niente. E' cio' che fa il bordo
- *             netto e rosicchiato invece che sfumato: a 0 torna l'alone.
- *   guadagno  quanto in fretta, sopra la soglia, il gesso diventa pieno.
- *             Alto = tratto pieno e grana a due toni; basso = grana morbida.
- *   opacita   quanto copre il gesso pieno. Sotto 1 di proposito: un filo di
- *             lavagna in trasparenza e' parte di cio' che fa il gesso.
- *   valle     altezza della lavagna sotto cui non attacca niente,
- *   picco     e sopra cui attacca tutto. Stringerli aumenta il contrasto
- *             della grana; e' la leva che separa il gesso dal pastello.
- *   velo      la polvere che resta nelle valli, come frazione del deposito.
- *             Sopra 0,15 torna l'alone grigio attorno ai tratti.
- *   strie     intensita' delle striature lungo il gesto.
- *   pressioneAlfa  come PRESSURE_ALPHA_MIN, ma per il gesso nuovo: 1 = la
- *             pressione non toglie deposito, stringe solo la banda. La soglia
- *             amplifica ogni calo di deposito in un calo di larghezza: con
- *             0,85 il tratto veloce si stringeva del 38-43% invece del 28%.
+ *   deposito   opacita' di ciascuna striscia della punta: quanto gesso
+ *              arriva a ogni passaggio.
+ *   soglia     il deposito sotto cui non resta niente. E' cio' che fa il
+ *              bordo netto invece che sfumato: a 0 torna l'alone.
+ *   guadagno   quanto in fretta, sopra la soglia, il gesso diventa pieno.
+ *   opacita    quanto copre UNA passata. Sotto 1 di proposito (Daniele,
+ *              29/09/2026): senza pressione vera, e' ripassando che il
+ *              bambino fa il colore pieno, e due colori si mescolano.
+ *   valle      altezza della lavagna sotto cui non attacca niente,
+ *   picco      e sopra cui attacca tutto: il contrasto della grana.
+ *   velo       la polvere che resta nelle valli, come frazione del deposito.
+ *              Sopra 0,15 torna l'alone grigio attorno ai tratti.
+ *   filamenti  quanto si vedono i filamenti lungo il gesto: 0 punta liscia,
+ *              1 punta a righe.
+ *   bordo      quanto e' largo il bordo sfumato della punta, come frazione
+ *              della larghezza. Piu' largo = tratto che SEMBRA piu' sottile.
  *
- * Tarati il 29/09/2026 in due tempi. L'aspetto affiancando a 3x la foto di un
- * gesso vero (il "%" di Wikimedia Commons, Percentage_chalkboard.JPG) alle tre
- * risoluzioni della pagina di confronto. Poi deposito, soglia e guadagno per
- * tenere la larghezza percepita del vecchio, misurata sul profilo medio del
- * tratto a meta' altezza (export 1600, spessore 27):
+ * Tarati il 29/09/2026 su una foto di disegni a gesso (dreamstime 189200205,
+ * scelta da Daniele) e sulla larghezza percepita del vecchio, misurata sul
+ * profilo medio del tratto a meta' altezza (export 1600, spessore 27):
  *
- *                     lento    veloce (p 0,2)
- *   vecchio (-20)     25 px    -28%
- *   primo nuovo       21 px    -43%    tratti piu' sottili: la lamentela
- *                                      del 15/09 sarebbe tornata
- *   questi            24 px    -25%
+ *                     lento    inchiostro   veloce (p 0,2): inchiostro, larghezza
+ *   vecchio (-20)     25 px    3252         -30%, -28%
+ *   questi            24 px    2056         -29%,  -8%
+ *
+ * L'inchiostro e' due terzi del vecchio di proposito: e' la passata
+ * semitrasparente. Sul gesto veloce il gesso nuovo diventa piu' rado, non
+ * piu' stretto, perche' il bordo resta netto: e' quel che fa il gesso vero,
+ * ma e' diverso da quel che il cliente aveva chiesto il 15/09. Da decidere.
  *
  * Le combinazioni scartate, e perche', in .lavoro/stato.md.
  */
 export const GESSO = {
-  deposito: 0.6,
-  soglia: 0.12,
-  guadagno: 2.4,
-  opacita: 0.95,
+  deposito: 0.9,
+  soglia: 0.06,
+  guadagno: 1.6,
+  opacita: 0.7,
   valle: 0.25,
-  picco: 0.75,
+  picco: 0.72,
   velo: 0.1,
-  strie: 1.8,
-  pressioneAlfa: 1,
+  filamenti: 0.4,
+  bordo: 0.04,
 };
 
 export const chalkById = (id) => CHALKS.find((c) => c.id === id) || CHALKS[0];

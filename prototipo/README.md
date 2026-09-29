@@ -139,31 +139,32 @@ Il prezzo di `eps 10` è il dettaglio fine: un tratto molto corto può venire ri
 
 La prima riga è la Definition of Done della fase. Regge **per costruzione**, non per attenzione: il contesto è trasformato in unità di lavagna una volta sola in `board.js`, quindi il codice di render non sa nulla di scala, pixel o DPR e non ha modo di dipenderne.
 
-## Il gesso nuovo (29/09/2026, branch `gesso-realistico`)
+## Il gesso nuovo (29–30/09/2026, branch `gesso-realistico`)
 
-Il gesso di sopra leggeva come **pastello morbido**: bordo sfumato con un alone, grana a macchie larghe e grigie, riempimenti piatti come un pennarello. Il limite era strutturale, non di taratura: la grana stava **nell'impronta**, e dieci impronte sovrapposte per punto la mediano via. Nel gesso vero la grana è della **lavagna**: il gesso resta sulle creste e salta le valli, sempre le stesse.
+Il gesso di sopra leggeva come **pastello morbido**: bordo sfumato con un alone, grana a macchie larghe e grigie, riempimenti piatti come un pennarello. Il limite era strutturale, non di taratura: la grana stava **nell'impronta tonda**, e dieci impronte sovrapposte per punto la mediano via.
 
-`src/gesso.js` fa così, tutto in GPU (niente `getImageData`, che su Safari riporterebbe i pixel dalla GPU a ogni frame):
+`src/gesso.js`, tutto in GPU (niente `getImageData`, che su Safari riporterebbe i pixel dalla GPU a ogni frame):
 
-1. **deposito**: i timbri di `chalk.js`, in bianco, su un canvas d'appoggio, più una dozzina di **striature** tracciate come linee sottili parallele al gesto;
-2. **creste**: `destination-in` con una trama fissa **in unità di lavagna**, ancorata all'origine (D1: stesso punto, stessa cresta, a ogni risoluzione);
-3. **soglia vera**: `max(0, X − c)`. Canvas 2D non sottrae, ma inverte (`destination-out` sopra un pieno dà 1 − a) e somma con tetto (`lighter`): 1 − min(1, (1 − X) + c). È la soglia a fare il bordo netto e rosicchiato; con la sola moltiplicazione restava l'alone;
-4. **guadagno** (copie in `lighter`), **velo** di polvere, colore in `source-in`.
+1. **punta trascinata**: una striscia sottile con un profilo di filamenti attraverso la larghezza, posata ogni 0,4 della sua lunghezza e ruotata nella direzione del gesto. I filamenti restano allineati da un capo all'altro: è la grana **allungata** del gesso vero. Capi arrotondati, un tremolio laterale lento;
+2. **lavagna**: `destination-in` con una trama finissima (cella di 1 unità) più nuvole larghe, **spostata a caso per ogni tratto**: ripassare riempie i buchi della passata prima;
+3. **soglia vera**: `max(0, X − c)`. Canvas 2D non sottrae, ma inverte (`destination-out` sopra un pieno dà 1 − a) e somma con tetto (`lighter`): 1 − min(1, (1 − X) + c). Senza, resta l'alone;
+4. **guadagno**, **velo** di polvere, colore in `source-in` al **70%**: una passata è semitrasparente, ripassando si arriva al pieno e due colori si mescolano.
 
-La gomma resta quella di prima. `?gesso=vecchio` rimette il gesso della -20, anche nell'immagine salvata. Tutti i numeri sono in `GESSO` in `palette.js`, con il perché.
+La gomma resta quella di prima; un tocco senza trascinare usa il timbro tondo di `chalk.js`. `?gesso=vecchio` rimette il gesso della -20, anche nell'immagine salvata. Tutti i numeri sono in `GESSO` in `palette.js`, con il perché.
 
-**`confronto-gesso.html`**: lo stesso disegno sintetico reso col vecchio e col nuovo, alle risoluzioni di telefono, export e desktop DPR 2, con una lente senza ammorbidimento. Con `?taratura` compaiono i cursori.
+**`confronto-gesso.html`**: lo stesso disegno sintetico reso col vecchio e col nuovo, alle risoluzioni di telefono, export e desktop DPR 2, con una lente senza ammorbidimento. In alto a sinistra: una, due e tre passate sulla stessa zona, e giallo sotto azzurro. Con `?taratura` compaiono i cursori.
 
 Cose da sapere prima di toccarlo:
 
-- **La larghezza percepita è tarata sul vecchio, non a caso.** La soglia trasforma ogni calo di deposito in un calo di larghezza. La prima taratura, bella a vedersi, faceva tratti di **21 px contro 25** e il veloce si stringeva del **43% contro 28**: sarebbe tornata la lamentela del 15/09. Per questo il gesso nuovo non toglie deposito con la pressione (`pressioneAlfa: 1`) e deposito, soglia e guadagno sono scelti per 24 px e −25%. Chi ritocca l'aspetto rimisuri le due cifre.
-- **Striature solo in aggiunta.** Provati anche i solchi in `destination-out`: cancellano il gesso lasciato dallo *stesso* tratto alle passate precedenti, e negli scarabocchi diventano graffi.
-- **Striature spezzate alle curve strette**: alle inversioni dello scarabocchio la linea spostata di lato farebbe un uncino fuori dal tratto.
-- **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2.
-- **La tessera della trama si genera al layout** (`precaricaTrama()` in `main.js`), non al primo tocco: a DPR 2 sono decine di millisecondi.
-- **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato il 29/09/2026. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato.
+- **La larghezza percepita è tarata sul vecchio**: 24 px contro 25 (profilo medio a metà altezza, spessore 27, export 1600). Con l'opacità al 70% il rischio «tratti sottili» è più alto di prima: chi ritocca `bordo`, `soglia` o `opacita` rimisuri.
+- **Sul gesto veloce il tratto diventa più rado, non più stretto**: inchiostro −29% come il vecchio, larghezza −8% contro −28%. È il gesso vero, ma non è la variazione di spessore chiesta dal cliente il 15/09. Aperto.
+- **Nelle curve strette si posano strisce in più** (una ogni 0,15 radianti). Senza, alle inversioni dello scarabocchio le strisce si aprivano a ventaglio e i filamenti facevano un pettine.
+- **Il filamento «medio» è a 2 unità, non di più**: a 3,2 disegnava corsie, e un'ellisse sembrava un binario.
+- **La trama NON è ancorata alla lavagna.** Era la prima idea (le valli sempre nello stesso posto) e ha un difetto grave: ripassare schiariva sempre gli stessi granelli e i buchi restavano buchi.
+- **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2. La tessera della trama si genera al layout (`precaricaTrama()`), non al primo tocco.
+- **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato. Il tratto non salta al rilascio: overlay e livello dei tratti coincidono pixel per pixel.
 
-Misurato su Chrome desktop, headless: un tratto lungo quanto la lavagna a spessore da telefono costa **+15%** rispetto al vecchio (30 ms contro 26; 50 contro 43 con CPU rallentata 4x). Quasi tutto è nei timbri, identici. **Non è misurato su device**: è la prima cosa da fare, con `?debug=1` e FPS TRATTO.
+Misurato su Chrome desktop, headless, a misura di telefono: il nuovo costa **meno** del vecchio — un tratto lungo quanto la lavagna 15 ms contro 21, uno scarabocchio enorme 53 contro 236 (con CPU rallentata 4x: 35 contro 49, 176 contro 593). Poche strisce invece di migliaia di timbri. **Non è misurato su device.**
 
 ## Il pannello Info
 
@@ -349,7 +350,7 @@ src/model.js    Drawing / Stroke, undo, redo
 src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
 src/chalk.js    le impronte e il timbro (il gesso vecchio, e il deposito del nuovo)
-src/gesso.js    il gesso nuovo: trama della lavagna, striature, soglia
+src/gesso.js    il gesso nuovo: punta trascinata, trama della lavagna, soglia
 src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/tutorial.js i sette passi, il riquadro e il "gia visto"
 src/main.js     colla e diagnostica
