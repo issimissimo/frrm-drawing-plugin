@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 28/09/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging** (gessetto nero, mensola a due righe fra 701 e 1099px), **1.12.0 in produzione** (rate limit tolto, 28/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-20/`. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
+Ultimo aggiornamento: 29/09/2026
+Versione corrente: `frmm-lavagna` **1.13.0 su staging** (gessetto nero, mensola a due righe fra 701 e 1099px), **1.12.0 in produzione** (rate limit tolto, 28/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-20/` (main), **`-21/` col gesso nuovo (branch `gesso-realistico`)**. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
 In produzione: la lavagna salva e manda il disegno; arriva in bacheca; la mail di notifica ha un link a una pagina con Approva / Rifiuta, senza login; la galleria (Custom Marquee) mostra gli approvati. Ci sono rate limit (3 per dispositivo, 20 per IP in 24 ore) e retention; **il rate limit è tolto nella 1.12.0, anche in produzione dal 28/09/2026** (sotto). La mail in produzione va ancora ad `admin_email` (`d.suppo@issimissimo.com`): l'impostazione «Notifiche dei disegni» è vuota.
@@ -14,6 +14,13 @@ Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · e
 - [x] Fuori piano, chiesto da Daniele: moderazione dalla mail (1.10.0 → 1.11.5), in produzione dal 26/09/2026.
 - [x] Fuori piano, cliente 28/09/2026: **gessetto nero** (1.13.0, solo staging; produzione dopo la prova di Daniele).
 - [x] **La mensola fra 701 e 1099px è su due righe** (1.13.0): era aperto dal 26/09/2026, e il nero lo peggiorava.
+
+## Fronte aperto — gesso realistico (branch `gesso-realistico`, 29/09/2026)
+Chiesto da Daniele: riaprire l'effetto gessetto per un upgrade estetico. **Solo prototipi su FTP, niente produzione.** Codice in `prototipo/src/gesso.js`, spiegazione nel README del prototipo.
+Criterio di finito: confronto affiancato vecchio/nuovo (`-21/confronto-gesso.html`) ✅ · larghezza percepita pari al vecchio ✅ (24 px contro 25, veloce −25% contro −28%) · **60 fps su iPhone 13 e Galaxy S10 ✗ (da provare, Daniele)** · **il cliente vede la differenza ✗**. Se non la vede, si chiude lì e il branch resta com'è.
+- Da provare su device: `-21/?debug=1`, FPS TRATTO su un tratto lungo e grosso; confronto sullo stesso telefono con `-21/?gesso=vecchio`. Memoria: tre canvas d'appoggio grandi quanto la lavagna (~14 MB a DPR 2 su telefono).
+- Prima di unire a main: cambia l'aspetto approvato dal cliente (opacità 0.35 del 23/09 non vale più per il nuovo: la leggerezza viene dalla porosità). E la galleria mescolerebbe disegni vecchi e nuovi, perché le immagini approvate non si rigenerano (e 11973/11975 non hanno un Drawing vero).
+- Scartati durante la taratura, per non ripercorrerli: **solo moltiplicazione deposito × cresta** (resta l'alone: serve la soglia vera); **guadagno alto (≥ 2,5) col deposito basso** (grana a due toni, piatta, "mimetica"); **velo ≥ 0,3** (alone grigio attorno ai tratti); **solchi in `destination-out`** (graffi negli scarabocchi); **impronte più strette per le striature** (punta 8, 6 corsie: il doppio dei timbri, striature invisibili); **striature lunghe e fino al bordo** (pennino a più punte, cavo intrecciato); **pressione che toglie deposito come nel vecchio** (veloce −43%).
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.
@@ -47,7 +54,7 @@ Criterio di finito (staging): dal telefono SALVA E INVIA → in bacheca ✅ · e
 - **PHP non è installato sul PC**: i test usano la copia in `…\e--Claude-Workspace-frrm-drawing-plugin\63a19454…\scratchpad\php\php.exe` (`-d extension_dir=<cartella>\ext -d extension=gd`). Cartella temporanea: può sparire.
 - **`.lavoro/` non è gitignorata e il repo è pubblico**: niente credenziali lì. Token GitHub e password dello staging passati in chiaro in transcript: **da ruotare**.
 - **FTP**: credenziali che aprono tutto l'account; solo `temp/frmm-drawing-plugin*`. Online `frmm`, repo `frrm`: non correggere.
-- Verifiche: `node prototipo/test/run.js` (68) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33, due mail) · `prova-bacheca.py` (14, consuma disegni) · `prova-abuso.py` (20 mail) · `prova-retention.py [svuota|orfani]` · `diagnostica-ip.py [--produzione]` (sola lettura).
+- Verifiche: `node prototipo/test/run.js` (74) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33, due mail) · `prova-bacheca.py` (14, consuma disegni) · `prova-abuso.py` (20 mail) · `prova-retention.py [svuota|orfani]` · `diagnostica-ip.py [--produzione]` (sola lettura).
 
 ## Prossimo passo
 In produzione: un disegno vero dal telefono, la mail a `d.suppo@issimissimo.com`, Approva dal link, verificare che compaia nella galleria del sito (purge di Speed Optimizer). Solo dopo, l'indirizzo del cliente in «Notifiche dei disegni».
