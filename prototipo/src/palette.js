@@ -302,8 +302,9 @@ export const ERASER_ALPHA = 0.85;
  *              nominale, come frazione della larghezza: li' il deposito cala
  *              piano e la soglia lascia solo le creste, cioe' granelli
  *              staccati (Daniele, 30/09/2026: "bordi meno definiti", come la
- *              "I" della foto). 0 = il bordo della -24. A 0,35 il tratto
- *              ingrassa senza sgranarsi di piu'.
+ *              "I" della foto). 0 = il bordo della -24. La -25 era a 0,25:
+ *              "non male, farei una via di mezzo" (Daniele), quindi 0,13.
+ *              A 0,35 il tratto ingrassa senza sgranarsi di piu'.
  *
  * Il 30/09/2026, coi granelli, il VELO e' sceso da 0,1 a 0: si prende dal
  * deposito, e nella fascia dei granelli il deposito e' basso ma non nullo, cosi'
@@ -315,10 +316,11 @@ export const ERASER_ALPHA = 0.85;
  *
  *                            lento: larg. / decimo / inchiostro   veloce (p 0,2)
  *   -24                      22 / 25   / 2387                     21 / 23   / 1292
- *   questi                   24,5 / 30,5 / 2769                   19 / 26   / 1334
+ *   questi (granelli 0,13)   21 / 28   / 2459                     18,5 / 25 / 1212
+ *   -25 (granelli 0,25)      24,5 / 30,5 / 2769                   19 / 26   / 1334
  *   rampa centrata sul bordo 16,5 / 23,5 / 1872                   11 / 19,5 / 919
  *
- * La terza riga e' la strada scartata: allungare la rampa anche verso
+ * L'ultima riga e' la strada scartata: allungare la rampa anche verso
  * l'interno toglie deposito al nucleo, e le linee sottili diventano esili.
  *
  * Tarati il 29/09/2026 su una foto di disegni a gesso (dreamstime 189200205,
@@ -363,7 +365,7 @@ export const GESSO = {
   inclinazione: 0.12,
   sfrangia: 0.1,
   ventaglio: 0.35,
-  granelli: 0.25,
+  granelli: 0.13,
 };
 
 export const chalkById = (id) => CHALKS.find((c) => c.id === id) || CHALKS[0];
