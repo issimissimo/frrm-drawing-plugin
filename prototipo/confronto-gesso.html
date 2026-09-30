@@ -75,6 +75,7 @@
 <script type="module">
 import { render } from './src/render.js';
 import { GESSO, BOARD_BG, chalkById } from './src/palette.js';
+import { componiSotto, FONDO } from './src/fondo.js';
 
 /* ---------- il disegno di prova ---------- */
 
@@ -156,7 +157,7 @@ const disegno = {
 
 /* ---------- render ---------- */
 
-let k = 1, lente = 1, rif = '-24';
+let k = 1, lente = 1, rif = '-24', fondo = true, msFondo = 0;
 
 /* Il gesso della -24: i parametri di allora, scritti per esteso perche' non
    seguano le tarature successive. I nuovi valgono zero, e a zero il codice di
@@ -184,11 +185,17 @@ function disegnaCon(id, modo) {
   const t0 = performance.now();
   render(disegno, ctx, modo);
   const ms = performance.now() - t0;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = BOARD_BG;
-  ctx.fillRect(0, 0, cv.width, cv.height);
-  ctx.globalCompositeOperation = 'source-over';
+  if (fondo && id === 'cv-nuovo') {
+    const t1 = performance.now();
+    componiSotto(ctx, 1200);
+    msFondo = performance.now() - t1;
+  } else {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = BOARD_BG;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   return ms;
 }
 
@@ -245,7 +252,8 @@ if (new URLSearchParams(location.search).has('taratura')) {
 }
 
 // Per la taratura automatica dal browser pilotato: nessun effetto sulla pagina.
-window.__prova = { GESSO, tutto, disegno, scala: (x) => { k = x; } };
+window.__prova = { GESSO, FONDO, tutto, disegno, scala: (x) => { k = x; },
+                   fondo: (x) => { fondo = x; }, msFondo: () => msFondo };
 
 tutto();
 </script>

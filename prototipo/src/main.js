@@ -4,8 +4,9 @@
  * Il tratto passa per: One Euro (live) -> pseudo-pressione -> RDP (a fine
  * gesto) -> ricampionamento su curva (al render). Vedi pen.js e render.js.
  *
- * Il tratto non e' disegnato ma timbrato: vedi chalk.js. Il fondo lavagna e'
- * un colore pieno nel CSS, senza texture.
+ * Il tratto non e' disegnato ma timbrato: vedi chalk.js. Il fondo lavagna sta
+ * su un canvas suo sotto i tratti (fondo.js), dal 30/09/2026; prima era un
+ * colore pieno nel CSS.
  *
  * La mensola: i gessetti sono oggetti, non pastiglie di colore. Selezionare
  * significa sollevare — nessun bordo, nessun anello, nessuna spunta. Il
@@ -20,13 +21,14 @@
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
          SMOOTHING, DEFAULT_SMOOTHING, SOGLIA_STRETTA,
-         unfreezeBoardHeight } from './palette.js';
+         unfreezeBoardHeight, boardHeight } from './palette.js';
 import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
 import { precaricaTrama } from './gesso.js';
+import { dipingiFondo, impostaFondo } from './fondo.js';
 import { count } from './geom.js';
 import { affiancate, puntaBase } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
@@ -37,15 +39,18 @@ const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
 const baseCanvas = document.getElementById('base');
 const overlayCanvas = document.getElementById('overlay');
+const fondoCanvas = document.getElementById('fondo');
 const hud = document.getElementById('hud');
 
-const board = createBoard(baseCanvas, overlayCanvas, stage);
+const board = createBoard(baseCanvas, overlayCanvas, stage, fondoCanvas);
 
 /* Il gesso nuovo (gesso.js) e' il default dal 29/09/2026. `?gesso=vecchio`
    rimette quello della -20, per confrontarli sullo stesso device. Vale per
    tutto — schermo, annulla, immagine salvata — perche' e' uno stato del
-   modulo di render e non un parametro da passare in giro. */
+   modulo di render e non un parametro da passare in giro. `?fondo=pieno`
+   fa lo stesso col fondo della lavagna (fondo.js). */
 impostaGesso(new URLSearchParams(location.search).get('gesso'));
+impostaFondo(new URLSearchParams(location.search).get('fondo'));
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -385,6 +390,9 @@ function relayout() {
   // La trama della lavagna alla scala nuova, prima del ridisegno e prima del
   // primo tocco: vedi precaricaTrama().
   if (gessoAttuale() === 'nuovo') precaricaTrama(lastLayout.scale);
+  // Il fondo: layout() ha appena ridimensionato il suo canvas, e ridimensionare
+  // un canvas lo svuota. Costa qualche millisecondo, una volta per layout.
+  dipingiFondo(board.fondo, boardHeight());
   repaint();
   paintLive();
 }

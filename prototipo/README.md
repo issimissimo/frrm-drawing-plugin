@@ -169,6 +169,17 @@ Cose da sapere prima di toccarlo:
 - **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2. La tessera della trama si genera al layout (`precaricaTrama()`), non al primo tocco.
 - **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato. Il tratto non salta al rilascio: overlay e livello dei tratti coincidono pixel per pixel.
 
+### Il fondo della lavagna (30/09/2026, dalla -27)
+
+`src/fondo.js`. Non più un colore pieno: velature larghe di gesso cancellato, passate di spugna ad arco, strisciate corte di mano e panno, e la grana della superficie. La velatura passa per una maschera di polvere, così è puntinata e non liscia. `?fondo=pieno` rimette il colore della -26, anche nell'immagine salvata.
+
+- **Non è una piastrella.** Nuvole, spugnate e strisciate sono funzioni della posizione sull'intera lavagna. Si ripete solo la grana, un granello per unità e senza forme da riconoscere, su due piastrelle di lati primi fra loro (241 e 256). Era il vincolo di Daniele.
+- **Stessa luminosità media del `#1F2225`**: la base è più scura (`#15181B`) e la velatura la riporta lì. I gessetti sono tarati su quel fondo. Numeri e confronto con la foto in `FONDO`.
+- **Sta su un canvas suo, `#fondo`, sotto i tratti**, per la stessa ragione per cui prima il colore stava nel CSS: il cancellino lavora in `destination-out` e deve scoprirlo, non bucarlo. Nell'export si compone in `destination-over` (`componiSotto`).
+- **Una lavagna più alta allunga il fondo, non lo rimescola**: spugnate e strisciate si decidono per celle fisse. Coperto da un test.
+- **Costo**: si dipinge solo al layout, mai durante il gesto. Prima volta ~100-200 ms (grana e nuvole si generano), poi 25-100 ms. Nell'export il fondo resta in memoria: il secondo export uguale (SALVA E INVIA) non lo rigenera.
+- **Prezzo dichiarato: il JPEG pesa il doppio**, 739 KB contro 354 sul disegno di prova (la grana per il JPEG è rumore). Lontano dai 5 MB del plugin, ma è mezzo secondo in più d'invio da telefono.
+
 Misurato su Chrome desktop, headless, a misura di telefono: il nuovo costa **meno** del vecchio — un tratto lungo quanto la lavagna 15 ms contro 21, uno scarabocchio enorme 53 contro 236 (con CPU rallentata 4x: 35 contro 49, 176 contro 593). Poche strisce invece di migliaia di timbri. **Non è misurato su device.**
 
 ## Il pannello Info

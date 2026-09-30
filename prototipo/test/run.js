@@ -14,6 +14,7 @@ import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
          lunghezzaPunta, passoPunta, granelli } from '../src/gesso.js';
+import { FONDO, nuvola, spugnate, strisciate } from '../src/fondo.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
@@ -478,6 +479,50 @@ test('gesso: la fascia dei granelli sta fuori dal tratto, il nucleo resta pieno'
   } finally {
     Object.assign(GESSO, salvati);
   }
+});
+
+test('fondo: le nuvole sono deterministiche e non si ripetono', () => {
+  // Deterministiche: lo schermo e l'immagine salvata hanno lo stesso fondo.
+  for (const [u, v] of [[0, 0], [123.4, 987.6], [1599, 2400]])
+    assert(nuvola(u, v) === nuvola(u, v), `nuvola(${u}, ${v}) cambia fra due chiamate`);
+  // Non periodiche: il vincolo di Daniele e' che il fondo non sembri un
+  // motivo ripetuto. Se ci fosse un periodo P fino a 1600, spostando la
+  // griglia di P i valori coinciderebbero tutti.
+  const punti = [];
+  for (let y = 0; y < 1200; y += 37) for (let x = 0; x < 1600; x += 41) punti.push([x, y]);
+  for (const P of [128, 256, 400, 420, 512, 640, 800, 1024, 1600]) {
+    let uguali = 0;
+    for (const [x, y] of punti) if (Math.abs(nuvola(x, y) - nuvola(x + P, y)) < 1e-9) uguali++;
+    assert(uguali < punti.length * 0.5, `le nuvole si ripetono ogni ${P} unita' (${uguali}/${punti.length})`);
+  }
+  // E coprono tutta la gamma: una lavagna tutta pulita o tutta velata.
+  let min = 1, max = 0;
+  for (const [x, y] of punti) { const n = nuvola(x, y); min = Math.min(min, n); max = Math.max(max, n); }
+  assert(min < 0.05 && max > 0.6, `nuvole piatte (${min.toFixed(2)}..${max.toFixed(2)})`);
+});
+
+test('fondo: una lavagna piu\' alta allunga il fondo, non lo rimescola', () => {
+  // Spugnate e strisciate si decidono per celle fisse: la parte in alto di
+  // una lavagna 4:3 deve essere la stessa di una lavagna da telefono in
+  // verticale. Altrimenti ruotare il telefono a lavagna vuota rimescolerebbe
+  // tutto, e l'export di una lavagna alta non somiglierebbe alla stessa
+  // lavagna vista piu' bassa.
+  for (const fn of [spugnate, strisciate]) {
+    const chiave = (s) => `${s.x.toFixed(3)}:${s.y.toFixed(3)}:${s.r.toFixed(3)}:${s.seme}`;
+    const bassa = new Set(fn(0, 1200).map(chiave));
+    const alta = new Set(fn(0, 2800).map(chiave));
+    for (const k of bassa) assert(alta.has(k), `${fn.name}: la lavagna alta perde ${k}`);
+    assert(alta.size > bassa.size, `${fn.name}: la lavagna alta non ne ha di piu'`);
+    assert(fn(0, 1200).map(chiave).join() === fn(0, 1200).map(chiave).join(), `${fn.name}: non deterministiche`);
+  }
+});
+
+test('fondo: la base e\' piu\' scura del #1F2225, che resta la luminosita\' media', () => {
+  // La velatura schiarisce: se la base fosse il colore di prima, il fondo
+  // medio sarebbe piu' chiaro e i gessetti — tarati sul #1F2225 — perderebbero
+  // contrasto. La media vera si misura nel browser (README).
+  const lum = (hex) => [1, 3, 5].reduce((s, i) => s + parseInt(hex.slice(i, i + 2), 16), 0);
+  assert(lum(FONDO.base) < lum(BOARD_BG), `base ${FONDO.base} non piu' scura di ${BOARD_BG}`);
 });
 
 test('gesso: la punta si posa abbastanza fitta da non lasciare buchi', () => {

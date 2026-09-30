@@ -43,8 +43,8 @@ const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
 const liscia = (t) => t * t * (3 - 2 * t);
 const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
 
-/** Hash intero -> [0, 1). Deterministico, senza stato. */
-function hash(x, y, o) {
+/** Hash intero -> [0, 1). Deterministico, senza stato. Lo usa anche fondo.js. */
+export function hash(x, y, o) {
   let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(o + 1, 2246822519);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   h ^= h >>> 16;

@@ -137,6 +137,17 @@
     overflow: hidden;
   }
   .layers canvas { display: block; }
+  /* Il fondo lavagna (fondo.js) sta su un canvas suo, SOTTO quello dei
+     tratti, per la stessa ragione del colore qui sopra: il cancellino lo
+     scopre e non lo buca. Il colore di .layers resta come ripiego, finche'
+     il fondo non e' dipinto e con ?fondo=pieno.
+     #base diventa posizionato solo per stare sopra #fondo nell'ordine del
+     DOM: fra elementi posizionati vince chi viene dopo. */
+  #fondo {
+    position: absolute;
+    inset: 0;
+  }
+  #base { position: relative; }
   #overlay {
     position: absolute;
     inset: 0;
@@ -738,6 +749,7 @@
 
   <div id="stage">
     <div class="layers" id="layers">
+      <canvas id="fondo" aria-hidden="true"></canvas>
       <canvas id="base"></canvas>
       <canvas id="overlay"></canvas>
     </div>
