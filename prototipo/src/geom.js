@@ -61,9 +61,15 @@ const at = (pts, i) => {
  *
  * Deterministica: stesso input -> stesso output, sempre. E' la premessa del
  * seed riproducibile della Fase 3.
+ *
+ * Con `info`, ci scrive `stabili`: quanti dei punti in uscita restano
+ * identici qualunque campione si aggiunga dopo. Serve alla gomma, che incide
+ * la lavagna dal vivo e deve fare esattamente cio' che fara' il render dal
+ * modello (vedi gomma.js).
  */
-export function resample(pts, spacing) {
+export function resample(pts, spacing, info = null) {
   const n = count(pts);
+  if (info) info.stabili = n > 0 ? 1 : 0;
   if (n === 0) return [];
   if (n === 1) return pts.slice();
   if (spacing <= 0) throw new Error('spacing deve essere > 0');
@@ -79,6 +85,11 @@ export function resample(pts, spacing) {
     }
   }
 
+  // I campioni densi fino a questo indice appartengono a segmenti che non
+  // cambieranno piu': il segmento i dipende dai punti i-1..i+2, quindi solo
+  // l'ultimo (n-2) si ricalcola quando arriva un campione nuovo. Il suo primo
+  // punto e' il campione n-2 stesso, esatto qualunque cosa venga dopo.
+  const fermi = (n - 2) * SUB;
   const out = [dense[0][0], dense[0][1], dense[0][2]];
   let carry = 0;
   for (let i = 1; i < dense.length; i++) {
@@ -96,6 +107,7 @@ export function resample(pts, spacing) {
       carry = 0;
     }
     carry += (1 - t) * segLen;
+    if (info && i <= fermi) info.stabili = out.length / STRIDE;
   }
 
   // L'ultimo campione originale va sempre incluso: senza, il tratto si accorcia

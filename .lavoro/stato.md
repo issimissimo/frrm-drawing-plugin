@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 30/09/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging** (gessetto nero, mensola a due righe fra 701 e 1099px), **1.12.0 in produzione** (rate limit tolto, 28/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-20/` (main), **`-27/` col gesso nuovo, i bordi a granelli e il fondo lavorato (branch `gesso-realistico`, non in main)**; `?fondo=pieno` rimette il fondo della -26. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
+Versione corrente: `frmm-lavagna` **1.13.0 su staging** (gessetto nero, mensola a due righe fra 701 e 1099px), **1.12.0 in produzione** (rate limit tolto, 28/09/2026); `custom-marquee` **1.2.1** su entrambi. Prototipo online: `temp/frmm-drawing-plugin-20/` (main), **`-28/` col gesso nuovo, i bordi a granelli, il fondo lavorato e il cancellino con l'alone (branch `gesso-realistico`, non in main)**; `?fondo=pieno`, `?alone=0`, `?gesso=vecchio` per i confronti. Stato approvato dal cliente: tag `approvato-cliente-25092026` (su `0d6df7c`), zip in `.lavoro/dist/approvato-cliente-25092026/` (solo locale: contengono i font commerciali).
 
 ## Dove siamo
 In produzione: la lavagna salva e manda il disegno; bacheca, mail con Approva / Rifiuta senza login, galleria degli approvati; retention; niente rate limit dalla 1.12.0. La mail in produzione va ancora ad `admin_email` (`d.suppo@issimissimo.com`): «Notifiche dei disegni» è vuota.
@@ -16,7 +16,7 @@ Criterio di finito: confronto affiancato (`-24/confronto-gesso.html`) ✅ · rip
 1. [x] -21 → -24: punta trascinata con filamenti, trama fine con valli che si sottraggono al deposito, passata semitrasparente che si accumula, bordi che si allargano. Storia dei giri e numeri in `prototipo/README.md` e in `GESSO` (`palette.js`).
 2. [ ] **Desiderio di Daniele (30/09)**: tratto più irregolare, **bordi meno definiti** di quelli della -24. → piano B2/B3 sotto.
 3. [ ] **Desiderio di Daniele (30/09)**: **fondo lavagna come la reference** (dreamstime 189200205, «I ♥ School»), non un colore pieno. → piano B2/B3 sotto.
-6. [ ] **Desiderio annotato (30/09), fuori da B2/B3**: il cancellino lascia un alone di gesso spalmato, come sulla lavagna vera, invece di scoprire il fondo pulito. Vincolo: la gomma incide il livello in `destination-out` durante il gesto, e a fine gesto non si ridisegna dal modello.
+6. [~] **Cancellino con l'alone — online nella -28, Daniele sceglie l'intensità** (sotto, B6).
 
 **B2/B3 — bordi a granelli e fondo lavorato (piano del 30/09/2026, approvato lo stesso giorno)**
 Obiettivo: il tratto e la lavagna devono leggere come gesso vero su lavagna vera, come nella reference; oggi il bordo è troppo tirato e il fondo è un colore piatto.
@@ -37,6 +37,23 @@ Rischi aperti:
 Costo stimato: 4 passi, tre prototipi (-25, -26, eventualmente uno intermedio). Proporzionato: è il fronte che Daniele ha chiesto; il rischio vero è il giro di taratura del passo 1, che si chiude a occhio.
 4. [ ] Da vedere (Daniele/cliente): sul gesto veloce la larghezza cala del 18% (vecchio −28%, cliente voleva ~20%). Non cercato: viene dal deposito. Da fermo 22 px contro 25 del vecchio.
 5. [ ] Prima di unire a main: cambia l'aspetto approvato dal cliente; la galleria mescolerebbe disegni vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero).
+
+**B6 — il cancellino che lascia l'alone (piano del 30/09/2026, approvato lo stesso giorno)**
+Scelte di Daniele (30/09): alone **del colore cancellato** (su lavagna pulita niente), **strisciato nel verso del gesto**, intensità **decisa su un confronto**, schermo e immagine salvata **identici pixel per pixel**.
+Obiettivo: cancellare deve lasciare il velo del gesso spalmato, come su una lavagna vera; oggi la gomma scopre la lavagna pulita.
+Criterio di finito: (a) cancellando un tratto resta un velo del suo colore, allungato nel verso del gesto; sul vuoto non resta niente (misurato: 0 pixel cambiati); (b) il livello dei tratti dopo un gesto dal vivo e il render dal modello (annulla, rotazione, export) danno **0 pixel diversi**, verificato con un gesto pilotato; (c) cancellare resta a 60 fps su iPhone 13 e S10; (d) Daniele sceglie l'intensità sul telefono.
+Fuori perimetro: polvere neutra sul vuoto; larghezza o forma del cancellino; rigenerare le immagini già in galleria; unione in main.
+Passi:
+1. [x] **L'alone nel render dal modello — fatto** (`gomma.js`; vuoto: 0 pixel).  Piano: (`render.js`, `chalk.js`). La gomma lavora a pezzi di N timbri: fotografa quel che c'è sotto il pezzo, lo cancella, rimette una frazione di quel che ha tolto (la foto ritagliata dalla forma della gomma) in più copie spostate nel verso del gesto. `timbra()` prende anche un indice di fine. Intensità in `ALONE` (`palette.js`), con `?alone=` per il confronto. Test: sul vuoto 0 pixel cambiati; su un tratto resta un velo del suo colore.
+2. [x] **Dal vivo identico al modello — fatto**: un timbro alla volta in tutte e due le strade, dal vivo solo i definitivi (`resample(..., info)`); stesso hash su 242.436 pixel. Test sui definitivi bit per bit. Piano: (`main.js`). Dal vivo si applicano solo i pezzi interi e solo i timbri già definitivi (la curva Catmull-Rom sposta ancora quelli fra gli ultimi due campioni), il resto al rilascio. Verifica pilotata: hash del livello dei tratti dopo il gesto = hash dopo `repaint()`.
+3. [x] **Costo — misurato**: 0,3-0,5 ms/timbro (pulita 0,1-0,2); CPU /4 ~1,3 ms/frame su gesto veloce da telefono. Piano: tempo per frame cancellando, a scala telefono e con CPU rallentata 4x, contro la gomma di oggi.
+4. [~] **-28 online**, default 0,2, con `?alone=0.1 / 0.2 / 0.3`; Daniele sceglie sul telefono; il valore scelto diventa il default.
+Rischi aperti:
+- **Il ritardo sotto il dito.** Per l'identità pixel per pixel la gomma dal vivo non può incidere i timbri che la curva sposterà ancora: resta indietro di un tratto fra due campioni più un pezzo. Se si vede, la scelta è fra ritardo e identità: torna a Daniele.
+- **Dove si deposita l'alone.** La gomma è larga e i pezzi si sovrappongono: ogni pezzo cancella buona parte dell'alone del precedente e lo trascina avanti. Il velo potrebbe concentrarsi ai bordi e in fondo alla passata, non su tutta la scia. È quel che fa un cancellino vero, ma va guardato.
+- **Costo per frame**: tre passate in più sul ritaglio del pezzo; la gomma sul telefono è larga 180 unità.
+- **Galleria**: i disegni già approvati restano con la gomma pulita (come per gesso e fondo, punto 5).
+Costo stimato: 4 passi, due prototipi al massimo. Il passo 2 è il più delicato: tocca la regola «a fine gesto non si ridisegna dal modello».
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.
@@ -79,4 +96,4 @@ Costo stimato: 4 passi, tre prototipi (-25, -26, eventualmente uno intermedio). 
 - Verifiche: `node prototipo/test/run.js` (76) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
 
 ## Prossimo passo
-Daniele guarda la -27 sul telefono, anche con `?fondo=pieno` per confronto, e ripete la prova dei 60 fps. Poi il link al cliente (lo dà Daniele).
+Daniele prova la -28 sul telefono con `?alone=0.1`, `0.2`, `0.3` (e dice se sotto il dito la gomma resta indietro); il valore scelto diventa il default in `gomma.js`. Restano aperti per B: 60 fps della -27 sul telefono e il sì del cliente (Daniele: «è magnifico», 30/09).

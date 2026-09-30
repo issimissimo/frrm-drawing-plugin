@@ -12,10 +12,11 @@
  * stessi identici pixel.
  */
 
-import { ERASER_ALPHA, CHALK_ALPHA } from './palette.js';
+import { CHALK_ALPHA } from './palette.js';
 import { resample, count } from './geom.js';
 import { timbra, passoTimbri } from './chalk.js';
 import { disegnaGesso } from './gesso.js';
+import { cancella } from './gomma.js';
 
 /**
  * Quale gesso: 'nuovo' (gesso.js, dal 29/09/2026) o 'vecchio' (solo
@@ -41,32 +42,29 @@ export const strokeGeometry = (stroke) => resample(stroke.pts, passoTimbri(strok
 /**
  * @param {number} da indice del primo timbro da disegnare. Serve alla gomma,
  *   che va applicata solo sul tratto nuovo (vedi chalk.js).
- * @returns {number} quanti timbri compongono il tratto, per sapere da dove
- *   riprendere alla chiamata successiva.
+ * @param {number} a indice del primo timbro da NON disegnare ancora. Solo
+ *   per la gomma dal vivo: si ferma ai timbri definitivi (vedi gomma.js).
+ * @returns {number} per la gomma, l'indice da cui riprendere; per il gesso,
+ *   quanti timbri compongono il tratto.
  */
-export function renderStroke(ctx, stroke, da = 0, modo = modoGesso) {
+export function renderStroke(ctx, stroke, da = 0, modo = modoGesso, a = Infinity) {
   const pts = strokeGeometry(stroke);
   if (count(pts) === 0) return 0;
 
-  const cancella = stroke.tool === 'eraser';
+  // La gomma incide il livello dei tratti e lascia l'alone del gesso che
+  // toglie (gomma.js). Il fondo non e' dipinto su questo canvas, quindi
+  // cancellare scopre la lavagna anziche' aprire un buco nero.
+  if (stroke.tool === 'eraser') return cancella(ctx, stroke, pts, da, a);
 
-  // Il gesso nuovo passa dal canvas d'appoggio (gesso.js). La gomma no: resta
-  // quella di sempre, incrementale e direttamente sul livello dei tratti.
-  if (!cancella && modo === 'nuovo') return disegnaGesso(ctx, stroke, pts);
+  // Il gesso nuovo passa dal canvas d'appoggio (gesso.js).
+  if (modo === 'nuovo') return disegnaGesso(ctx, stroke, pts);
 
   ctx.save();
-  if (cancella) {
-    // Il cancellino toglie invece di aggiungere, ma resta granuloso: un
-    // rettangolo netto sarebbe l'unica cosa, in tutta la lavagna, a non
-    // sembrare gesso. Il fondo non e' dipinto su questo canvas, quindi
-    // cancellare scopre la lavagna anziche' aprire un buco nero.
-    ctx.globalCompositeOperation = 'destination-out';
-  }
   timbra(ctx, pts, {
-    color: cancella ? '#000' : stroke.color,
+    color: stroke.color,
     width: stroke.width,
     seed: stroke.seed,
-    alpha: cancella ? ERASER_ALPHA : CHALK_ALPHA,
+    alpha: CHALK_ALPHA,
     da,
   });
   ctx.restore();

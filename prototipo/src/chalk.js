@@ -230,7 +230,7 @@ export const bandaEffettiva = (width, p = 1) =>
  * `pts` e' l'array piatto [x, y, p, ...]; `seed` rende la texture riproducibile
  * (D1): stesso stroke, stessa identica grana, a qualsiasi risoluzione.
  *
- * `da` salta i primi timbri, per aggiungere solo il tratto nuovo. Serve alla
+ * `da` salta i primi timbri e `a` si ferma prima del timbro `a`: servono alla
  * gomma, che lavora in destination-out: ridisegnare tutto a ogni frame
  * cancellerebbe sessanta volte lo stesso punto.
  *
@@ -240,7 +240,7 @@ export const bandaEffettiva = (width, p = 1) =>
  * il 16% dei pixel invece del 3%, perche' ogni micro-movimento ricalcolava
  * l'aspetto di tutte le impronte.
  */
-export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
+export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0, a = Infinity }) {
   const n = pts.length / 3;
   if (n === 0) return;
 
@@ -317,7 +317,7 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0 }) {
       // non servono a questo punto e per i punti saltati: il disegno
       // incrementale della gomma deve dare gli stessi pixel di quello completo.
       const r1 = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd();
-      if (j >= k || i < da) continue;
+      if (j >= k || i < da || i >= a) continue;
 
       const off = k === 1 ? 0 : -spread / 2 + (j * spread) / (k - 1);
       const cx = x + nx * off + (r1 - 0.5) * 2 * jitter;

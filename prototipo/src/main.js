@@ -29,8 +29,9 @@ import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
 import { precaricaTrama } from './gesso.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
-import { count } from './geom.js';
-import { affiancate, puntaBase } from './chalk.js';
+import { impostaAlone } from './gomma.js';
+import { count, resample } from './geom.js';
+import { affiancate, puntaBase, passoTimbri } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
 import { createDomanda, createCoda, endpointInvio, firma } from './invio.js';
@@ -51,6 +52,9 @@ const board = createBoard(baseCanvas, overlayCanvas, stage, fondoCanvas);
    fa lo stesso col fondo della lavagna (fondo.js). */
 impostaGesso(new URLSearchParams(location.search).get('gesso'));
 impostaFondo(new URLSearchParams(location.search).get('fondo'));
+// `?alone=0.1` cambia quanto gesso lascia il cancellino (gomma.js), per
+// scegliere l'intensita' sul device.
+impostaAlone(new URLSearchParams(location.search).get('alone'));
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -116,10 +120,23 @@ function repaint() {
  */
 let timbriApplicati = 0;
 
+/**
+ * Fin dove la gomma puo' incidere dal vivo: i timbri che la curva non
+ * spostera' piu', meno uno, perche' ogni timbro prende la direzione anche dal
+ * vicino successivo. Cosi' lo schermo e' identico al render dal modello
+ * (gomma.js); il resto si incide al rilascio.
+ */
+function timbriDefinitivi(stroke) {
+  const info = {};
+  resample(stroke.pts, passoTimbri(stroke.width), info);
+  return Math.max(0, info.stabili - 1);
+}
+
 function paintLive() {
   if (!pen || !pen.current || !pen.current.pts.length) return;
   if (pen.current.tool === 'eraser') {
-    timbriApplicati = renderStroke(board.base, pen.current, timbriApplicati);
+    timbriApplicati = renderStroke(board.base, pen.current, timbriApplicati, undefined,
+      timbriDefinitivi(pen.current));
   } else {
     board.clearOverlay();
     renderStroke(board.overlay, pen.current);
@@ -162,7 +179,10 @@ const input = createInput(overlayCanvas, board, {
       // schermo e' gia' il risultato giusto, e ricostruirlo cambierebbe la
       // grana di TUTTI i tratti, non solo di quello appena chiuso.
       if (stroke.tool !== 'eraser') board.commitOverlay();
-      // La gomma ha gia' inciso il livello durante il gesto: nulla da fare.
+      // La gomma ha gia' inciso il livello durante il gesto, fino ai timbri
+      // definitivi: al rilascio si incidono gli ultimi, gli stessi che il
+      // render dal modello incide in coda.
+      else renderStroke(board.base, stroke, timbriApplicati);
     }
     board.clearOverlay();
     syncButtons();

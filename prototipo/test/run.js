@@ -481,6 +481,37 @@ test('gesso: la fascia dei granelli sta fuori dal tratto, il nucleo resta pieno'
   }
 });
 
+test('gomma: i timbri dichiarati definitivi non cambiano piu\', bit per bit', () => {
+  // La gomma dal vivo incide solo questi (main.js, timbriDefinitivi). Se uno
+  // cambiasse quando arriva il campione dopo, lo schermo non sarebbe piu'
+  // identico al render dal modello — annulla, rotazione, immagine salvata.
+  const rnd = mulberry32(4242);
+  for (const passo of [4, 11.3, 30]) {
+    const pts = [];
+    let x = 300, y = 300;
+    for (let i = 0; i < 60; i++) {
+      // Passi irregolari, anche un dito fermo (passo zero) e uno veloce.
+      const v = i % 13 === 5 ? 0 : 2 + rnd() * 40;
+      const ang = i * 0.3 + rnd();
+      x += Math.cos(ang) * v; y += Math.sin(ang) * v;
+      pts.push(x, y, rnd());
+    }
+    const tutto = resample(pts, passo);
+    let definitiviMax = 0;
+    for (let m = 1; m <= 60; m++) {
+      const info = {};
+      const parziale = resample(pts.slice(0, m * STRIDE), passo, info);
+      assert(info.stabili <= count(parziale), `passo ${passo}, ${m} campioni: stabili oltre la fine`);
+      for (let i = 0; i < info.stabili * STRIDE; i++) {
+        assert(parziale[i] === tutto[i], `passo ${passo}, ${m} campioni: il timbro ${Math.floor(i / 3)} cambia (${parziale[i]} / ${tutto[i]})`);
+      }
+      definitiviMax = Math.max(definitiviMax, info.stabili);
+    }
+    // E non e' una garanzia vuota: quasi tutto il tratto diventa definitivo.
+    assert(definitiviMax > count(tutto) * 0.8, `passo ${passo}: definitivi solo ${definitiviMax} di ${count(tutto)}`);
+  }
+});
+
 test('fondo: le nuvole sono deterministiche e non si ripetono', () => {
   // Deterministiche: lo schermo e l'immagine salvata hanno lo stesso fondo.
   for (const [u, v] of [[0, 0], [123.4, 987.6], [1599, 2400]])

@@ -169,6 +169,16 @@ Cose da sapere prima di toccarlo:
 - **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2. La tessera della trama si genera al layout (`precaricaTrama()`), non al primo tocco.
 - **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato. Il tratto non salta al rilascio: overlay e livello dei tratti coincidono pixel per pixel.
 
+### Il cancellino che lascia l'alone (30/09/2026, dalla -28)
+
+`src/gomma.js`. Il cancellino non pulisce, spalma: per ogni timbro fotografa quel che c'è sotto, cancella, e rimette una frazione del gesso tolto (la foto ritagliata dalla forma della gomma) in quattro copie spostate **all'indietro** lungo il gesto. Sul rosso resta un velo rosato, sul bianco uno grigio, sulla lavagna pulita niente. `?alone=0.1` cambia l'intensità (default 0,2; 0 = la gomma di prima).
+
+- **Lo schermo è identico al render dal modello**, pixel per pixel: misurato con un gesto pilotato, stesso hash su 242.436 pixel. Il modo: la gomma lavora un timbro alla volta in tutte e due le strade, e dal vivo incide solo i timbri **definitivi** — `resample(pts, passo, info)` dice quanti non cambieranno più, e si toglie uno perché la direzione di un timbro dipende anche dal successivo. Il resto si incide al rilascio (`main.js`, `onEnd`). Chi facesse incidere alla gomma anche la coda provvisoria riaprirebbe la differenza fra schermo e immagine salvata.
+- **All'indietro, non in avanti**: in avanti il timbro successivo ricancellerebbe l'alone e lo trascinerebbe fino in fondo alla passata.
+- **Sulla lavagna vuota 0 pixel**, misurato: non c'è niente da fotografare.
+- **`timbra()` consuma la sequenza casuale per intero** anche per i timbri saltati da `da` e `a`: è ciò che rende uguale incidere a pezzi e incidere tutto insieme.
+- **Costo**: ~0,3-0,5 ms per timbro contro ~0,1-0,2 della gomma pulita; con CPU rallentata 4x, ~1,3 ms per frame su un gesto veloce da telefono. Il render dal modello (annulla, export) paga lo stesso per ogni timbro di gomma del disegno.
+
 ### Il fondo della lavagna (30/09/2026, dalla -27)
 
 `src/fondo.js`. Non più un colore pieno: velature larghe di gesso cancellato, passate di spugna ad arco, strisciate corte di mano e panno, e la grana della superficie. La velatura passa per una maschera di polvere, così è puntinata e non liscia. `?fondo=pieno` rimette il colore della -26, anche nell'immagine salvata.
