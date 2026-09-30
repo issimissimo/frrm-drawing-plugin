@@ -23,11 +23,20 @@
  * Ripassare pulisce di piu' da solo: ogni passata rimette una frazione della
  * frazione.
  *
- * UN TIMBRO ALLA VOLTA, e non a caso: dal vivo la gomma incide i timbri man
- * mano che diventano definitivi (resample() con `info`), dal modello li
- * incide tutti di fila. Con la stessa unita' di lavoro le due strade fanno
- * le stesse operazioni sugli stessi pixel, e lo schermo e' identico a quel
- * che danno annulla, rotazione e immagine salvata.
+ * UN TIMBRO ALLA VOLTA, e non a caso: dal vivo la gomma incide per sempre i
+ * timbri man mano che diventano definitivi (resample() con `info`), dal
+ * modello li incide tutti di fila. Con la stessa unita' di lavoro le due
+ * strade fanno le stesse operazioni sugli stessi pixel, e lo schermo coincide
+ * con quel che danno annulla, rotazione e immagine salvata.
+ *
+ * La coda ancora provvisoria si incide lo stesso, per non restare indietro
+ * sotto il dito, e al frame dopo si rimette com'era da una foto (main.js).
+ * Su un canvas in GPU quella foto non e' esatta al bit: premoltiplicare e
+ * tornare indietro sbaglia di un'unita' sui pixel semitrasparenti. Misurato
+ * il 30/09/2026 su un gesto pilotato: 13-134 pixel su ~900.000 diversi dal
+ * render dal modello, di 1-2 livelli su 255 nel colore pesato per
+ * l'opacita'. Invisibile. L'identita' al bit chiederebbe la lavagna in CPU
+ * (willReadFrequently), e il gesso nuovo vive di passate in GPU.
  */
 
 import { timbra } from './chalk.js';
@@ -37,8 +46,14 @@ import { ERASER_ALPHA } from './palette.js';
 /**
  * Quanto del gesso tolto torna come alone, in totale fra le copie.
  * `?alone=` lo cambia per il confronto sul device (main.js).
+ *
+ * La -28 aveva 0,2 e le copie fra 0,12 e 0,5 larghezze dietro: sul telefono
+ * «non si nota minimamente» (Daniele, 30/09/2026). Misurato alla geometria
+ * del telefono, luminosita' della scia sopra la gomma pulita: 0,2 -> +4,
+ * 0,4 -> +12, 0,6 -> +16. Spostare le copie piu' indietro non cambiava
+ * quasi nulla; e' l'intensita' che conta.
  */
-let alone = 0.2;
+let alone = 0.5;
 export const impostaAlone = (v) => {
   const x = Number(v);
   if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) alone = Math.min(1, Math.max(0, x));
@@ -50,12 +65,42 @@ export const aloneAttuale = () => alone;
  * gomma, e con che peso. Pesano di piu' le vicine: la striscia sfuma
  * allontanandosi da dove il gesso e' stato preso.
  */
-const COPIE = [
-  { dietro: 0.12, peso: 0.4 },
-  { dietro: 0.25, peso: 0.3 },
-  { dietro: 0.38, peso: 0.2 },
-  { dietro: 0.5, peso: 0.1 },
+export const COPIE = [
+  { dietro: 0.45, peso: 0.4 },
+  { dietro: 0.6, peso: 0.3 },
+  { dietro: 0.75, peso: 0.2 },
+  { dietro: 0.9, peso: 0.1 },
 ];
+
+/**
+ * Il rettangolo in pixel che incidere i timbri [da, a) puo' toccare: i timbri
+ * e la scia dietro di loro. Intero e dentro il canvas; null se vuoto.
+ * Serve alla coda provvisoria dal vivo (main.js), che si fotografa prima di
+ * inciderla e si rimette al frame dopo.
+ */
+export function ingombro(ctx, stroke, pts, da, a) {
+  const n = count(pts);
+  const fine = Math.min(a, n);
+  if (fine <= da) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = da; i < fine; i++) {
+    const x = pts[i * 3], y = pts[i * 3 + 1];
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  // Largo di proposito: il raggio del timbro piu' la copia piu' lontana, in
+  // qualunque direzione, piu' un quarto di larghezza e 3 pixel. Un pixel
+  // toccato fuori da qui non tornerebbe indietro: col margine stretto (2
+  // unita') restavano ~20 pixel diversi dal render dal modello su un gesto,
+  // sfiorati dai bordi sfumati dei timbri e dalle copie a mezzo pixel.
+  const r = stroke.width * (1 + COPIE[COPIE.length - 1].dietro);
+  const m = ctx.getTransform();
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const px0 = Math.max(0, Math.floor((x0 - r) * m.a + m.e) - 3), py0 = Math.max(0, Math.floor((y0 - r) * m.a + m.f) - 3);
+  const px1 = Math.min(W, Math.ceil((x1 + r) * m.a + m.e) + 3), py1 = Math.min(H, Math.ceil((y1 + r) * m.a + m.f) + 3);
+  if (px1 <= px0 || py1 <= py0) return null;
+  return { x: px0, y: py0, w: px1 - px0, h: py1 - py0 };
+}
 
 /** Due canvas d'appoggio per misura di destinazione (schermo, export). */
 const appoggi = new Map();
