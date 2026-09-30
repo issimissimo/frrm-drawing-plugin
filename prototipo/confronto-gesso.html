@@ -53,6 +53,11 @@
     <button data-z="2">2x</button>
     <button data-z="3">3x</button>
   </span>
+  <label>Sopra</label>
+  <span class="scelta" id="rif">
+    <button data-r="-24" aria-pressed="true">gesso nuovo della -24</button>
+    <button data-r="vecchio">gesso vecchio, la -20</button>
+  </span>
   <label>Disposizione</label>
   <span class="scelta" id="disp">
     <button data-d="sopra" aria-pressed="true">uno sopra l'altro</button>
@@ -63,8 +68,8 @@
 <div id="taratura"></div>
 
 <div class="coppia" id="coppia">
-  <figure><figcaption>Vecchio — la -20</figcaption><canvas id="cv-vecchio"></canvas></figure>
-  <figure><figcaption>Nuovo</figcaption><canvas id="cv-nuovo"></canvas></figure>
+  <figure><figcaption id="cap-rif">Gesso nuovo della -24</figcaption><canvas id="cv-vecchio"></canvas></figure>
+  <figure><figcaption>Questa versione</figcaption><canvas id="cv-nuovo"></canvas></figure>
 </div>
 
 <script type="module">
@@ -151,9 +156,24 @@ const disegno = {
 
 /* ---------- render ---------- */
 
-let k = 1, lente = 1;
+let k = 1, lente = 1, rif = '-24';
 
-function disegna(id, modo) {
+/* Il gesso della -24: i parametri di allora, scritti per esteso perche' non
+   seguano le tarature successive. I nuovi valgono zero, e a zero il codice di
+   oggi rende quel che rendeva la -24. */
+const GESSO_24 = {
+  deposito: 0.8, soglia: 0.03, profondita: 0.9, guadagno: 3, opacita: 0.95,
+  valle: 0.15, picco: 0.85, velo: 0.1, filamenti: 0.4, bordo: 0.04,
+  inclinazione: 0.12, sfrangia: 0.05, ventaglio: 0.35, granelli: 0,
+};
+
+function disegna(id, modo, parametri = null) {
+  const salvati = { ...GESSO };
+  if (parametri) Object.assign(GESSO, parametri);
+  try { return disegnaCon(id, modo); } finally { Object.assign(GESSO, salvati); }
+}
+
+function disegnaCon(id, modo) {
   const cv = document.getElementById(id);
   cv.width = Math.round(1600 * k);
   cv.height = Math.round(1200 * k);
@@ -173,7 +193,9 @@ function disegna(id, modo) {
 }
 
 function tutto() {
-  const a = disegna('cv-vecchio', 'vecchio');
+  const a = rif === 'vecchio'
+    ? disegna('cv-vecchio', 'vecchio')
+    : disegna('cv-vecchio', 'nuovo', GESSO_24);
   const b = disegna('cv-nuovo', 'nuovo');
   document.title = `Confronto gesso — ${a.toFixed(0)} / ${b.toFixed(0)} ms`;
 }
@@ -192,6 +214,11 @@ function scelta(id, fn) {
 }
 scelta('scala', (d) => { k = Number(d.k); });
 scelta('lente', (d) => { lente = Number(d.z); });
+scelta('rif', (d) => {
+  rif = d.r;
+  document.getElementById('cap-rif').textContent =
+    rif === 'vecchio' ? 'Gesso vecchio — la -20' : 'Gesso nuovo della -24';
+});
 scelta('disp', (d) => { document.getElementById('coppia').classList.toggle('affiancati', d.d === 'fianco'); });
 
 /* La taratura si vede solo con ?taratura: al cliente si mostra il confronto,
@@ -202,7 +229,8 @@ if (new URLSearchParams(location.search).has('taratura')) {
   const campi = { deposito: [0.05, 1, 0.01], soglia: [0, 0.6, 0.01], profondita: [0, 1.5, 0.05], guadagno: [1, 8, 0.1],
                   opacita: [0.2, 1, 0.01], valle: [0, 0.7, 0.01], picco: [0.3, 1, 0.01],
                   velo: [0, 1, 0.01], filamenti: [0, 1, 0.05], bordo: [0, 0.2, 0.01],
-                  inclinazione: [0, 0.4, 0.01], sfrangia: [0, 0.2, 0.01], ventaglio: [0, 1, 0.05] };
+                  inclinazione: [0, 0.4, 0.01], sfrangia: [0, 0.2, 0.01], ventaglio: [0, 1, 0.05],
+                  granelli: [0, 0.6, 0.01] };
   for (const [nome, [min, max, step]] of Object.entries(campi)) {
     const l = document.createElement('label');
     l.innerHTML = `${nome} <input type="range" min="${min}" max="${max}" step="${step}" value="${GESSO[nome]}"> <output>${GESSO[nome]}</output>`;
@@ -217,7 +245,7 @@ if (new URLSearchParams(location.search).has('taratura')) {
 }
 
 // Per la taratura automatica dal browser pilotato: nessun effetto sulla pagina.
-window.__prova = { GESSO, tutto, disegno };
+window.__prova = { GESSO, tutto, disegno, scala: (x) => { k = x; } };
 
 tutto();
 </script>

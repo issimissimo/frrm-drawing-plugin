@@ -9,11 +9,11 @@
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN, BOARD_W, boardHeight, freezeBoardHeight,
-         unfreezeBoardHeight, CHALKS, BOARD_BG } from '../src/palette.js';
+         unfreezeBoardHeight, CHALKS, BOARD_BG, GESSO } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
-         lunghezzaPunta, passoPunta } from '../src/gesso.js';
+         lunghezzaPunta, passoPunta, granelli } from '../src/gesso.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
@@ -440,13 +440,43 @@ test('gesso: la punta ha filamenti al centro e bordi che vanno a zero', () => {
   // I filamenti sono la grana allungata: se il profilo fosse piatto, il
   // tratto trascinato sarebbe una striscia uniforme. E ai bordi deve
   // arrivare a zero, o il tratto avrebbe un filo netto come un nastro.
+  // La punta e' larga w piu' la fascia dei granelli per lato.
   for (const w of [21, 27, 50, 108]) {
     const p = profiloPunta(1234, w);
+    const est = granelli(w), wt = w + 2 * est;
     let min = 1, max = 0;
-    for (let v = w * 0.25; v <= w * 0.75; v += 0.1) { const x = p(v); min = Math.min(min, x); max = Math.max(max, x); }
+    for (let v = est + w * 0.25; v <= est + w * 0.75; v += 0.1) { const x = p(v); min = Math.min(min, x); max = Math.max(max, x); }
     assert(max - min > 0.2, `larghezza ${w}: profilo quasi piatto (${min.toFixed(2)}..${max.toFixed(2)})`);
     assert(max <= 1 && min >= 0, `larghezza ${w}: profilo fuori da [0, 1]`);
-    assert(p(0) < 0.01 && p(w) < 0.01, `larghezza ${w}: i bordi non vanno a zero`);
+    assert(p(0) < 0.01 && p(wt) < 0.01, `larghezza ${w}: i bordi non vanno a zero`);
+  }
+});
+
+test('gesso: la fascia dei granelli sta fuori dal tratto, il nucleo resta pieno', () => {
+  // Centrata sul bordo, la rampa toglieva deposito anche dentro e le linee
+  // sottili sembravano esili (16,5 px contro 22 della -24). Senza filamenti
+  // il profilo e' la sola rampa: dentro la larghezza nominale, lontano dal
+  // bordo di prima, deve valere 1; nella fascia deve salire da 0 senza buchi.
+  const salvati = { ...GESSO };
+  try {
+    GESSO.filamenti = 0;
+    for (const w of [21, 27, 50, 108]) {
+      const p = profiloPunta(1, w);
+      const est = granelli(w);
+      assert(est > 0, `larghezza ${w}: nessuna fascia di granelli`);
+      const bordo = Math.min(w * 0.18, 1 + w * GESSO.bordo);
+      for (let v = est + bordo; v <= est + w - bordo; v += 0.25)
+        assert(p(v) > 0.999, `larghezza ${w}: nucleo indebolito in ${v.toFixed(2)} (${p(v).toFixed(3)})`);
+      let prec = -1;
+      for (let v = 0; v <= est + bordo; v += 0.25) {
+        assert(p(v) >= prec - 1e-9, `larghezza ${w}: la fascia non sale in ${v.toFixed(2)}`);
+        prec = p(v);
+      }
+      const meta = p(est / 2);
+      assert(meta > 0.05 && meta < 0.6, `larghezza ${w}: a meta' fascia il deposito e' ${meta.toFixed(2)}, non parziale`);
+    }
+  } finally {
+    Object.assign(GESSO, salvati);
   }
 });
 

@@ -197,21 +197,39 @@ function rumore1(seme, cella) {
  *    lavagna, piu' uno piu' largo che li raggruppa. Trascinato lungo la curva
  *    diventa la striatura;
  *  - i BORDI: il deposito cala nell'ultimo decimo della larghezza. Netti,
- *    perche' un bordo morbido e' l'aerografo di prima.
+ *    perche' un bordo morbido e' l'aerografo di prima;
+ *  - i GRANELLI (dal 30/09/2026): la punta sporge di `granelli(w)` per lato
+ *    oltre la larghezza nominale, e il calo del deposito si allunga su tutta
+ *    quella fascia. Li' il deposito e' poco, e la soglia sulla trama lascia
+ *    solo le creste: il bordo si sgrana in puntini, come nella "I" della foto
+ *    di riferimento, invece di sfumare. La rampa si allunga solo verso
+ *    l'esterno: il nucleo resta quello della -24. Centrata sul bordo di
+ *    prima toglieva deposito anche dentro, e le linee sottili sembravano
+ *    piu' esili (provato il 30/09/2026).
+ *
+ * `v` va da 0 a `w + 2 * granelli(w)`: la larghezza di tutta la punta.
  */
 export function profiloPunta(seme, w) {
   // Il medio a 3,2 unita' faceva corsie leggibili: l'ellisse di prova
   // sembrava un binario. A 2 raggruppa senza disegnare righe.
   const fine = rumore1(seme, 0.9);
   const medio = rumore1(seme ^ 0x2545F491, 2);
-  const bordo = Math.min(w * 0.18, 1 + w * GESSO.bordo);
+  const est = granelli(w);
+  const bordo = Math.min(w * 0.18, 1 + w * GESSO.bordo) + est;
+  const wt = w + 2 * est;
   const f = GESSO.filamenti;
   return (v) => {
     const fil = 0.7 * fine(v) + 0.3 * medio(v);
     const striato = 1 - f + f * tra(0.2, 0.75, fil);
-    return striato * tra(0, bordo, v) * tra(0, bordo, w - v);
+    return striato * tra(0, bordo, v) * tra(0, bordo, wt - v);
   };
 }
+
+/**
+ * Di quanto la punta sporge per lato oltre la larghezza nominale, in unita'
+ * di lavagna. A zero il bordo e' quello della -24.
+ */
+export const granelli = (w) => w * GESSO.granelli;
 
 /**
  * La punta come immagine: `lungo` unita' nella direzione del gesto, `w`
@@ -223,13 +241,14 @@ export function profiloPunta(seme, w) {
  * lavagna e' mezzo pixel, e senza media i filamenti diventerebbero aliasing.
  */
 function immaginePunta(seme, w, lungo, k) {
+  const wt = w + 2 * granelli(w);
   const W = Math.max(2, Math.round(lungo * k));
-  const H = Math.max(2, Math.round(w * k));
+  const H = Math.max(2, Math.round(wt * k));
   const prof = profiloPunta(seme, w);
   const colonna = new Float32Array(H);
   for (let y = 0; y < H; y++) {
     let s = 0;
-    for (let q = 0; q < 3; q++) s += prof(((y + (q + 0.5) / 3) / H) * w);
+    for (let q = 0; q < 3; q++) s += prof(((y + (q + 0.5) / 3) / H) * wt);
     colonna[y] = s / 3;
   }
   const cv = document.createElement('canvas');
@@ -256,7 +275,7 @@ function immaginePunta(seme, w, lungo, k) {
  */
 let puntaInCache = { chiave: '', cv: null };
 function punta(seme, w, lungo, k) {
-  const chiave = `${seme}:${w}:${lungo}:${k}:${GESSO.filamenti}:${GESSO.bordo}`;
+  const chiave = `${seme}:${w}:${lungo}:${k}:${GESSO.filamenti}:${GESSO.bordo}:${GESSO.granelli}`;
   if (puntaInCache.chiave !== chiave) puntaInCache = { chiave, cv: immaginePunta(seme, w, lungo, k) };
   return puntaInCache.cv;
 }
@@ -305,6 +324,9 @@ function trascina(ctx, m, stroke) {
 
   const L = (n - 1) * passo;
   const r = w / 2;
+  // La punta disegnata e' piu' larga della nominale della fascia dei granelli:
+  // sx e dx sono le meta' nominali, `sporge` le porta a tutta la punta.
+  const sporge = 1 + (2 * granelli(w)) / w;
 
   // Una striscia nel punto (x, y), ruotata di `ang`, a distanza `s`
   // dall'inizio, con una frazione `peso` del deposito.
@@ -323,7 +345,7 @@ function trascina(ctx, m, stroke) {
     // Senza, la soglia la schiacciava al 9%.
     ctx.globalAlpha = GESSO.deposito * peso * (0.75 + 0.25 * dose(s))
       * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
-    ctx.drawImage(img, -lungo / 2, off - sx, lungo, sx + dx);
+    ctx.drawImage(img, -lungo / 2, off - sx * sporge, lungo, (sx + dx) * sporge);
   };
 
   let prec = null;   // [x, y, angolo, p] della striscia precedente
@@ -470,8 +492,10 @@ export function disegnaGesso(ctx, stroke, pts) {
   fin.globalAlpha = 1;
   fin.clearRect(0, 0, W, H);
   fin.globalCompositeOperation = 'lighter';
-  fin.globalAlpha = GESSO.velo;
-  fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
+  if (GESSO.velo > 0) {
+    fin.globalAlpha = GESSO.velo;
+    fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
+  }
 
   // 2-3. Valli e soglia: X = max(0, D - profondita' x valle - c).
   //    Canvas 2D non sottrae, ma sa invertire (destination-out sopra un pieno

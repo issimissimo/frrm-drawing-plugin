@@ -298,6 +298,28 @@ export const ERASER_ALPHA = 0.85;
  *   ventaglio  il deposito delle strisce aggiunte nelle curve strette, come
  *              frazione di quelle normali: a 1 ogni inversione dello
  *              scarabocchio diventa un punto bianco.
+ *   granelli   di quanto la punta sporge per lato oltre la larghezza
+ *              nominale, come frazione della larghezza: li' il deposito cala
+ *              piano e la soglia lascia solo le creste, cioe' granelli
+ *              staccati (Daniele, 30/09/2026: "bordi meno definiti", come la
+ *              "I" della foto). 0 = il bordo della -24. A 0,35 il tratto
+ *              ingrassa senza sgranarsi di piu'.
+ *
+ * Il 30/09/2026, coi granelli, il VELO e' sceso da 0,1 a 0: si prende dal
+ * deposito, e nella fascia dei granelli il deposito e' basso ma non nullo, cosi'
+ * diventava un alone grigio continuo attorno al tratto: l'aerografo. Dentro il
+ * tratto non si vede la differenza. E la SFRANGIA e' salita da 0,05 a 0,1.
+ *
+ * Misure del 30/09/2026 (export 1600, bianco 27; larghezza dove il profilo
+ * medio supera meta' del massimo, e dove supera un decimo):
+ *
+ *                            lento: larg. / decimo / inchiostro   veloce (p 0,2)
+ *   -24                      22 / 25   / 2387                     21 / 23   / 1292
+ *   questi                   24,5 / 30,5 / 2769                   19 / 26   / 1334
+ *   rampa centrata sul bordo 16,5 / 23,5 / 1872                   11 / 19,5 / 919
+ *
+ * La terza riga e' la strada scartata: allungare la rampa anche verso
+ * l'interno toglie deposito al nucleo, e le linee sottili diventano esili.
  *
  * Tarati il 29/09/2026 su una foto di disegni a gesso (dreamstime 189200205,
  * scelta da Daniele) e sulla larghezza percepita del vecchio, misurata sul
@@ -335,12 +357,13 @@ export const GESSO = {
   opacita: 0.95,
   valle: 0.15,
   picco: 0.85,
-  velo: 0.1,
+  velo: 0,
   filamenti: 0.4,
   bordo: 0.04,
   inclinazione: 0.12,
-  sfrangia: 0.05,
+  sfrangia: 0.1,
   ventaglio: 0.35,
+  granelli: 0.25,
 };
 
 export const chalkById = (id) => CHALKS.find((c) => c.id === id) || CHALKS[0];
