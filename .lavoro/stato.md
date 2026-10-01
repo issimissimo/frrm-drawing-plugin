@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 02/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-39/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-40/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -31,6 +31,8 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - [x] Cestino e salvataggio fallito in `finestra.js` invece di `confirm()`/`alert()`. Nel cestino il primario e' **NO, LO TENGO** (scelta di Daniele: il cestino non si annulla). Verificati NO, Esc, SI', cestino a lavagna vuota, telefono a 360 px.
 - [x] Difetto trovato strada facendo: `scarica()` lancia in modo sincrono, il `.catch()` di `salva()` non lo vedeva → nessun messaggio, SALVA spento fino al tratto dopo. Provato con `toDataURL` che lancia, prima e dopo.
 - [ ] Prova sul telefono vero (dito, Safari e Chrome).
+- [x] **Arancio `#FF822A`** al posto di `#F1A366` (Daniele: «molto simile a un marrone chiaro»), in main (`cdc7a46`) e nel branch, online nella **-40** (= -39 + l'arancio). Scelto da Daniele fra quattro candidati su due confronti col motore vero (gesso nuovo e gesso al 35%); numeri in `fase-0-specifiche.md` §3.2.
+- [ ] Prova sul telefono dell'arancio: i colori sullo schermo del telefono non sono quelli del monitor.
 - [ ] In produzione serve una versione nuova del plugin da main: decisione di Daniele. Lo zip NON si costruisce dal branch (vedi Trappole).
 
 ## Decisioni prese e perché
