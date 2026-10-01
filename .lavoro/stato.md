@@ -1,10 +1,10 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 01/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-30/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-31/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
-Branch `gesso-realistico`, online nella -30 (la -29 piu' il cancellino veloce, 01/10): gesso nuovo con bordi a granelli, fondo lavagna generato, cancellino che lascia l'alone del gesso tolto. Daniele: «adesso abbiamo DAVVERO l'effetto gessetto» (30/09); gomma provata sul telefono: «funziona, l'effetto mi piace» (01/10).
+Branch `gesso-realistico`, online nella -31 (la -29 col cancellino che regge sul S10, 01/10): gesso nuovo con bordi a granelli, fondo lavagna generato, cancellino che lascia l'alone del gesso tolto. Daniele: «adesso abbiamo DAVVERO l'effetto gessetto» (30/09); gomma provata sul telefono: «funziona, l'effetto mi piace» (01/10).
 Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.7`.
 
 ## Piano attivo
@@ -13,9 +13,9 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 - [ ] QA in produzione su device veri: telefono → mail → Approva → galleria (compreso il purge di Speed Optimizer).
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
-Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **60 fps della -30 su iPhone 13 e S10 ✗** (verificati solo sulla -24) · **sì del cliente ✗**.
-- [ ] Il cliente vede la -30 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
-- [ ] 60 fps della -30 sul telefono, `?debug=1`, disegnando e cancellando a lungo.
+Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **60 fps della -31: S10 ✅ cancellando (misurato via USB, 01/10), iPhone 13 ✗** · **sì del cliente ✗**.
+- [ ] Il cliente vede la -31 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
+- [ ] 60 fps della -31 su iPhone 13 (`?debug=1`, cancellando a zig-zag ampio), e sul S10 disegnando a lungo col gesso (la gomma e' misurata, il gesso no).
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
 - [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
 - [ ] Annotato, non aperto: polvere neutra del cancellino anche sul vuoto.
@@ -37,14 +37,16 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - **Fondo generato, non foto né piastrella** (`fondo.js`): le forme sono funzioni della posizione, si ripete solo la grana su due piastrelle di lati primi fra loro. **Base più scura** (`#15181B`) perché la media resti il `#1F2225` su cui sono tarati i gessetti.
 - **Fondo su un canvas `#fondo` sotto i tratti, e nell'export in destination-over**: la gomma deve scoprirlo, non bucarlo.
 - **Alone del cancellino rimesso ALL'INDIETRO lungo il gesto**: in avanti lo ricancellerebbe il timbro successivo.
-- **Gomma un timbro alla volta, dal vivo incisi per sempre solo i timbri definitivi (`resample(..., info)`), la coda provvisoria incisa e ritirata da una foto**: gomma sotto il dito (22% di gesso residuo, era 84%) e schermo = modello entro 1-2 livelli su poche decine di pixel. L'identità al bit chiederebbe la lavagna in CPU.
-- **Cancellino veloce senza toccare l'estetica (01/10, -30)**: rallentava col gesto perche' `timbra()` consumava il PRNG dall'inizio a ogni timbro (O(n²), 40% del tempo) e la curva si ricampionava da capo tre volte a frame. Ora `mulberry32(seme, salta)` salta in O(1) e `resample(..., memo)` riparte dall'ultimo punto fermo. Pixel identici per costruzione (due test bit per bit). Misurato in Chrome a CPU 1/6, gesto di 20 s: 60 fps fissi (prima, a 1/4, da 59 a 6 in 10 s). Resta la parte GPU (~16 drawImage a timbro, 3 travasi fra canvas): **non misurabile qui, si vede solo sul telefono**.
+- **Gomma per GRUPPI FISSI di 6 timbri (dal 01/10, -31), dal vivo incisi solo i gruppi interi e definitivi (`resample(..., info)`); il resto si vede sull'overlay come fondo attraverso i timbri (`velaCoda()`)**: identico a cancellare per costruzione, e non legge la lavagna. Schermo = modello entro 1 livello su ~10 pixel. Fino alla -30 era un timbro alla volta con la coda incisa e ritirata da una foto: sul S10 **5 fps** su uno zig-zag ampio, il ritardo si accumulava.
+- **Cancellino, primo giro (01/10, -30), utile ma non era il problema del S10**: rallentava col gesto perche' `timbra()` consumava il PRNG dall'inizio a ogni timbro (O(n²), 40% del tempo) e la curva si ricampionava da capo tre volte a frame. Ora `mulberry32(seme, salta)` salta in O(1) e `resample(..., memo)` riparte dall'ultimo punto fermo. Pixel identici per costruzione (due test bit per bit). Misurato in Chrome a CPU 1/6, gesto di 20 s: 60 fps fissi (prima, a 1/4, da 59 a 6 in 10 s). Sul S10 nessun miglioramento percepito (Daniele): il collo di bottiglia era un altro.
+- **Cancellino, secondo giro (01/10, -31): il costo era il NUMERO di letture fra canvas**. Misurato sul S10 via USB (`.lavoro/misura-telefono.mjs`): ogni volta che un canvas legge un altro canvas Chrome consegna il lavoro alla GPU, **2,2 ms a consegna** sul thread `CrGpuMain` (1 ms di sola consegna a Vulkan); timbro per timbro erano 3 a timbro, 420/s, thread al 100%. Sul PC la stessa consegna costa un decimo: **il PC non lo vede** (60 fps anche a CPU 1/6). Gruppi da 6 + coda sull'overlay: S10 zig-zag ampio 5 → **58 fps**, a velocita' doppia **47**, corto 30 → **59**. L'alone cambia solo nella grana (7,5% dei pixel, 5 livelli medi); da 4 a 8 a occhio non si distinguono. `?gruppo=1` rimette il timbro per timbro. **Margine stretto**: a velocita' doppia `CrGpuMain` e' al 95%, su un telefono piu' lento non reggerebbe. Strade non provate: gruppi piu' grandi; cancellare con la maschera gia' pronta invece di ritimbrare (meta' delle impronte, una consegna in piu').
 - **Spessore/velocità chiuso il 17/09** col gesso vecchio (`PRESSURE_*` non si toccano).
 
 ## Trappole
 - **`pacchetto.py` sul branch scrive `frmm-lavagna-1.13.0.zip` SOPRA lo zip di main**: stesso numero, contenuto diverso. Il 01/10 lo zip del branch è stato rinominato `…-BRANCH-gesso-realistico-NON-INSTALLARE.zip` e quello di main ricostruito da un worktree (copiandoci i font, che non sono nel repo). Sul branch non si costruisce lo zip senza cambiare versione.
 - **Fotografare e rimettere un pezzo di canvas in GPU non è esatto al bit** (±1 sui pixel semitrasparenti). È esatto solo dopo un `getImageData`, che sposta il canvas in CPU: un test che legge prima di provare dà «esatto» dove il telefono no. Le differenze si misurano sul colore pesato per l'opacità.
-- **In `main.js` `coda` è la coda d'invio**: la foto della gomma si chiama `codaGomma`. Una collisione di nomi blocca l'app intera, senza errori visibili se non in console.
+- **In `main.js` `coda` è la coda d'invio**: la gomma ha `memoGomma` e `timbriApplicati`, mai `coda`. Una collisione di nomi blocca l'app intera, senza errori visibili se non in console (gia' successo con la foto della coda, tolta nella -31).
+- **Le prestazioni della gomma (e di ogni passata fra canvas) si misurano sul telefono, non sul PC**: `.lavoro/misura-telefono.mjs` (USB, gesto sintetico identico per variante, `--trace`) e `.lavoro/riassumi-traccia.mjs`. Guardare `CrGpuMain` e il numero di `DoEndRasterCHROMIUM` al secondo. Lo schermo del telefono che si spegne fa scadere il caricamento: `adb shell input keyevent KEYCODE_WAKEUP`. Chiudere solo le schede `localhost:8123` lasciate aperte.
 - **Due disegni in produzione hanno un Drawing finto**: post **11973 e 11975**.
 - **La mensola a una riga chiede ~1050px**: fra 701 e 1099px va su due righe.
 - **«auto mode classifier gave no verdict (error)»**: la revisione dei comandi lato server Anthropic non risponde per 2-3 minuti alla volta (28/09, 30/09). Non è la rete. Decisione di Daniele: si aspetta, niente regole di permesso né cambi di modalità.
@@ -60,7 +62,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - **PHP non è installato sul PC.**
 - **`.lavoro/` non è gitignorata e il repo è pubblico**: niente credenziali. Token GitHub e password dello staging passati in chiaro in transcript: **da ruotare**. `esempio.jpg` (foto stock con filigrana) e i due `disegno-da-aggiungere-*.jpg` stanno nella root, fuori da git: non vanno committati.
 - **FTP**: solo `temp/frmm-drawing-plugin*`. Online `frmm`, repo `frrm`: non correggere.
-- Verifiche: `node prototipo/test/run.js` (84) · `python .lavoro/pacchetto.py` (import versionati) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
+- Verifiche: `node prototipo/test/run.js` (85) · `python .lavoro/pacchetto.py` (import versionati) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
 
 ## Prossimo passo
-Daniele prova la -30 sul telefono (`?debug=1`, cancellando a lungo). Poi mostra la -30 al cliente e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`).
+Daniele prova la -31 sul S10 col dito (zig-zag ampio, come il 01/10) e sull'iPhone. Poi mostra la -31 al cliente e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`).

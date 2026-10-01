@@ -21,6 +21,7 @@ import { nomeFile, haDisegno, dimensioni, EXPORT_W,
 import { clientId, CHIAVE_CLIENT, endpointInvio, payloadDisegno, firma,
          motivoDaStatus, inviaVoce, createCoda, MAX_TENTATIVI, MAX_CODA } from '../src/invio.js';
 import { createDrawing, adattaLavagna } from '../src/model.js';
+import { cancella, impostaGruppo } from '../src/gomma.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
          giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
@@ -591,6 +592,63 @@ test('gomma: il ricampionamento incrementale da\' lo stesso tratto, bit per bit'
   const r = resample(altro, 5, null, memo);
   const atteso = resample(altro.slice(), 5);
   assert(r.length === atteso.length && r.every((v, i) => v === atteso[i]), 'il memo di un altro tratto e\' stato usato');
+});
+
+test('gomma: a pezzi come dal vivo fa le stesse operazioni che tutta insieme', () => {
+  // Dal vivo cancella() riceve fin dove i timbri sono definitivi, frame per
+  // frame, e incide solo gruppi interi; dal modello riceve tutto il tratto.
+  // Le due strade devono posare gli stessi gruppi con le stesse operazioni,
+  // o lo schermo non e' piu' quel che danno annulla, rotazione ed export.
+  const registro = [];
+  const finto = (nome, w, h) => {
+    const cv = { width: w, height: h };
+    const ctx = {
+      canvas: cv, globalAlpha: 1, globalCompositeOperation: 'source-over', t: [1, 0, 0, 1, 0, 0],
+      getTransform() { const [a, b, c, d, e, f] = this.t; return { a, b, c, d, e, f }; },
+      setTransform(...x) { this.t = x.length === 1 ? [x[0].a, x[0].b, x[0].c, x[0].d, x[0].e, x[0].f] : x; },
+      pila: [],
+      save() { this.pila.push([this.t, this.globalAlpha, this.globalCompositeOperation]); },
+      restore() { [this.t, this.globalAlpha, this.globalCompositeOperation] = this.pila.pop(); },
+      clearRect(...x) { registro.push([nome, 'clear', ...x]); },
+      drawImage(img, ...x) {
+        registro.push([nome, this.globalCompositeOperation, this.globalAlpha, img === cv ? 'se' : (img.nome || 'impronta'), ...this.t, ...x]);
+      },
+      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {}, fillRect() {},
+    };
+    cv.getContext = () => ctx;
+    cv.nome = nome;
+    return ctx;
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => finto('appoggio', 0, 0).canvas };
+  try {
+    const rnd = mulberry32(5);
+    const pts = [];
+    for (let i = 0; i < 70; i++) pts.push(300 + i * 18, 400 + 120 * Math.sin(i * 0.2), rnd());
+    const stroke = { tool: 'eraser', width: 180, seed: 0xC0FFEE, pts: [] };
+    for (const g of [1, 4, 6]) {
+      impostaGruppo(g);
+      const tutta = () => { const c = finto('lavagna', 1440, 1080); c.setTransform(0.9, 0, 0, 0.9, 0, 0); return c; };
+      cancella(tutta(), stroke, pts);                  // impronte colorate in cache
+      registro.length = 0;
+      assert(cancella(tutta(), stroke, pts) === 70, `gruppi da ${g}: non arriva in fondo`);
+      const modello = registro.slice();
+      registro.length = 0;
+      const vivo = tutta();
+      let fatti = 0;
+      for (const definitivi of [0, 3, 3, 9, 10, 17, 30, 31, 52, 68]) {
+        fatti = cancella(vivo, stroke, pts, fatti, definitivi);
+        assert(fatti % g === 0 && fatti <= definitivi, `gruppi da ${g}: inciso fino a ${fatti} con ${definitivi} definitivi`);
+      }
+      cancella(vivo, stroke, pts, fatti);                // il rilascio
+      assert(registro.length === modello.length, `gruppi da ${g}: ${registro.length} operazioni contro ${modello.length}`);
+      for (let i = 0; i < modello.length; i++)
+        assert(modello[i].every((v, k) => v === registro[i][k]), `gruppi da ${g}: l'operazione ${i} cambia: ${JSON.stringify(modello[i])} / ${JSON.stringify(registro[i])}`);
+    }
+  } finally {
+    impostaGruppo(6);
+    globalThis.document = prima;
+  }
 });
 
 test('fondo: le nuvole sono deterministiche e non si ripetono', () => {

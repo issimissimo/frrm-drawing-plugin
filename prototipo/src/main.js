@@ -29,7 +29,7 @@ import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
 import { precaricaTrama } from './gesso.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
-import { impostaAlone, ingombro, cancella } from './gomma.js';
+import { impostaAlone, impostaGruppo, gruppoAttuale, aloneAttuale, cancella, velaCoda } from './gomma.js';
 import { count, resample } from './geom.js';
 import { affiancate, puntaBase, passoTimbri } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
@@ -55,6 +55,9 @@ impostaFondo(new URLSearchParams(location.search).get('fondo'));
 // `?alone=0.1` cambia quanto gesso lascia il cancellino (gomma.js), per
 // scegliere l'intensita' sul device.
 impostaAlone(new URLSearchParams(location.search).get('alone'));
+// `?gruppo=1` torna all'alone timbro per timbro della -30 (gomma.js), per il
+// confronto sul device.
+impostaGruppo(new URLSearchParams(location.search).get('gruppo'));
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -115,8 +118,9 @@ function repaint() {
  * Il gesso vive sull'overlay e si ridisegna intero a ogni frame: e' corto e
  * costa poco. La gomma no: lavora in destination-out, e sull'overlay
  * cancellerebbe l'overlay stesso, che e' vuoto — non si vedrebbe nulla fino
- * al rilascio. Va applicata al livello dei tratti, e solo sul pezzo nuovo,
- * perche' ripassare cancella ogni volta di piu'.
+ * al rilascio. Va incisa sul livello dei tratti, e solo sul pezzo nuovo,
+ * perche' ripassare cancella ogni volta di piu'. Quel che non si puo' ancora
+ * incidere si vede sull'overlay (velaCoda() in gomma.js).
  */
 let timbriApplicati = 0;
 
@@ -128,7 +132,7 @@ let timbriApplicati = 0;
  *
  * Una sola volta per frame, e ripartendo dall'ultimo punto fermo
  * (`memoGomma`, vedi resample()): fino al 01/10/2026 si ricampionava da capo
- * tre volte per frame (qui, in renderStroke() e in incidiCoda()), e il costo
+ * tre volte per frame (qui, in renderStroke() e per la coda provvisoria), e il costo
  * cresceva con la lunghezza del gesto.
  */
 let memoGomma = {};
@@ -140,53 +144,23 @@ function geometriaGomma(stroke) {
 }
 
 /**
- * La coda provvisoria della gomma: i timbri dopo i definitivi, che la curva
- * sposta ancora. Si incidono comunque, perche' la gomma deve stare sotto il
- * dito — senza, restava indietro di un tratto fra due campioni, «in maniera
- * fastidiosa» sul telefono (Daniele, 30/09/2026). Ma prima si fotografa il
- * pezzo di lavagna che toccheranno, e al frame dopo lo si rimette com'era:
- * incisi per sempre restano solo i definitivi, e lo schermo resta identico
- * al render dal modello.
+ * La gomma sta sotto il dito anche dove non e' ancora incisa: il gruppo in
+ * corso e la coda che la curva sposta ancora si vedono sull'overlay, come
+ * fondo della lavagna attraverso i timbri. Senza, la gomma restava indietro
+ * di un tratto fra due campioni, «in maniera fastidiosa» sul telefono
+ * (Daniele, 30/09/2026).
+ *
+ * Fino alla -30 la coda si incideva sulla lavagna e al frame dopo si
+ * rimetteva com'era da una foto: due letture di canvas a frame, che su un
+ * S10 costano ~2 ms l'una sul thread della GPU (gomma.js).
  */
-let codaGomma = null;                                    // { x, y, w, h } in pixel
-const fotoCoda = document.createElement('canvas');
-
-function rimettiCoda() {
-  if (!codaGomma) return;
-  const b = board.base;
-  b.save();
-  b.setTransform(1, 0, 0, 1, 0, 0);
-  b.globalCompositeOperation = 'source-over';
-  b.globalAlpha = 1;
-  b.clearRect(codaGomma.x, codaGomma.y, codaGomma.w, codaGomma.h);
-  b.drawImage(fotoCoda, 0, 0, codaGomma.w, codaGomma.h, codaGomma.x, codaGomma.y, codaGomma.w, codaGomma.h);
-  b.restore();
-  codaGomma = null;
-}
-
-function incidiCoda(stroke, pts) {
-  const r = ingombro(board.base, stroke, pts, timbriApplicati, Infinity);
-  if (!r) return;
-  // Ridimensionare un canvas lo svuota: si fa solo quando serve piu' spazio,
-  // e la foto si scatta subito dopo.
-  if (fotoCoda.width < r.w || fotoCoda.height < r.h) {
-    fotoCoda.width = Math.max(fotoCoda.width, r.w);
-    fotoCoda.height = Math.max(fotoCoda.height, r.h);
-  }
-  const f = fotoCoda.getContext('2d');
-  f.clearRect(0, 0, r.w, r.h);
-  f.drawImage(board.canvas, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
-  codaGomma = r;
-  cancella(board.base, stroke, pts, timbriApplicati);   // tutta, senza avanzare
-}
-
 function paintLive() {
   if (!pen || !pen.current || !pen.current.pts.length) return;
   if (pen.current.tool === 'eraser') {
-    rimettiCoda();
     const { pts, definitivi } = geometriaGomma(pen.current);
     timbriApplicati = cancella(board.base, pen.current, pts, timbriApplicati, definitivi);
-    incidiCoda(pen.current, pts);
+    board.clearOverlay();
+    velaCoda(board.overlay, fondoCanvas, pen.current, pts, timbriApplicati);
   } else {
     board.clearOverlay();
     renderStroke(board.overlay, pen.current);
@@ -206,7 +180,6 @@ const input = createInput(overlayCanvas, board, {
     });
     pen.begin(p);
     timbriApplicati = 0;
-    codaGomma = null;
     memoGomma = {};
     paintLive();
     worst = 0;
@@ -231,13 +204,11 @@ const input = createInput(overlayCanvas, board, {
       // schermo e' gia' il risultato giusto, e ricostruirlo cambierebbe la
       // grana di TUTTI i tratti, non solo di quello appena chiuso.
       if (stroke.tool !== 'eraser') board.commitOverlay();
-      // La gomma ha gia' inciso il livello durante il gesto, fino ai timbri
-      // definitivi: al rilascio si toglie la coda provvisoria e si incidono
-      // gli ultimi, gli stessi che il render dal modello incide in codaGomma.
-      else {
-        rimettiCoda();
-        renderStroke(board.base, stroke, timbriApplicati);
-      }
+      // La gomma ha gia' inciso il livello durante il gesto, per gruppi
+      // interi e definitivi: al rilascio si incidono gli ultimi, gli stessi
+      // gruppi che incide il render dal modello. La coda sull'overlay si
+      // svuota qui sotto.
+      else renderStroke(board.base, stroke, timbriApplicati);
     }
     board.clearOverlay();
     syncButtons();
@@ -456,9 +427,6 @@ function relayout() {
   // rischia di congelare un rapporto sbagliato. Vedi unfreezeBoardHeight().
   if (!history.count) unfreezeBoardHeight();
   lastLayout = board.layout();
-  // Il livello dei tratti si ridisegna dal modello: una foto della coda
-  // provvisoria della gomma non avrebbe piu' senso.
-  codaGomma = null;
   // E il Drawing segue: senza, l'immagine salvata avrebbe le misure del primo
   // layout e non di quel che si vede. Vedi adattaLavagna().
   adattaLavagna(drawing);
@@ -580,6 +548,7 @@ function tick(now = performance.now()) {
       `  punta      ${punta}`,
       ``,
       `gesso        ${gessoAttuale()}`,
+      `gomma        alone ${aloneAttuale()}, gruppo ${gruppoAttuale()}`,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,
       `stroke       ${history.count}`,

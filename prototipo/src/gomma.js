@@ -7,36 +7,39 @@
  * sul bianco uno grigio, sulla lavagna pulita niente (scelte di Daniele,
  * 30/09/2026).
  *
- * Per ogni timbro della gomma, sul livello dei tratti:
+ * Per ogni GRUPPO di timbri della gomma, sul livello dei tratti:
  *
- *   1. FOTO     si copia quel che c'e' sotto il timbro, alone compreso;
- *   2. GOMMA    si cancella come prima, in destination-out;
- *   3. MASCHERA gli stessi timbri in bianco su un canvas vuoto: e' la
- *               frazione tolta, pixel per pixel;
- *   4. TOLTO    la foto ritagliata dalla maschera (destination-in): e'
- *               esattamente il gesso appena rimosso, col suo colore;
- *   5. ALONE    lo si rimette, a una frazione, in piu' copie spostate
+ *   1. MASCHERA i timbri del gruppo in bianco su un canvas vuoto: e' la
+ *               frazione che toglieranno, pixel per pixel;
+ *   2. TOLTO    quel che c'e' sotto, ritagliato dalla maschera (source-in):
+ *               e' esattamente il gesso che la gomma sta per rimuovere, col
+ *               suo colore, alone compreso;
+ *   3. GOMMA    si cancella come prima, in destination-out;
+ *   4. ALONE    il tolto si rimette, a una frazione, in piu' copie spostate
  *               ALL'INDIETRO lungo il gesto: il velo resta sulla scia gia'
- *               pulita, strisciato. In avanti lo ricancellerebbe il timbro
+ *               pulita, strisciato. In avanti lo ricancellerebbe il gruppo
  *               successivo, e si ammucchierebbe in fondo alla passata.
  *
  * Ripassare pulisce di piu' da solo: ogni passata rimette una frazione della
  * frazione.
  *
- * UN TIMBRO ALLA VOLTA, e non a caso: dal vivo la gomma incide per sempre i
- * timbri man mano che diventano definitivi (resample() con `info`), dal
- * modello li incide tutti di fila. Con la stessa unita' di lavoro le due
- * strade fanno le stesse operazioni sugli stessi pixel, e lo schermo coincide
- * con quel che danno annulla, rotazione e immagine salvata.
+ * PER GRUPPI, e non per timbro, dal 01/10/2026. Ogni volta che un canvas
+ * legge un altro canvas, Chrome deve consegnare alla GPU tutto quel che
+ * aveva in sospeso: misurato su un Galaxy S10, 2,2 ms a consegna sul thread
+ * della GPU, di cui 1 ms di sola consegna a Vulkan. Timbro per timbro erano
+ * tre consegne a timbro, 420 al secondo su uno zig-zag ampio: 5 fps, e il
+ * ritardo si accumulava perche' ogni frame lento lasciava piu' timbri al
+ * successivo. Per gruppi sono due consegne a gruppo.
  *
- * La coda ancora provvisoria si incide lo stesso, per non restare indietro
- * sotto il dito, e al frame dopo si rimette com'era da una foto (main.js).
- * Su un canvas in GPU quella foto non e' esatta al bit: premoltiplicare e
- * tornare indietro sbaglia di un'unita' sui pixel semitrasparenti. Misurato
- * il 30/09/2026 su un gesto pilotato: 13-134 pixel su ~900.000 diversi dal
- * render dal modello, di 1-2 livelli su 255 nel colore pesato per
- * l'opacita'. Invisibile. L'identita' al bit chiederebbe la lavagna in CPU
- * (willReadFrequently), e il gesso nuovo vive di passate in GPU.
+ * GRUPPI FISSI: [0, G), [G, 2G)... sempre gli stessi, dal vivo e dal modello.
+ * Dal vivo un gruppo si incide quando tutti i suoi timbri sono definitivi
+ * (resample() con `info`), dal modello tutti di fila: le due strade fanno le
+ * stesse operazioni sugli stessi pixel, e lo schermo coincide con quel che
+ * danno annulla, rotazione e immagine salvata.
+ *
+ * Quel che non e' ancora inciso — il gruppo in corso e la coda che la curva
+ * sposta ancora — si vede lo stesso, sotto il dito, sul livello sopra: vedi
+ * velaCoda().
  */
 
 import { timbra } from './chalk.js';
@@ -73,12 +76,10 @@ export const COPIE = [
 ];
 
 /**
- * Il rettangolo in pixel che incidere i timbri [da, a) puo' toccare: i timbri
- * e la scia dietro di loro. Intero e dentro il canvas; null se vuoto.
- * Serve alla coda provvisoria dal vivo (main.js), che si fotografa prima di
- * inciderla e si rimette al frame dopo.
+ * Il rettangolo in pixel che i timbri [da, a) coprono. Intero e dentro il
+ * canvas; null se vuoto. Serve a velaCoda(), che lavora solo li'.
  */
-export function ingombro(ctx, stroke, pts, da, a) {
+function ingombro(ctx, stroke, pts, da, a) {
   const n = count(pts);
   const fine = Math.min(a, n);
   if (fine <= da) return null;
@@ -88,40 +89,58 @@ export function ingombro(ctx, stroke, pts, da, a) {
     if (x < x0) x0 = x; if (x > x1) x1 = x;
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
-  // Largo di proposito: il raggio del timbro piu' la copia piu' lontana, in
-  // qualunque direzione, piu' un quarto di larghezza e 3 pixel. Un pixel
-  // toccato fuori da qui non tornerebbe indietro: col margine stretto (2
-  // unita') restavano ~20 pixel diversi dal render dal modello su un gesto,
-  // sfiorati dai bordi sfumati dei timbri e dalle copie a mezzo pixel.
-  const r = stroke.width * (1 + COPIE[COPIE.length - 1].dietro);
+  // Il timbro piu' largo sporge di poco oltre la larghezza nominale, come in
+  // cancella(); 2 pixel per gli arrotondamenti.
+  const r = stroke.width * 0.75;
   const m = ctx.getTransform();
   const W = ctx.canvas.width, H = ctx.canvas.height;
-  const px0 = Math.max(0, Math.floor((x0 - r) * m.a + m.e) - 3), py0 = Math.max(0, Math.floor((y0 - r) * m.a + m.f) - 3);
-  const px1 = Math.min(W, Math.ceil((x1 + r) * m.a + m.e) + 3), py1 = Math.min(H, Math.ceil((y1 + r) * m.a + m.f) + 3);
+  const px0 = Math.max(0, Math.floor((x0 - r) * m.a + m.e) - 2), py0 = Math.max(0, Math.floor((y0 - r) * m.a + m.f) - 2);
+  const px1 = Math.min(W, Math.ceil((x1 + r) * m.a + m.e) + 2), py1 = Math.min(H, Math.ceil((y1 + r) * m.a + m.f) + 2);
   if (px1 <= px0 || py1 <= py0) return null;
   return { x: px0, y: py0, w: px1 - px0, h: py1 - py0 };
 }
 
-/** Due canvas d'appoggio per misura di destinazione (schermo, export). */
-const appoggi = new Map();
-function appoggio(w, h) {
-  const chiave = `${w}x${h}`;
-  let a = appoggi.get(chiave);
-  if (a) return a;
-  const nuovo = () => {
-    const cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
-    return cv.getContext('2d');
-  };
-  a = { foto: nuovo(), masc: nuovo() };
-  if (appoggi.size >= 2) appoggi.delete(appoggi.keys().next().value);
-  appoggi.set(chiave, a);
-  return a;
+/**
+ * Quanti timbri per gruppo. Il passo dei timbri della gomma e' un decimo
+ * della sua larghezza: un gruppo da 6 ne copre sei decimi.
+ *
+ * Misurato su un Galaxy S10 il 01/10/2026, zig-zag ampio (velocita' doppia):
+ * timbro per timbro 5 fps; gruppi da 2 -> 42; da 4 -> 56 (33); da 6 -> 59
+ * (50); da 8 -> 59 (53). L'alone cambia poco e solo nella grana: rispetto
+ * al timbro per timbro, coi gruppi da 6 cambia il 7,5% dei pixel, di 5
+ * livelli su 255 in media (da 4: 6,1%; da 8: 8,9%). A occhio non si
+ * distinguono. `?gruppo=` lo cambia per il confronto sul device (main.js).
+ */
+let gruppo = 6;
+export const impostaGruppo = (v) => {
+  const x = Math.round(Number(v));
+  if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) gruppo = Math.min(32, Math.max(1, x));
+};
+export const gruppoAttuale = () => gruppo;
+
+/**
+ * Il canvas d'appoggio, grande quanto il rettangolo di un gruppo e non quanto
+ * la lavagna. Cresce e non cala: schermo ed export hanno scale diverse.
+ */
+let appoggio = null;
+function appoggiaFino(w, h) {
+  if (!appoggio) appoggio = document.createElement('canvas').getContext('2d');
+  const cv = appoggio.canvas;
+  if (cv.width < w || cv.height < h) {
+    cv.width = Math.max(cv.width, w);
+    cv.height = Math.max(cv.height, h);
+  }
+  return appoggio;
 }
 
 /**
  * Incide i timbri [da, a) della gomma `stroke` su `ctx` (gia' in unita' di
- * lavagna), un timbro alla volta, lasciando l'alone.
+ * lavagna), un gruppo alla volta, lasciando l'alone.
+ *
+ * `da` deve stare all'inizio di un gruppo: e' 0, o quel che ha restituito la
+ * chiamata precedente. Un gruppo si incide solo intero, tranne l'ultimo del
+ * tratto, che si incide quando `a` arriva alla fine (onEnd, render dal
+ * modello).
  *
  * @param {number[]} pts i timbri, cioe' il tratto gia' ricampionato
  * @returns {number} l'indice del primo timbro non ancora inciso
@@ -143,83 +162,115 @@ export function cancella(ctx, stroke, pts, da = 0, a = Infinity) {
   const m = ctx.getTransform();
   const k = m.a;
   const W = ctx.canvas.width, H = ctx.canvas.height;
-  const { foto, masc } = appoggio(W, H);
   const w = stroke.width;
   // Il timbro piu' largo sporge di poco oltre la larghezza nominale (jitter,
   // impronte affiancate): un quarto in piu' basta.
   const raggio = w * 0.75;
   const indietro = w * COPIE[COPIE.length - 1].dietro;
 
-  for (let i = da; i < fine; i++) {
-    const x = pts[i * 3], y = pts[i * 3 + 1];
-    // Il verso del gesto: centrato come la normale di timbra(), che usa gli
-    // stessi vicini. Il vicino dopo esiste gia' ed e' definitivo: dal vivo
-    // si incide solo fino a stabili - 1.
-    const p = Math.max(0, i - 1), q = Math.min(n - 1, i + 1);
-    let dx = pts[q * 3] - pts[p * 3], dy = pts[q * 3 + 1] - pts[p * 3 + 1];
+  let g0 = da;
+  for (;;) {
+    const g1 = Math.min(g0 + gruppo, n);
+    if (g1 <= g0 || g1 > fine) break;             // finito, o gruppo non ancora intero
+
+    // Il verso del gruppo: la media dei versi dei suoi timbri, ciascuno
+    // centrato come la normale di timbra(), che usa gli stessi vicini. Il
+    // vicino dopo l'ultimo esiste gia' ed e' definitivo: dal vivo si incide
+    // solo fino a stabili - 1.
+    let dx = 0, dy = 0;
+    let cx0 = Infinity, cy0 = Infinity, cx1 = -Infinity, cy1 = -Infinity;
+    for (let i = g0; i < g1; i++) {
+      const x = pts[i * 3], y = pts[i * 3 + 1];
+      if (x < cx0) cx0 = x; if (x > cx1) cx1 = x;
+      if (y < cy0) cy0 = y; if (y > cy1) cy1 = y;
+      const p = Math.max(0, i - 1), q = Math.min(n - 1, i + 1);
+      const tx = pts[q * 3] - pts[p * 3], ty = pts[q * 3 + 1] - pts[p * 3 + 1];
+      const len = Math.hypot(tx, ty);
+      if (len > 0) { dx += tx / len; dy += ty / len; }
+    }
     const len = Math.hypot(dx, dy);
     if (len > 0) { dx /= len; dy /= len; } else { dx = 0; dy = 0; }
 
-    // Il rettangolo in pixel: il timbro e la scia dietro, interi e dentro il
+    // Il rettangolo in pixel: i timbri e la scia dietro, interi e dentro il
     // canvas. Tutte le passate lavorano solo li'.
-    const ux0 = Math.min(x, x - dx * indietro) - raggio, ux1 = Math.max(x, x - dx * indietro) + raggio;
-    const uy0 = Math.min(y, y - dy * indietro) - raggio, uy1 = Math.max(y, y - dy * indietro) + raggio;
+    const ux0 = cx0 + Math.min(0, -dx * indietro) - raggio, ux1 = cx1 + Math.max(0, -dx * indietro) + raggio;
+    const uy0 = cy0 + Math.min(0, -dy * indietro) - raggio, uy1 = cy1 + Math.max(0, -dy * indietro) + raggio;
     const px0 = Math.max(0, Math.floor(ux0 * k + m.e)), py0 = Math.max(0, Math.floor(uy0 * k + m.f));
     const px1 = Math.min(W, Math.ceil(ux1 * k + m.e)), py1 = Math.min(H, Math.ceil(uy1 * k + m.f));
     const pw = px1 - px0, ph = py1 - py0;
 
-    if (pw <= 0 || ph <= 0) {
-      // Fuori dal canvas: non c'e' niente da fotografare, basta cancellare
-      // (che fuori non fa nulla, ma consuma la stessa sequenza).
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      timbra(ctx, pts, { ...opzioni, da: i, a: i + 1 });
-      ctx.restore();
-      continue;
+    if (pw > 0 && ph > 0) {
+      // Nell'appoggio il rettangolo sta all'origine: (px0, py0) della
+      // lavagna e' (0, 0) li'. Lo spostamento e' intero: stessi pixel.
+      const tolto = appoggiaFino(pw, ph);
+
+      // 1. La maschera: i timbri del gruppo, in bianco, sul vuoto.
+      tolto.setTransform(1, 0, 0, 1, 0, 0);
+      tolto.globalCompositeOperation = 'source-over';
+      tolto.globalAlpha = 1;
+      tolto.clearRect(0, 0, pw, ph);
+      tolto.setTransform(m.a, m.b, m.c, m.d, m.e - px0, m.f - py0);
+      timbra(tolto, pts, { ...opzioni, color: '#ffffff', da: g0, a: g1 });
+
+      // 2. Il gesso che sta per andarsene: la lavagna dentro la maschera.
+      //    source-in svuota anche quel che la sorgente non copre: fuori dal
+      //    rettangolo, cioe' niente che serva.
+      tolto.setTransform(1, 0, 0, 1, 0, 0);
+      tolto.globalCompositeOperation = 'source-in';
+      tolto.drawImage(ctx.canvas, px0, py0, pw, ph, 0, 0, pw, ph);
+      tolto.globalCompositeOperation = 'source-over';
     }
 
-    // 1. La foto di quel che c'e'.
-    //    Non con 'copy', che svuoterebbe tutto il canvas fuori dalla sorgente:
-    //    a ogni timbro, un canvas grande quanto la lavagna.
-    foto.setTransform(1, 0, 0, 1, 0, 0);
-    foto.globalCompositeOperation = 'source-over';
-    foto.globalAlpha = 1;
-    foto.clearRect(px0, py0, pw, ph);
-    foto.drawImage(ctx.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
-
-    // 2. La gomma.
+    // 3. La gomma. Fuori dal canvas non fa nulla, ma timbra() salta da sola
+    //    la sequenza dei timbri che precedono.
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
-    timbra(ctx, pts, { ...opzioni, da: i, a: i + 1 });
+    timbra(ctx, pts, { ...opzioni, da: g0, a: g1 });
     ctx.restore();
 
-    // 3. La maschera: gli stessi timbri, in bianco, sul vuoto.
-    masc.setTransform(1, 0, 0, 1, 0, 0);
-    masc.clearRect(px0, py0, pw, ph);
-    masc.setTransform(m);
-    timbra(masc, pts, { ...opzioni, color: '#ffffff', da: i, a: i + 1 });
-    masc.setTransform(1, 0, 0, 1, 0, 0);
-
-    // 4. Il gesso tolto. destination-in svuota tutto quel che la sorgente
-    //    non copre: il clip lo tiene dentro il rettangolo.
-    foto.save();
-    foto.beginPath();
-    foto.rect(px0, py0, pw, ph);
-    foto.clip();
-    foto.globalCompositeOperation = 'destination-in';
-    foto.drawImage(masc.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
-    foto.restore();
-
-    // 5. L'alone, all'indietro lungo il gesto.
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
-    for (const { dietro, peso } of COPIE) {
-      ctx.globalAlpha = alone * peso;
-      const ox = -dx * dietro * w * k, oy = -dy * dietro * w * k;
-      ctx.drawImage(foto.canvas, px0, py0, pw, ph, px0 + ox, py0 + oy, pw, ph);
+    // 4. L'alone, all'indietro lungo il gesto.
+    if (pw > 0 && ph > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      for (const { dietro, peso } of COPIE) {
+        ctx.globalAlpha = alone * peso;
+        const ox = -dx * dietro * w * k, oy = -dy * dietro * w * k;
+        ctx.drawImage(appoggio.canvas, 0, 0, pw, ph, px0 + ox, py0 + oy, pw, ph);
+      }
+      ctx.restore();
     }
-    ctx.restore();
+    g0 = g1;
   }
-  return Math.max(da, fine);
+  return g0;
+}
+
+/**
+ * La parte della gomma non ancora incisa, dal timbro `da` in poi, disegnata
+ * sul livello SOPRA i tratti (`ov`, l'overlay, gia' vuoto e in unita' di
+ * lavagna): il fondo della lavagna visto attraverso i timbri.
+ *
+ * A schermo e' la stessa cosa che cancellare: sopra un tratto di opacita'
+ * `t`, un timbro di opacita' `g` lascia vedere fondo*g + (tratto su
+ * fondo)*(1-g), che e' quel che lascia il destination-out, per qualunque
+ * `t`. E costa zero consegne alla GPU: il fondo si dipinge una volta per
+ * layout e poi non cambia.
+ *
+ * Fino alla -30 la coda si incideva sulla lavagna e al frame dopo si
+ * rimetteva com'era da una foto: due letture di canvas a frame, piu' tre a
+ * timbro per l'alone. L'alone qui non c'e': compare quando il gruppo si
+ * incide, un frame o due dopo, sotto il dito.
+ */
+export function velaCoda(ov, fondo, stroke, pts, da) {
+  const r = ingombro(ov, stroke, pts, da, Infinity);
+  if (!r || !fondo) return;
+  timbra(ov, pts, { color: '#ffffff', width: stroke.width, seed: stroke.seed, alpha: ERASER_ALPHA, da });
+  ov.save();
+  ov.setTransform(1, 0, 0, 1, 0, 0);
+  ov.beginPath();
+  ov.rect(r.x, r.y, r.w, r.h);
+  ov.clip();
+  ov.globalCompositeOperation = 'source-in';
+  ov.drawImage(fondo, r.x, r.y, r.w, r.h, r.x, r.y, r.w, r.h);
+  ov.restore();
 }
