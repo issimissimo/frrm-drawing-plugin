@@ -1,10 +1,11 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 01/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-32/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-33/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
 Branch `gesso-realistico`, online nella -32: gesso nuovo a granelli, fondo generato, cancellino con l'alone; **ottimizzazione prestazioni CHIUSA il 01/10** (Daniele, S10: «il cancellino funziona benissimo», gesso «ottimo»): 60 fps fissi su gomma e gesso anche a gesto lungo e veloce.
+**-33 (01/10)**: la -32 più l'**opacità che cala con la velocità** (Daniele): trasparenza pura, applicata dopo la soglia, quindi grana e larghezza invariate; −40% a pseudo-pressione 0, `?opacita=0.2`/`0.6` per scegliere, `?opacita=0` = la -32 al bit. Non ancora provata a mano sul telefono.
 Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.7`.
 
 ## Piano attivo
@@ -14,6 +15,7 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
 Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
+- [ ] Daniele prova la -33 sul telefono e sceglie quanto cala l'opacità col gesto veloce (`?opacita=`, default 0,4).
 - [ ] Il cliente vede la -32 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
 - [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
@@ -40,6 +42,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - **Gruppi e strisce definitive sono gli stessi dal vivo e dal modello**: schermo = annulla/rotazione/export entro 1 livello su ~100 pixel. L'alone per gruppi cambia la grana del 7,5% dei pixel (5 livelli medi) rispetto al timbro per timbro.
 - **La trama del gesso si stende su TUTTO il canvas** (`passate()`): sul solo rettangolo la GPU la campiona diversa e dal vivo restavano file di pixel a 1-4 livelli. Prezzo: render cambiato rispetto alla -31 nell'8,6% dei pixel, max 6 livelli.
 - **Spessore/velocità chiuso il 17/09** col gesso vecchio (`PRESSURE_*` non si toccano).
+- **Opacità/velocità (01/10, -33)**: un fattore NUOVO (`calo` in `gesso.js`), non `PRESSURE_ALPHA_MIN`, che toglie deposito prima della soglia e quindi sgrana e assottiglia. Maschera della copertura per striscia, ridotta a 1/4 di lato, applicata con `destination-in` dopo il colore. Tre regole misurate: (1) svuotare e poi **lighter**, non source-over (sulle giunture il lento scendeva a 0,75); (2) strisce consecutive di copertura uguale (quantizzata 1/64) in **un Path2D solo**: due riempimenti per striscia portavano il S10 da 60 a 52 fps; (3) rettangoli **allineati a pixel interi**, senza antialiasing: con coperture parziali vivo e modello differivano fino a 64 livelli alle inversioni. Esito: vivo = modello al bit (prova deterministica), lento identico alla -32, veloce ×0,686; S10 gesso a velocità doppia 58-59 fps contro 59-60. Solo gesso nuovo: con `?gesso=vecchio` non c'è.
 
 ## Trappole
 - **`pacchetto.py` sul branch scrive `frmm-lavagna-1.13.0.zip` SOPRA lo zip di main**: stesso numero, contenuto diverso. Il 01/10 lo zip del branch è stato rinominato `…-BRANCH-gesso-realistico-NON-INSTALLARE.zip` e quello di main ricostruito da un worktree (copiandoci i font, che non sono nel repo). Sul branch non si costruisce lo zip senza cambiare versione.

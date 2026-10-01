@@ -40,6 +40,63 @@ import { GESSO, PRESSURE_MIN, PRESSURE_ALPHA_MIN } from './palette.js';
 /** Come timbra(): la pressione stringe la banda fino a PRESSURE_MIN. */
 const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
 
+/**
+ * Quanto si schiarisce il tratto al massimo della velocita' (p = 0): 0,4 vuol
+ * dire che copre il 40% in meno. `?opacita=` lo cambia per il confronto sul
+ * device (main.js); a 0 non c'e' maschera e il tratto e' quello della -32.
+ *
+ * E' trasparenza pura: si applica DOPO soglia, guadagno e colore (passate()),
+ * quindi grana, granelli e larghezza restano quelli del gesto lento. Togliere
+ * deposito prima della soglia, come fa gia' PRESSURE_ALPHA_MIN, sgrana e
+ * assottiglia il tratto: e' la questione spessore/velocita' chiusa il
+ * 17/09/2026, che qui non si tocca.
+ */
+let calo = 0.4;
+export const impostaOpacita = (v) => {
+  const x = Number(v);
+  if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) calo = Math.min(1, Math.max(0, x));
+};
+export const opacitaAttuale = () => calo;
+/**
+ * Quantizzata a 1/LIVELLI: le strisce consecutive con la stessa copertura
+ * vanno sulla maschera in UN riempimento solo (trascina()). Un passo di 1/64
+ * e' sotto quel che si vede sul gesso, e l'ingrandimento lo sfuma.
+ */
+const LIVELLI = 64;
+const coperturaVelocita = (p) => Math.round((1 - calo * (1 - p)) * LIVELLI) / LIVELLI;
+
+/**
+ * La maschera e' RIDOTTA pixel di lato piu' piccola della lavagna, e si
+ * legge ingrandita (bilineare). La copertura cambia lentamente lungo il
+ * gesto, la piena risoluzione non serve: e a piena risoluzione, su un Galaxy
+ * S10 (DPR 3), il gesso veloce scendeva da 60 a 52 fps, col thread della GPU
+ * dal 77 al 92%.
+ *
+ * Ridurla da sola pero' non bastava: costava il NUMERO di riempimenti, due per
+ * striscia con un cambio di composizione in mezzo (misurato: senza i
+ * riempimenti 60 fps, senza la lettura della maschera 53-58). Da qui i
+ * gruppi di trascina().
+ */
+const RIDUZIONE = 4;
+const misuraMaschera = (n) => Math.ceil(n / RIDUZIONE);
+
+/**
+ * Il rettangolo della maschera, in pixel ridotti, che serve al rettangolo
+ * (px0, py0, pw, ph) della lavagna: intero e con un pixel in piu' per lato.
+ * La GPU, leggendo un pezzo di immagine, non campiona fuori dal pezzo: se il
+ * bordo del pezzo cadesse dentro il gesso, rettangoli diversi potrebbero dare
+ * pixel diversi (e' la trappola gia' vista con la trama, vedi passate()), e
+ * dal vivo il rettangolo cambia a ogni frame. Cosi' il bordo cade fuori.
+ * Precauzione: le differenze misurate fra vivo e modello venivano da
+ * un'altra parte (rettangoli a pixel interi, in trascina()).
+ */
+function rettangoloMaschera(maschera, px0, py0, pw, ph) {
+  const x = Math.max(0, Math.floor(px0 / RIDUZIONE) - 1), y = Math.max(0, Math.floor(py0 / RIDUZIONE) - 1);
+  const w = Math.min(maschera.canvas.width, misuraMaschera(px0 + pw) + 1) - x;
+  const h = Math.min(maschera.canvas.height, misuraMaschera(py0 + ph) + 1) - y;
+  return { x, y, w, h };
+}
+
 const liscia = (t) => t * t * (3 - 2 * t);
 const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
 
@@ -300,8 +357,17 @@ export const passoPunta = (w) => lunghezzaPunta(w) * 0.4;
  * dipende solo dal suo indice, dai vicini e dalla lunghezza del tratto,
  * quindi a pezzi o tutte insieme sono le stesse strisce nello stesso ordine.
  * `pts` e' il tratto gia' ricampionato col passo della punta, se c'e'.
+ *
+ * Con `maschera` ogni striscia vi posa anche il suo rettangolo, con alpha
+ * uguale alla copertura della sua velocita' (vedi `calo`). Prima lo svuota:
+ * le strisce si sovrappongono, e sommate l'alpha andrebbe a 1 dappertutto.
+ * Cosi' in ogni pixel vale l'ultima striscia passata, nell'ordine del gesto.
+ *
+ * Le strisce consecutive con la stessa copertura si posano insieme, in un
+ * unico tracciato: dentro un riempimento i rettangoli sovrapposti si uniscono
+ * senza sommarsi, e fra un gruppo e l'altro vale ancora l'ultimo.
  */
-export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
+export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null, maschera = null) {
   const { width: w, seed } = stroke;
   const lungo = lunghezzaPunta(w);
   const passo = passoPunta(w);
@@ -334,6 +400,26 @@ export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
   // La punta disegnata e' piu' larga della nominale della fascia dei granelli:
   // sx e dx sono le meta' nominali, `sporge` le porta a tutta la punta.
   const sporge = 1 + (2 * granelli(w)) / w;
+  if (maschera) maschera.fillStyle = '#ffffff';
+  // L'ingrandimento sfuma il bordo della maschera su RIDUZIONE pixel: i
+  // rettangoli si allargano di una volta e mezza tanto, perche' la sfumatura
+  // cada fuori dal gesso e non sui granelli del bordo.
+  const orlo = (1.5 * RIDUZIONE) / k;
+  const kr = k / RIDUZIONE;
+  let gruppo = null, livello = -1;
+  // Svuotare e poi SOMMARE (lighter): con rettangoli a pixel interi la
+  // copertura e' 0 o 1, e lighter su un pixel svuotato vale f.
+  const chiudiGruppo = () => {
+    if (!gruppo) return;
+    maschera.setTransform(1, 0, 0, 1, 0, 0);
+    maschera.globalCompositeOperation = 'destination-out';
+    maschera.globalAlpha = 1;
+    maschera.fill(gruppo);
+    maschera.globalCompositeOperation = 'lighter';
+    maschera.globalAlpha = livello;
+    maschera.fill(gruppo);
+    gruppo = null;
+  };
 
   // Una striscia nel punto (x, y), ruotata di `ang`, a distanza `s`
   // dall'inizio, con una frazione `peso` del deposito.
@@ -353,6 +439,25 @@ export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
     ctx.globalAlpha = GESSO.deposito * peso * (0.75 + 0.25 * dose(s))
       * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p);
     ctx.drawImage(img, -lungo / 2, off - sx * sporge, lungo, (sx + dx) * sporge);
+    if (maschera) {
+      const f = coperturaVelocita(p);
+      if (f !== livello) { chiudiGruppo(); livello = f; gruppo = new Path2D(); }
+      // Il rettangolo della striscia (allargato di `orlo`), in pixel della
+      // maschera, e poi quello allineato alla griglia che lo contiene. A
+      // pixel interi non c'e' antialiasing: con coperture parziali, posare
+      // due strisce in un tracciato solo o una dopo l'altra dava valori
+      // diversi, e il tratto dal vivo (che le posa a pezzi, frame per frame)
+      // differiva da quello salvato fino a 64 livelli alle inversioni.
+      const u0 = -lungo / 2 - orlo, u1 = lungo / 2 + orlo;
+      const v0 = off - sx * sporge - orlo, v1 = off + dx * sporge + orlo;
+      const ex = (k * x + m.e) / RIDUZIONE, ey = (k * y + m.f) / RIDUZIONE;
+      const ca = kr * c, sa = kr * sn;
+      const qx = [ca * u0 - sa * v0, ca * u1 - sa * v0, ca * u1 - sa * v1, ca * u0 - sa * v1];
+      const qy = [sa * u0 + ca * v0, sa * u1 + ca * v0, sa * u1 + ca * v1, sa * u0 + ca * v1];
+      const x0 = Math.floor(ex + Math.min(...qx)), x1 = Math.ceil(ex + Math.max(...qx));
+      const y0 = Math.floor(ey + Math.min(...qy)), y1 = Math.ceil(ey + Math.max(...qy));
+      gruppo.rect(x0, y0, x1 - x0, y1 - y0);
+    }
   };
 
   let prec = null;   // [x, y, angolo, p] della striscia precedente
@@ -388,18 +493,21 @@ export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
     posa(x, y, ang, p, s);
     prec = [x, y, ang, p];
   }
+  if (maschera) chiudiGruppo();
   return n;
 }
 
 /* --- Il canvas d'appoggio -------------------------------------------------- */
 
 /**
- * Tre canvas d'appoggio per ogni misura di destinazione: lo schermo ne ha
+ * Quattro canvas d'appoggio per ogni misura di destinazione: lo schermo ne ha
  * una, l'export un'altra. Poche voci, ma una mappa senza tetto crescerebbe a
  * ogni resize della finestra.
  *
  * Pesano: tre canvas grandi quanto la lavagna, cioe' ~14 MB su un telefono a
  * DPR 2 e ~60 MB su un desktop a DPR 2. E' il prezzo delle passate in GPU.
+ * Il quarto, `vel`, e' la maschera della velocita' (trascina()): ridotta a
+ * 1/16 dei pixel, pesa poco.
  */
 const appoggi = new Map();
 const MAX_APPOGGI = 3;
@@ -408,12 +516,12 @@ function appoggio(w, h) {
   const chiave = `${w}x${h}`;
   let a = appoggi.get(chiave);
   if (a) return a;
-  const nuovo = () => {
+  const nuovo = (cw = w, ch = h) => {
     const cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
+    cv.width = cw; cv.height = ch;
     return cv.getContext('2d');
   };
-  a = { dep: nuovo(), aux: nuovo(), fin: nuovo(), pattern: new Map() };
+  a = { dep: nuovo(), aux: nuovo(), fin: nuovo(), vel: nuovo(misuraMaschera(w), misuraMaschera(h)), pattern: new Map() };
   if (appoggi.size >= MAX_APPOGGI) appoggi.delete(appoggi.keys().next().value);
   appoggi.set(chiave, a);
   return a;
@@ -462,8 +570,11 @@ export function rettangoloTratto(pts, width) {
  *
  * Con `sopra` il rettangolo di `ctx` si svuota prima: e' l'overlay, che
  * dentro quel rettangolo aveva la versione precedente dello stesso tratto.
+ *
+ * Con `maschera` il risultato prende anche la copertura della velocita',
+ * per ultima: e' trasparenza, non meno gesso (vedi `calo`).
  */
-function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
+function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false, maschera = null) {
   const k = m.a;
   const { dep, aux, fin } = a;
 
@@ -537,8 +648,17 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   fin.globalAlpha = GESSO.opacita;
   fin.fillStyle = color;
   fin.fillRect(px0, py0, pw, ph);
-  fin.globalCompositeOperation = 'source-over';
   fin.globalAlpha = 1;
+
+  // 6. La velocita': il gesto rapido copre meno. Il pezzo letto sborda dal
+  //    rettangolo (rettangoloMaschera()), e con lui il destination-in: fuori
+  //    dal rettangolo `fin` non si legge mai.
+  if (maschera) {
+    const q = rettangoloMaschera(maschera, px0, py0, pw, ph);
+    fin.globalCompositeOperation = 'destination-in';
+    fin.drawImage(maschera.canvas, q.x, q.y, q.w, q.h, q.x * RIDUZIONE, q.y * RIDUZIONE, q.w * RIDUZIONE, q.h * RIDUZIONE);
+  }
+  fin.globalCompositeOperation = 'source-over';
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -580,18 +700,25 @@ export function disegnaGesso(ctx, stroke, pts) {
   dep.globalCompositeOperation = 'source-over';
   dep.globalAlpha = 1;
   dep.clearRect(0, 0, W, H);
+  // Un tocco senza trascinare nasce a p = 1: copertura piena, niente maschera.
+  let maschera = null;
   if (length(stroke.pts) < width * 0.3) {
     // Un tocco senza trascinare: non c'e' una direzione in cui trascinare la
     // punta. Il timbro tondo di chalk.js fa il punto.
     dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
     timbra(dep, pts, { color: '#ffffff', width, seed, alpha: GESSO.deposito });
   } else {
-    trascina(dep, m, stroke);
+    if (calo > 0) {
+      maschera = a.vel;
+      maschera.setTransform(1, 0, 0, 1, 0, 0);
+      maschera.clearRect(0, 0, maschera.canvas.width, maschera.canvas.height);
+    }
+    trascina(dep, m, stroke, 0, Infinity, null, maschera);
   }
   dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
   dep.globalAlpha = 1;
 
-  passate(ctx, a, m, color, seed, px0, py0, pw, ph);
+  passate(ctx, a, m, color, seed, px0, py0, pw, ph, false, maschera);
   return n;
 }
 
@@ -632,6 +759,13 @@ export function disegnaGesso(ctx, stroke, pts) {
  */
 let vivo = null;
 let depositoVivo = null;
+// La maschera della velocita' del tratto in corso, solo con le strisce
+// definitive: come il deposito, a ogni frame se ne copia il rettangolo e le
+// provvisorie vanno sulla copia. Posandole direttamente qui resterebbero i
+// ritagli della posizione di prima: la copertura di una striscia provvisoria
+// cambia quando la semplificazione toglie punti. Costa una copia a frame:
+// misurato sul S10, il gesso veloce resta a 58-59 fps contro 59-60.
+let mascheraViva = null;
 
 /** Il tratto dal vivo ricomincia da capo al prossimo frame: overlay compreso. */
 export const azzeraGessoVivo = () => { vivo = null; };
@@ -697,11 +831,17 @@ export function disegnaGessoVivo(ctx, stroke, fissi) {
       const cv = document.createElement('canvas');
       cv.width = W; cv.height = H;
       depositoVivo = cv.getContext('2d');
+      const cm = document.createElement('canvas');
+      cm.width = misuraMaschera(W); cm.height = misuraMaschera(H);
+      mascheraViva = cm.getContext('2d');
     }
     depositoVivo.setTransform(1, 0, 0, 1, 0, 0);
     depositoVivo.globalCompositeOperation = 'source-over';
     depositoVivo.globalAlpha = 1;
     depositoVivo.clearRect(0, 0, W, H);
+    mascheraViva.setTransform(1, 0, 0, 1, 0, 0);
+    mascheraViva.globalCompositeOperation = 'source-over';
+    mascheraViva.clearRect(0, 0, mascheraViva.canvas.width, mascheraViva.canvas.height);
     svuota();
     // Con niente di posato, il rettangolo cambiato sara' tutto il tratto.
     vivo = { stroke, W, H, posate: 0, prima: null };
@@ -714,11 +854,12 @@ export function disegnaGessoVivo(ctx, stroke, fissi) {
   resample(stroke.pts.slice(0, fissi * 3), passo, info);
   const stabili = info.stabili;
   const definitive = Math.max(0, Math.min(n, stabili - 1, Math.floor(stabili - (w / 2) / passo)));
+  const maschera = calo > 0 ? mascheraViva : null;
 
   // 1. Le strisce appena diventate definitive, sul deposito che resta.
   let R = null;
   if (definitive > vivo.posate) {
-    trascina(depositoVivo, m, stroke, vivo.posate, definitive, pts);
+    trascina(depositoVivo, m, stroke, vivo.posate, definitive, pts, maschera);
     R = rettangoloPixel(pts, vivo.posate - 1, definitive, w, m, W, H);
     vivo.posate = definitive;
   }
@@ -730,6 +871,7 @@ export function disegnaGessoVivo(ctx, stroke, fissi) {
   if (!R) return;
 
   // 3. Il deposito di quel rettangolo: il definitivo, piu' le provvisorie.
+  //    Lo stesso per la maschera, nel rettangolo ridotto che lo contiene.
   const a = appoggio(W, H);
   const dep = a.dep;
   dep.setTransform(1, 0, 0, 1, 0, 0);
@@ -737,8 +879,19 @@ export function disegnaGessoVivo(ctx, stroke, fissi) {
   dep.globalAlpha = 1;
   dep.clearRect(R.x, R.y, R.w, R.h);
   dep.drawImage(depositoVivo.canvas, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
-  trascina(dep, m, stroke, vivo.posate, n, pts);
+  let copia = null;
+  if (maschera) {
+    copia = a.vel;
+    // Lo stesso pezzo che leggera' passate(): copiato 1:1, senza filtro.
+    const q = rettangoloMaschera(maschera, R.x, R.y, R.w, R.h);
+    copia.setTransform(1, 0, 0, 1, 0, 0);
+    copia.globalCompositeOperation = 'source-over';
+    copia.globalAlpha = 1;
+    copia.clearRect(q.x, q.y, q.w, q.h);
+    copia.drawImage(maschera.canvas, q.x, q.y, q.w, q.h, q.x, q.y, q.w, q.h);
+  }
+  trascina(dep, m, stroke, vivo.posate, n, pts, copia);
 
-  // 4. Valli, soglia, colore, e sull'overlay al posto di prima.
-  passate(ctx, a, m, color, seed, R.x, R.y, R.w, R.h, true);
+  // 4. Valli, soglia, colore, velocita', e sull'overlay al posto di prima.
+  passate(ctx, a, m, color, seed, R.x, R.y, R.w, R.h, true, copia);
 }
