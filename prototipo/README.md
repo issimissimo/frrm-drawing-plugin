@@ -324,6 +324,7 @@ src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
 src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/tutorial.js i sette passi, il riquadro e il "gia visto"
+src/finestra.js la finestra al posto di confirm() e alert()
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
 font/           i .woff2 della Fondazione, NON versionati (vedi sopra)

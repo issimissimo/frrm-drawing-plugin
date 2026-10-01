@@ -31,6 +31,7 @@ import { affiancate, puntaBase } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
 import { createDomanda, createCoda, endpointInvio, firma } from './invio.js';
+import { createFinestra } from './finestra.js';
 
 const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
@@ -261,6 +262,26 @@ const btnClear = document.getElementById('btn-clear');
  */
 const btnSave = document.getElementById('btn-save');
 
+/**
+ * La finestra al posto di confirm() e alert() (finestra.js). Puo' mancare per
+ * la stessa ragione di btnSave: allora restano i dialoghi di sistema, brutti
+ * ma funzionanti.
+ */
+const elFinestra = document.getElementById('msg');
+const finestra = elFinestra ? createFinestra(elFinestra) : null;
+
+const CANCELLA = {
+  t: 'Vuoi cancellare tutto il disegno?',
+  s: 'Non si potrà più riavere.',
+  a: 'NO, LO TENGO',
+  b: 'SÌ, CANCELLA',
+};
+const NON_SALVATO = {
+  t: 'Il disegno non si è salvato.',
+  s: 'Riprova!',
+  a: 'VA BENE',
+};
+
 function syncButtons() {
   btnUndo.disabled = !history.canUndo;
   // Una lavagna di sole gommate non e' un disegno: vedi haDisegno().
@@ -269,11 +290,13 @@ function syncButtons() {
 
 btnUndo.addEventListener('click', () => { if (history.undo()) { repaint(); syncButtons(); } });
 
-btnClear.addEventListener('click', () => {
+btnClear.addEventListener('click', async () => {
   if (!history.count) return;
-  // Conferma provvisoria: il dialogo di sistema e' la cosa piu' brutta di
-  // questa schermata e va rifatta come pannello dentro la lavagna.
-  if (!window.confirm('Vuoi cancellare tutto il disegno?')) return;
+  // 'b' e' SI', CANCELLA: NO, LO TENGO ed Esc lasciano il disegno com'e'.
+  const si = finestra
+    ? (await finestra.chiedi(CANCELLA)) === 'b'
+    : window.confirm(CANCELLA.t);
+  if (!si) return;
   history.clear();
   lastStroke = null;
   repaint();
@@ -300,12 +323,16 @@ btnClear.addEventListener('click', () => {
  */
 function salva() {
   btnSave.disabled = true;
-  scarica(drawing, LOGO_W)
+  // scarica() non e' async: se la codifica del JPEG fallisce LANCIA, non
+  // restituisce una promessa respinta. Con il solo .catch() l'eccezione
+  // passava oltre, il messaggio non compariva mai e SALVA restava spento fino
+  // al tratto dopo (provato il 02/10/2026). L'esecutore di new Promise gira
+  // subito, quindi la chiamata resta sincrona e il tocco resta valido.
+  new Promise((fatto) => fatto(scarica(drawing, LOGO_W)))
     .catch((e) => {
-      // Provvisorio come la conferma del cestino: va rifatto come pannello
-      // dentro la lavagna.
       console.error(e);
-      window.alert('Non e riuscito a salvare il disegno.');
+      if (finestra) finestra.chiedi(NON_SALVATO);
+      else window.alert(NON_SALVATO.t);
     })
     .finally(syncButtons);
 }
@@ -527,6 +554,10 @@ if (!tutorial && btnHelp) btnHelp.hidden = true;
 relayout();
 syncTools();
 syncButtons();
+
+// Ora la lavagna ha le sue misure e la mensola i suoi gessetti: si mostra.
+// Vedi .app in index.html.
+document.querySelector('.app').classList.add('pronta');
 
 /* Il logo si carica ora perche' al click di SALVA non c'e' tempo: l'export e'
    sincrono per non perdere l'attivazione del tocco (export.js, nota 3). Fra
