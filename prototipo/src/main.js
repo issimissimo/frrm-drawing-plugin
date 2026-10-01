@@ -27,7 +27,7 @@ import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
-import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo, impostaOpacita, opacitaAttuale } from './gesso.js';
+import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo, impostaOpacita, opacitaAttuale, impostaRiempie, riempieAttuale } from './gesso.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
 import { impostaAlone, impostaGruppo, gruppoAttuale, aloneAttuale, cancella, velaCoda } from './gomma.js';
 import { count, resample } from './geom.js';
@@ -61,6 +61,9 @@ impostaGruppo(new URLSearchParams(location.search).get('gruppo'));
 // `?opacita=0.2` cambia quanto si schiarisce il gesto veloce (gesso.js), per
 // scegliere sul device; `?opacita=0` e' il tratto della -32.
 impostaOpacita(new URLSearchParams(location.search).get('opacita'));
+// `?riempie=0.5` cambia quanto il gesso abbondante riempie le valli
+// (gesso.js); `?riempie=0` e' il tratto della -34.
+impostaRiempie(new URLSearchParams(location.search).get('riempie'));
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -556,7 +559,7 @@ function tick(now = performance.now()) {
       `  timbri     ${disegnati}`,
       `  punta      ${punta}`,
       ``,
-      `gesso        ${gessoAttuale()}, veloce -${Math.round(opacitaAttuale() * 100)}%`,
+      `gesso        ${gessoAttuale()}, veloce -${Math.round(opacitaAttuale() * 100)}%, riempie ${riempieAttuale()}`,
       `gomma        alone ${aloneAttuale()}, gruppo ${gruppoAttuale()}`,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,

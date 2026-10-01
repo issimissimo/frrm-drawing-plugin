@@ -74,6 +74,33 @@ export const impostaOpacita = (v) => {
 };
 export const opacitaAttuale = () => calo;
 
+/**
+ * Quanto il gesso abbondante riempie le valli della lavagna (Daniele,
+ * 01/10/2026: «quando il tratto e' lento, il deposito deve essere quasi
+ * totale, come se ci fossi passato sopra piu' volte»). Le valli tolgono
+ *
+ *   profondita x valle x (1 - riempie x D)
+ *
+ * invece di profondita x valle: dove il gesso e' tanto (gesto lento,
+ * ripassato) le valli si chiudono, dove e' poco (gesto veloce, frangia dei
+ * granelli) restano come prima. `?riempie=` lo cambia; a 0 e' la -34 al bit.
+ *
+ * Non si poteva avere col solo deposito: D arriva al massimo a 1 e la valle
+ * piu' profonda ne toglie 0,9, quindi una passata sola non riempie mai le
+ * valli profonde, qualunque gesso ci sia. E nel cuore di un tratto lento D
+ * e' ~0,63 (veloce ~0,43, misurato il 01/10/2026).
+ *
+ * Prezzo dichiarato: un colore passato lento sopra un altro lo copre quasi
+ * tutto. Il 29/09/2026 una passata copriva ~60% proprio perche' due colori
+ * si mescolassero; resta vero per i gesti veloci.
+ */
+let riempie = 1;
+export const impostaRiempie = (v) => {
+  const x = Number(v);
+  if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) riempie = Math.min(1, Math.max(0, x));
+};
+export const riempieAttuale = () => riempie;
+
 const liscia = (t) => t * t * (3 - 2 * t);
 const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
 
@@ -183,6 +210,32 @@ function tessera(k) {
 }
 
 /**
+ * La tessera del riempimento (vedi `riempie` e passate()): alpha
+ * (1 + p r valle) / (1 + p r), con p la profondita'. Stessa griglia della
+ * tessera della trama, quindi le due si sovrappongono pixel per pixel.
+ */
+function tesseraRiempie(k, r) {
+  const lato = Math.max(1, Math.round(TRAMA * k));
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = lato;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(lato, lato);
+  const d = img.data;
+  const passo = TRAMA / lato;
+  const pr = GESSO.profondita * r;
+  for (let y = 0; y < lato; y++) {
+    const v = (y + 0.5) * passo;
+    for (let x = 0; x < lato; x++) {
+      const i = (y * lato + x) * 4;
+      d[i] = d[i + 1] = d[i + 2] = 255;
+      d[i + 3] = Math.round(((1 + pr * (1 - cresta((x + 0.5) * passo, v))) / (1 + pr)) * 255);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+/**
  * Le tessere gia' generate, per lato in pixel e taratura. Condivise fra tutti
  * i canvas d'appoggio: la stessa scala sullo schermo e nell'export e' la
  * stessa tessera, e generarla costa (a DPR 2 qualche decina di ms).
@@ -192,14 +245,14 @@ const tessere = new Map();
 const chiaveTessera = (k) =>
   `${Math.max(1, Math.round(TRAMA * k))}:${GESSO.valle}:${GESSO.picco}`;
 
-function tesseraPer(k) {
-  const chiave = chiaveTessera(k);
+function tesseraPer(k, r = 0) {
+  const chiave = r > 0 ? `${chiaveTessera(k)}:riempie:${r}:${GESSO.profondita}` : chiaveTessera(k);
   let t = tessere.get(chiave);
   if (!t) {
-    // Poche voci — schermo ed export — ma senza tetto crescerebbe a ogni
-    // resize della finestra.
-    if (tessere.size >= 4) tessere.delete(tessere.keys().next().value);
-    t = tessera(k);
+    // Poche voci — schermo ed export, trama e riempimento — ma senza tetto
+    // crescerebbe a ogni resize della finestra.
+    if (tessere.size >= 8) tessere.delete(tessere.keys().next().value);
+    t = r > 0 ? tesseraRiempie(k, r) : tessera(k);
     tessere.set(chiave, t);
   }
   return t;
@@ -210,7 +263,7 @@ function tesseraPer(k) {
  * layout: senza, la prima tessera si genererebbe al primo tocco, e a DPR 2
  * sono qualche decina di millisecondi proprio sul primo tratto.
  */
-export const precaricaTrama = (k) => { tesseraPer(k); };
+export const precaricaTrama = (k) => { tesseraPer(k); if (riempie > 0) tesseraPer(k, riempie); };
 
 /* --- La punta del gessetto -------------------------------------------------- */
 
@@ -459,11 +512,11 @@ function appoggio(w, h) {
  * disegna nello spazio utente — gia' in unita' di lavagna — e la sua
  * trasformazione riporta la tessera da pixel a unita' (vedi disegnaGesso).
  */
-function patternTrama(a, ctx, k) {
-  const chiave = chiaveTessera(k);
+function patternTrama(a, ctx, k, r = 0) {
+  const chiave = r > 0 ? `${chiaveTessera(k)}:riempie:${r}:${GESSO.profondita}` : chiaveTessera(k);
   let p = a.pattern.get(chiave);
   if (p) return p;
-  p = ctx.createPattern(tesseraPer(k), 'repeat');
+  p = ctx.createPattern(tesseraPer(k, r), 'repeat');
   if (a.pattern.size >= 4) a.pattern.delete(a.pattern.keys().next().value);
   a.pattern.set(chiave, p);
   return p;
@@ -523,10 +576,19 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   //
   //    La trama si sposta a caso per ogni tratto: due tratti diversi hanno
   //    le valli in posti diversi, e sovrapposti si completano.
+  //
+  //    Con `riempie` = r le valli tolgono p x valle x (1 - r D). Riscritto
+  //    per le stesse operazioni, e diviso per (1 + p r) perche' stia sotto 1:
+  //      aux = (1 - D) x M + (p (1 - r) valle + c + p r) / (1 + p r)
+  //      M   = (1 + p r valle) / (1 + p r)        (tesseraRiempie())
+  //    da' 1 - aux = X / (1 + p r), e il guadagno moltiplica per (1 + p r).
+  //    A r = 0 sono le operazioni di prima, una per una.
+  const pr = GESSO.profondita * riempie;
   const pat = patternTrama(a, aux, k);
   const s = TRAMA / tesseraPer(k).width;
   const sp = mulberry32((seed ^ 0x1B873593) >>> 0);
-  pat.setTransform(new DOMMatrix([s, 0, 0, s, sp() * TRAMA, sp() * TRAMA]));
+  const spostamento = new DOMMatrix([s, 0, 0, s, sp() * TRAMA, sp() * TRAMA]);
+  pat.setTransform(spostamento);
   const pieno = (c) => {
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
@@ -538,8 +600,20 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   pieno(aux);
   aux.globalCompositeOperation = 'destination-out';
   aux.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);     // 1 - D
+  // Tutto il canvas, come la trama qui sotto e per la stessa ragione.
+  const tutto = (c) => c.fillRect(-m.e / k - 1, -m.f / k - 1, (c.canvas.width + 2) / k, (c.canvas.height + 2) / k);
+  if (pr > 0) {
+    const patR = patternTrama(a, aux, k, riempie);
+    patR.setTransform(spostamento);
+    aux.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    aux.globalCompositeOperation = 'destination-in';
+    aux.globalAlpha = 1;
+    aux.fillStyle = patR;
+    tutto(aux);                                                       // x M
+    aux.setTransform(1, 0, 0, 1, 0, 0);
+  }
   aux.globalCompositeOperation = 'lighter';
-  aux.globalAlpha = GESSO.profondita;
+  aux.globalAlpha = (GESSO.profondita * (1 - riempie)) / (1 + pr);
   // La trama si stende su TUTTO il canvas, senza ritaglio, qualunque sia il
   // rettangolo: la GPU interpola le coordinate del motivo sul quadrilatero
   // che riempie, e quadrilateri diversi la campionano con arrotondamenti
@@ -548,12 +622,14 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   // differivano di 1-4 livelli su file di pixel (misurato il 01/10/2026;
   // anche un clip rimpicciolisce il quadrilatero). Fuori dal rettangolo
   // `aux` non si legge mai.
-  aux.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-  aux.fillStyle = pat;
-  aux.fillRect(-m.e / k - 1, -m.f / k - 1, (aux.canvas.width + 2) / k, (aux.canvas.height + 2) / k);   // + p x valle
-  aux.setTransform(1, 0, 0, 1, 0, 0);
+  if (aux.globalAlpha > 0) {
+    aux.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    aux.fillStyle = pat;
+    tutto(aux);                                                       // + p x valle
+    aux.setTransform(1, 0, 0, 1, 0, 0);
+  }
   aux.fillStyle = '#ffffff';
-  aux.globalAlpha = GESSO.soglia;
+  aux.globalAlpha = (GESSO.soglia + pr) / (1 + pr);
   aux.fillRect(px0, py0, pw, ph);                                     // + c
   pieno(dep);
   dep.globalCompositeOperation = 'destination-out';
@@ -562,7 +638,7 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
 
   // 4. Guadagno: g copie sommate, sopra il velo. La parte frazionaria entra
   //    come opacita' dell'ultima copia.
-  for (let g = GESSO.guadagno; g > 0; g -= 1) {
+  for (let g = GESSO.guadagno * (1 + pr); g > 0; g -= 1) {
     fin.globalAlpha = Math.min(1, g);
     fin.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
   }
