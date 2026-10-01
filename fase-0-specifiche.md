@@ -39,15 +39,15 @@ Il verde ardesia è stato scartato: più riconoscibile come "lavagna di scuola",
 
 ## 3. Palette gessetti
 
-Generata in **OKLCH a luminanza e croma costanti** (`L = 0.780`, `C = 0.120`), variando solo la tonalità. **Tre gessetti stanno fuori serie** — bianco, rosso e marrone: vedi §3.2. Il croma è il massimo che tiene tutte e otto le tonalità dentro il gamut sRGB a questa luminanza: oltre, i canali si saturano, il colore risultante non è più quello richiesto e l'isoluminanza si perde.
+Generata in **OKLCH a luminanza e croma costanti** (`L = 0.780`, `C = 0.120`), variando solo la tonalità. **Quattro gessetti stanno fuori serie** — bianco, arancio (dal 02/10/2026), rosso e marrone: vedi §3.2. Il croma è il massimo che tiene tutte e otto le tonalità dentro il gamut sRGB a questa luminanza: oltre, i canali si saturano, il colore risultante non è più quello richiesto e l'isoluminanza si perde.
 
-Fra i **sette in serie** lo spread di contrasto è di **0,82 punti** su un range 7,6–8,4: nessuno di loro sparisce, nessuno domina. I tre fuori serie stanno più in basso, e §3.2 dice di quanto.
+Fra i **sei in serie** lo spread di contrasto sta nel range 7,6–8,4: nessuno di loro sparisce, nessuno domina. Arancio, rosso e marrone stanno più in basso, e §3.2 dice di quanto.
 
 | Gessetto | Hex | L | C | H |
 |---|---|---|---|---|
 | bianco | `#FAF8F3` | 0.980 | 0.008 | 95° |
 | giallo | `#C9B957` | 0.780 | 0.120 | 100° |
-| arancio | `#F1A366` | 0.780 | 0.120 | 58° |
+| **arancio** | `#FF822A` | **0.736** | **0.178** | 50° |
 | **rosso** | `#FE4335` | **0.660** | **0.225** | 29° |
 | rosa | `#F197C2` | 0.780 | 0.120 | 350° |
 | lilla | `#C9A3F5` | 0.780 | 0.120 | 305° |
@@ -73,11 +73,12 @@ Note:
 - I valori OKLCH vanno conservati nel codice accanto agli hex: se la texture del gesso altera troppo la resa, si sposta `L` per i sette in serie in un colpo solo e la palette resta coerente. **È probabile che serva**: grana e opacità irregolare abbassano la saturazione percepita, che è esattamente il motivo per cui si parte carichi.
 - La **selezione del gessetto attivo** non si segnala con un bordo colorato attorno al pulsante: il colore è già nel gessetto. Si segnala con la posizione (gessetto sollevato) — dettaglio di Fase 4, annotato qui perché discende dalla palette.
 
-### 3.2 I tre fuori serie
+### 3.2 I quattro fuori serie
 
 | | perché sta fuori |
 |---|---|
 | **bianco** `L 0.980` | è il gessetto di default e deve leggersi come *il gesso*, non come la nona tinta |
+| **arancio** `L 0.736` | a `L 0.780` il croma massimo in sRGB è 0.153, e a 0.120 l'arancione aveva la tinta del marrone con più luce: un marrone chiaro. Era anche la coppia più vicina della palette, col giallo (0,087 in OKLab). Spostato il 02/10/2026, vedi sotto |
 | **rosso** `L 0.660` | a `L 0.780` il rosso è un rosa salmone — era esattamente il vecchio `corallo`. Per essere rosso deve scendere |
 | **marrone** `L 0.620` | il marrone **è** un arancione scuro: a `L 0.780` non esiste, viene beige |
 
@@ -87,13 +88,14 @@ Costano contrasto sul fondo nero, ed è bene sapere quanto:
 
 | | contrasto tratto pieno |
 |---|---|
-| gli altri sette | 7,6 – 8,4 |
+| gli altri sei | 7,6 – 8,4 |
+| arancio `#FF822A` | **6,5** |
 | rosso `#FE4335` | **4,63** |
 | marrone `#AD794B` | **4,29** |
 
 Sono i valori più scuri che restano attorno alla soglia WCAG di 4,5 pur essendo inequivocabilmente rossi e marroni. Un rosso più pieno (`#F90F0D`) scende a 3,89 e un marrone più scuro (`#9E6F43`) a 3,65: lì un tratto sottile comincia a sparire sul nero, ed è il caso peggiore perché la pseudo-pressione assottiglia proprio i gesti rapidi dei bambini.
 
-**Da tenere d'occhio**: il marrone è a `H 62`, l'arancio a `H 58`. Sono parenti stretti di tonalità e si distinguono solo per luminosità e croma — se nella mensola risultassero confondibili, il marrone va spostato verso `H 70`.
+~~**Da tenere d'occhio**: il marrone è a `H 62`, l'arancio a `H 58`. [...] se nella mensola risultassero confondibili, il marrone va spostato verso `H 70`.~~ — **Successo, e si è spostato l'arancio** (02/10/2026): «molto simile a un marrone chiaro». Non bastava allontanare il marrone, perché il difetto era dell'arancio stesso, che a C 0.120 non è arancione. Scelto su un confronto col motore vero (gesso nuovo e gesso al 35%) fra quattro candidati, tutti più saturi e più scuri: `#FF9A3F` (A, resta albicocca al 35%), `#FF8F34` (B), **`#FF822A` (C, scelto)** e `#FE7825` (D, a 0,096 dal rosso). Con C nessuna coppia della palette scende sotto le due che c'erano già, giallo-verde e rosa-lilla a 0,092; il vicino più stretto dell'arancio diventa il rosso, a 0,117.
 
 ---
 

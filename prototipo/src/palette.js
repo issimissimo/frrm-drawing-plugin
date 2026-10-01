@@ -80,11 +80,21 @@ export const SOGLIA_STRETTA = 700;
 export const BOARD_BG = '#1F2225';
 
 /**
- * Dieci gessetti; sei a luminanza e croma costanti (L 0.780 / C 0.120), cosi' che
- * nessuno pesi piu' degli altri. Quattro stanno fuori serie, e ognuno per un
- * motivo suo:
+ * Dieci gessetti; cinque a luminanza e croma costanti (L 0.780 / C 0.120), cosi'
+ * che nessuno pesi piu' degli altri. Cinque stanno fuori serie, e ognuno per
+ * un motivo suo:
  *
  *   bianco    piu' chiaro: e' il default, deve leggersi come "il gesso".
+ *   arancio   piu' scuro e piu' saturo (02/10/2026, Daniele: «molto simile a
+ *             un marrone chiaro»). A L 0.780 il croma massimo in sRGB e'
+ *             0.153, e a 0.120 l'arancione aveva la tinta del marrone (58
+ *             contro 62) con piu' luce: un marrone chiaro anche sulla carta.
+ *             Col tratto al 35% si confondeva col marrone, ed era la coppia
+ *             piu' vicina della palette col giallo (0,087 in OKLab). Scelto
+ *             su un confronto col motore vero fra quattro candidati: a
+ *             #FF822A nessuna coppia scende sotto le due che c'erano gia'
+ *             (giallo-verde e rosa-lilla, 0,092); il vicino piu' stretto
+ *             diventa il rosso, a 0,117. Contrasto sul fondo 6,5.
  *   rosso     piu' scuro:  a L 0.780 il rosso e' un rosa salmone, che era
  *             esattamente il vecchio "corallo". Per essere rosso deve scendere.
  *   marrone   piu' scuro:  il marrone E' un arancione scuro. A L 0.780 non
@@ -96,7 +106,7 @@ export const BOARD_BG = '#1F2225';
  * 3,9 e un marrone piu' scuro (#9E6F43) a 3,7, dove un tratto sottile
  * comincia a sparire.
  *
- *   nero      il quarto fuori serie, chiesto dal cliente il 28/09/2026 (i
+ *   nero      fuori serie anche lui, chiesto dal cliente il 28/09/2026 (i
  *             bambini lo cercavano; il cancellino non era una risposta). NON
  *             e' il colore della lavagna, che era la richiesta iniziale:
  *             provato, #1F2225 sul fondo vuoto non lascia alcun segno e
@@ -110,7 +120,7 @@ export const CHALKS = [
   { id: 'bianco',  hex: '#FAF8F3', L: 0.980, C: 0.008, H: 95  },
   { id: 'nero',    hex: '#050506', L: 0.116, C: 0.003, H: 286, scuro: true },
   { id: 'giallo', hex: '#C9B957', L: 0.780, C: 0.120, H: 100 },
-  { id: 'arancio', hex: '#F1A366', L: 0.780, C: 0.120, H: 58  },
+  { id: 'arancio', hex: '#FF822A', L: 0.736, C: 0.178, H: 50  },
   { id: 'rosso',   hex: '#FE4335', L: 0.660, C: 0.225, H: 29  },
   { id: 'rosa',    hex: '#F197C2', L: 0.780, C: 0.120, H: 350 },
   { id: 'lilla',   hex: '#C9A3F5', L: 0.780, C: 0.120, H: 305 },
