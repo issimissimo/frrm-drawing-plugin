@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 01/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-37/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-38/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -15,7 +15,8 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
 Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
-- [ ] **Daniele cerca la combinazione del deposito sulla -37** (01/10): `?taratura` apre un pannello con quattro cursori (`taratura.js`) che ridisegnano il disegno esistente e riscrivono l'URL; COPIA LINK dà la combinazione. Parametri anche da URL: `lento` (deposito a p 1, 0,5–1,25, def. 1), `veloce` (a p 0, 0,2–1,25, def. 0,75), `curva` (esponente del passaggio, 0,25–3, def. 1), `riempie` (0–1, def. 0,5). Ai default la -37 = -35 con `?riempie=0.5`, al bit. Quando Daniele manda la combinazione, diventa il default in `TARATURA_PREDEFINITA` (`gesso.js`).
+- [x] **Combinazione del deposito scelta da Daniele col pannello della -37** (01/10): **lento 1,15, veloce 0,5, curva 1,1, riempie 0,25**, default dalla **-38** (`TARATURA_PREDEFINITA` in `gesso.js`). Il pannello resta: `?taratura` (`taratura.js`), e i parametri da URL. Misure (spessore 27) contro la -32: lento alpha media 0,72 (-32: 0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel -57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Quindi il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
+- **Difetto trovato e corretto nella -38**: con `curva` ≠ 1 la Catmull-Rom che sfora sotto p = 0 dava `NaN`, e il canvas teneva l'alpha della striscia prima: schermo ≠ immagine salvata fino a 242 livelli. Era nella -37 con `?curva=`. Test in `run.js` (88), con controprova: fallisce sul codice senza la correzione.
 - La **punta che salta è abbandonata** (Daniele, 01/10: «preferisco la 35»). Branch locale `prova-punta-che-salta` lasciato com'è, non pushato; la -36 resta online come le altre.
 - [ ] Prestazioni sul S10 della -35/-37 **non misurate** (telefono scollegato): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame.
 - Difetto della -34 (resta nella -35 a `riempie` 0, non a 1): un colore veloce sopra un altro sbiadisce, perché togliere deposito indebolisce i grani rimasti. Con `riempie` 1 a p 0,2 i grani pieni tornano al 14% (-34: 3%).

@@ -13,7 +13,8 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, timbra, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
-         lunghezzaPunta, passoPunta, granelli, trascina } from '../src/gesso.js';
+         lunghezzaPunta, passoPunta, granelli, trascina,
+         impostaTaratura, TARATURA_PREDEFINITA } from '../src/gesso.js';
 import { createPen } from '../src/pen.js';
 import { FONDO, nuvola, spugnate, strisciate } from '../src/fondo.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
@@ -722,6 +723,38 @@ test('gesso: le strisce posate a pezzi sono quelle posate tutte insieme', () => 
         assert(tutte[i].every((v, k) => v === registro[i][k]), `larghezza ${width}: la striscia ${i} cambia`);
     }
   } finally {
+    globalThis.document = prima;
+  }
+});
+
+test('gesso: nessuna striscia con alpha non finito, qualunque curva', () => {
+  // La Catmull-Rom del ricampionamento sfora appena sotto p = 0 sui gesti
+  // veloci, e (-x) ** 1,1 e' NaN. Il canvas vero ignora un globalAlpha NaN e
+  // tiene quello della striscia prima: dal vivo e dal modello e' diversa, e
+  // con curva 1,1 lo schermo differiva dall'immagine salvata fino a 242
+  // livelli (01/10/2026). Il canvas finto invece il NaN lo tiene: si vede qui.
+  const alfa = [];
+  const ctx = {
+    canvas: { width: 0, height: 0 }, globalAlpha: 1,
+    setTransform() {}, drawImage() { alfa.push(this.globalAlpha); },
+    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {},
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) };
+  try {
+    // p che scende, resta un tratto appena sotto zero (come dopo lo sforo
+    // della curva) e torna su.
+    const pts = [];
+    for (let i = 0; i < 40; i++) pts.push(100 + i * 12, 200, i >= 15 && i <= 25 ? -0.01 : Math.abs(i - 20) / 20);
+    for (const curva of [0.25, 1, 1.1, 3]) {
+      impostaTaratura({ curva });
+      alfa.length = 0;
+      trascina(ctx, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, { tool: 'chalk', color: '#fff', width: 27, seed: 5, pts });
+      assert(alfa.length > 0, `curva ${curva}: nessuna striscia`);
+      assert(alfa.every(Number.isFinite), `curva ${curva}: alpha non finito`);
+    }
+  } finally {
+    impostaTaratura(TARATURA_PREDEFINITA);
     globalThis.document = prima;
   }
 });

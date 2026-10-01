@@ -83,13 +83,16 @@ const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
  *     La larghezza non si muove (22 px a p 0,2).
  *   - `riempie` 1: lento con alpha media 0,85 e 72% di grani pieni (contro
  *     0,54 e 19%), ma il tratto legge a pennarello e i filamenti della punta
- *     diventano righe. 0,5 e' la via di mezzo scelta come partenza.
+ *     diventano righe.
+ *
+ * Valori scelti da Daniele il 01/10/2026 col pannello (`?taratura`, -37):
+ * lento 1,15, veloce 0,5, curva 1,1, riempie 0,25.
  *
  * Prezzo dichiarato di `riempie`: un colore passato lento sopra un altro lo
  * copre quasi tutto. Il 29/09/2026 una passata copriva ~60% proprio perche'
  * due colori si mescolassero; resta vero per i gesti veloci.
  */
-export const TARATURA_PREDEFINITA = Object.freeze({ lento: 1, veloce: 0.75, curva: 1, riempie: 0.5 });
+export const TARATURA_PREDEFINITA = Object.freeze({ lento: 1.15, veloce: 0.5, curva: 1.1, riempie: 0.25 });
 export const TARATURA = { ...TARATURA_PREDEFINITA };
 export const LIMITI_TARATURA = { lento: [0.5, 1.25], veloce: [0.2, 1.25], curva: [0.25, 3], riempie: [0, 1] };
 
@@ -102,7 +105,12 @@ export function impostaTaratura(valori) {
   }
 }
 
-const depositoVelocita = (p) => TARATURA.veloce + (TARATURA.lento - TARATURA.veloce) * p ** TARATURA.curva;
+// p va limitato: la Catmull-Rom del ricampionamento sfora appena sotto 0 sui
+// gesti piu' veloci, e una base negativa con esponente non intero da' NaN. Il
+// canvas ignora un globalAlpha NaN e tiene quello della striscia prima, che
+// dal vivo e dal modello e' diversa: con curva 1,1 differivano fino a 242
+// livelli (01/10/2026). Fino ad allora curva valeva 1 e il problema non c'era.
+const depositoVelocita = (p) => TARATURA.veloce + (TARATURA.lento - TARATURA.veloce) * Math.min(1, Math.max(0, p)) ** TARATURA.curva;
 
 const liscia = (t) => t * t * (3 - 2 * t);
 const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
