@@ -11,7 +11,7 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN, BOARD_W, boardHeight, freezeBoardHeight,
          unfreezeBoardHeight, CHALKS, BOARD_BG, GESSO } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
-import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
+import { mulberry32, timbra, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
          lunghezzaPunta, passoPunta, granelli } from '../src/gesso.js';
 import { FONDO, nuvola, spugnate, strisciate } from '../src/fondo.js';
@@ -341,6 +341,51 @@ test('gessetto: il PRNG e ripetibile dallo stesso seme', () => {
   }
 });
 
+test('gessetto: saltare n estrazioni e\' come farle', () => {
+  // timbra() riparte dal timbro `da` saltando la sequenza invece di
+  // consumarla (01/10/2026): se il salto sbagliasse anche di un'estrazione,
+  // la gomma dal vivo non darebbe piu' i pixel del render dal modello.
+  for (const seme of [0, 1, 12345, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF]) {
+    for (const n of [0, 1, 7, 20, 1000, 123457]) {
+      const a = mulberry32(seme);
+      for (let i = 0; i < n; i++) a();
+      const b = mulberry32(seme, n);
+      for (let i = 0; i < 5; i++) {
+        const va = a(), vb = b();
+        assert(va === vb, `seme ${seme}, salto ${n}: ${va} / ${vb}`);
+      }
+    }
+  }
+});
+
+test('gomma: timbra() a pezzi fa le stesse impronte che tutta insieme', () => {
+  // E' la proprieta' su cui regge la gomma dal vivo: un timbro alla volta
+  // (gomma.js), con il salto della sequenza, deve posare le stesse impronte,
+  // nello stesso ordine e con la stessa opacita', del tratto in una chiamata.
+  const finto = () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+    putImageData() {}, drawImage() {}, fillRect() {} });
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => ({ getContext: finto }) };
+  try {
+    const registra = (out) => ({ globalAlpha: 1, drawImage(img, x, y, w, h) { out.push([this.globalAlpha, x, y, w, h]); } });
+    const rnd = mulberry32(31);
+    const pts = [];
+    for (let i = 0; i < 80; i++) pts.push(200 + i * 17, 300 + 40 * Math.sin(i * 0.3), rnd());
+    for (const width of [10, 44, 180]) {
+      const opz = { color: '#ffffff', width, seed: 0xDEADBEEF, alpha: 0.85 };
+      const tutto = [], pezzi = [];
+      timbra(registra(tutto), pts, opz);
+      for (let i = 0; i < 80; i++) timbra(registra(pezzi), pts, { ...opz, da: i, a: i + 1 });
+      assert(tutto.length >= 80, `larghezza ${width}: solo ${tutto.length} impronte`);
+      assert(pezzi.length === tutto.length, `larghezza ${width}: ${pezzi.length} impronte contro ${tutto.length}`);
+      for (let i = 0; i < tutto.length; i++)
+        assert(tutto[i].every((v, k) => v === pezzi[i][k]), `larghezza ${width}: l'impronta ${i} cambia`);
+    }
+  } finally {
+    globalThis.document = prima;
+  }
+});
+
 test('gessetto: semi diversi danno sequenze diverse', () => {
   const a = mulberry32(1), b = mulberry32(2);
   let uguali = 0;
@@ -510,6 +555,42 @@ test('gomma: i timbri dichiarati definitivi non cambiano piu\', bit per bit', ()
     // E non e' una garanzia vuota: quasi tutto il tratto diventa definitivo.
     assert(definitiviMax > count(tutto) * 0.8, `passo ${passo}: definitivi solo ${definitiviMax} di ${count(tutto)}`);
   }
+});
+
+test('gomma: il ricampionamento incrementale da\' lo stesso tratto, bit per bit', () => {
+  // La gomma dal vivo ricampiona riprendendo dall'ultimo punto fermo (memo,
+  // 01/10/2026). Deve dare esattamente cio' che da' il ricampionamento da
+  // capo — punti e timbri definitivi — a ogni campione che arriva.
+  const rnd = mulberry32(777);
+  for (const passo of [2, 11.3, 18]) {
+    for (let prova = 0; prova < 4; prova++) {
+      const pts = [], memo = {};
+      let x = 400, y = 400;
+      for (let m = 1; m <= 90; m++) {
+        // Anche il dito fermo (campioni ripetuti) e qualche salto lungo.
+        const v = m % 11 === 3 ? 0 : 1 + rnd() * (prova * 15 + 8);
+        const ang = m * 0.4 + rnd() * 2;
+        x += Math.cos(ang) * v; y += Math.sin(ang) * v;
+        pts.push(x, y, rnd());
+        // Non a ogni campione: dal vivo ne arrivano anche due o tre per frame.
+        if (rnd() < 0.3 && m < 90) continue;
+        const iA = {}, iB = {};
+        const a = resample(pts, passo, iA, memo);
+        const b = resample(pts.slice(), passo, iB);
+        assert(a.length === b.length, `passo ${passo}, ${m} campioni: ${a.length / 3} punti contro ${b.length / 3}`);
+        for (let i = 0; i < a.length; i++)
+          assert(a[i] === b[i], `passo ${passo}, ${m} campioni: il punto ${Math.floor(i / 3)} cambia (${a[i]} / ${b[i]})`);
+        assert(iA.stabili === iB.stabili, `passo ${passo}, ${m} campioni: definitivi ${iA.stabili} contro ${iB.stabili}`);
+      }
+    }
+  }
+  // Un array diverso non riprende dal memo di un altro tratto.
+  const memo = {};
+  resample([0, 0, 1, 100, 0, 1, 200, 50, 1], 5, null, memo);
+  const altro = [0, 0, 1, 30, 30, 1, 60, 0, 1, 90, 30, 1];
+  const r = resample(altro, 5, null, memo);
+  const atteso = resample(altro.slice(), 5);
+  assert(r.length === atteso.length && r.every((v, i) => v === atteso[i]), 'il memo di un altro tratto e\' stato usato');
 });
 
 test('fondo: le nuvole sono deterministiche e non si ripetono', () => {

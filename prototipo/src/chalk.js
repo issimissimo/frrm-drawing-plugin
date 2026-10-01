@@ -38,8 +38,17 @@ const LATO = 96;
  */
 const NUCLEO = 0.60;
 
-/** PRNG di Marsaglia via mulberry32: piccolo, veloce, riproducibile. */
-export function mulberry32(a) {
+/**
+ * PRNG di Marsaglia via mulberry32: piccolo, veloce, riproducibile.
+ *
+ * `salta` lo porta direttamente dove sarebbe dopo `salta` estrazioni: lo
+ * stato avanza di una costante a ogni chiamata, quindi saltare e' una
+ * moltiplicazione e non un ciclo. Serve a timbra(), che per la gomma riparte
+ * dal timbro `da`: consumare la sequenza dall'inizio costava O(n) a timbro, e
+ * su un gesto lungo era il 40% del tempo (misurato il 01/10/2026).
+ */
+export function mulberry32(a, salta = 0) {
+  a = ((a | 0) + Math.imul(salta, 0x6D2B79F5)) | 0;
   return function () {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -245,10 +254,16 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0, a =
   if (n === 0) return;
 
   const set = colorate(color);
-  const rnd = mulberry32(seed);
 
   const kMax = affiancate(width);
   const punta = puntaBase(width);
+
+  // Ogni timbro consuma 4 estrazioni per impronta possibile (kMax), anche
+  // quelle che non disegna: si salta direttamente al timbro `da` e ci si
+  // ferma prima di `a`. Stessi numeri, stessi pixel, del ciclo completo.
+  const inizio = Math.max(0, Math.min(da, n));
+  const fine = Math.min(a, n);
+  const rnd = mulberry32(seed, inizio * kMax * 4);
 
   /**
    * Peso di ciascuna striscia, costante per tutto il tratto.
@@ -278,7 +293,7 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0, a =
   // lo renderebbe dipendente dalla risoluzione.
   const jitter = Math.max(0.8, punta * 0.09);
 
-  for (let i = 0; i < n; i++) {
+  for (let i = inizio; i < fine; i++) {
     const x = pts[i * 3], y = pts[i * 3 + 1], p = pts[i * 3 + 2];
 
     // La pressione allarga la BANDA, non l'impronta: premere di piu' appoggia
@@ -314,10 +329,11 @@ export function timbra(ctx, pts, { color, width, seed, alpha = 0.42, da = 0, a =
 
     for (let j = 0; j < kMax; j++) {
       // La sequenza si consuma SEMPRE per intero, anche per le impronte che
-      // non servono a questo punto e per i punti saltati: il disegno
-      // incrementale della gomma deve dare gli stessi pixel di quello completo.
+      // non servono a questo punto: il salto iniziale conta kMax impronte a
+      // timbro, e il disegno incrementale della gomma deve dare gli stessi
+      // pixel di quello completo.
       const r1 = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd();
-      if (j >= k || i < da || i >= a) continue;
+      if (j >= k) continue;
 
       const off = k === 1 ? 0 : -spread / 2 + (j * spread) / (k - 1);
       const cx = x + nx * off + (r1 - 0.5) * 2 * jitter;

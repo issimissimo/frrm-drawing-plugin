@@ -29,7 +29,7 @@ import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
 import { precaricaTrama } from './gesso.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
-import { impostaAlone, ingombro } from './gomma.js';
+import { impostaAlone, ingombro, cancella } from './gomma.js';
 import { count, resample } from './geom.js';
 import { affiancate, puntaBase, passoTimbri } from './chalk.js';
 import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
@@ -121,15 +121,22 @@ function repaint() {
 let timbriApplicati = 0;
 
 /**
- * Fin dove la gomma puo' incidere per sempre: i timbri che la curva non
- * spostera' piu', meno uno, perche' ogni timbro prende la direzione anche dal
- * vicino successivo. Cosi' lo schermo e' identico al render dal modello
- * (gomma.js).
+ * I timbri della gomma in corso, e fin dove si puo' incidere per sempre: i
+ * timbri che la curva non spostera' piu', meno uno, perche' ogni timbro prende
+ * la direzione anche dal vicino successivo. Cosi' lo schermo e' identico al
+ * render dal modello (gomma.js).
+ *
+ * Una sola volta per frame, e ripartendo dall'ultimo punto fermo
+ * (`memoGomma`, vedi resample()): fino al 01/10/2026 si ricampionava da capo
+ * tre volte per frame (qui, in renderStroke() e in incidiCoda()), e il costo
+ * cresceva con la lunghezza del gesto.
  */
-function timbriDefinitivi(stroke) {
+let memoGomma = {};
+
+function geometriaGomma(stroke) {
   const info = {};
-  resample(stroke.pts, passoTimbri(stroke.width), info);
-  return Math.max(0, info.stabili - 1);
+  const pts = resample(stroke.pts, passoTimbri(stroke.width), info, memoGomma);
+  return { pts, definitivi: Math.max(0, info.stabili - 1) };
 }
 
 /**
@@ -157,8 +164,8 @@ function rimettiCoda() {
   codaGomma = null;
 }
 
-function incidiCoda(stroke) {
-  const r = ingombro(board.base, stroke, strokeGeometry(stroke), timbriApplicati, Infinity);
+function incidiCoda(stroke, pts) {
+  const r = ingombro(board.base, stroke, pts, timbriApplicati, Infinity);
   if (!r) return;
   // Ridimensionare un canvas lo svuota: si fa solo quando serve piu' spazio,
   // e la foto si scatta subito dopo.
@@ -170,16 +177,16 @@ function incidiCoda(stroke) {
   f.clearRect(0, 0, r.w, r.h);
   f.drawImage(board.canvas, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
   codaGomma = r;
-  renderStroke(board.base, stroke, timbriApplicati);   // tutta, senza avanzare
+  cancella(board.base, stroke, pts, timbriApplicati);   // tutta, senza avanzare
 }
 
 function paintLive() {
   if (!pen || !pen.current || !pen.current.pts.length) return;
   if (pen.current.tool === 'eraser') {
     rimettiCoda();
-    timbriApplicati = renderStroke(board.base, pen.current, timbriApplicati, undefined,
-      timbriDefinitivi(pen.current));
-    incidiCoda(pen.current);
+    const { pts, definitivi } = geometriaGomma(pen.current);
+    timbriApplicati = cancella(board.base, pen.current, pts, timbriApplicati, definitivi);
+    incidiCoda(pen.current, pts);
   } else {
     board.clearOverlay();
     renderStroke(board.overlay, pen.current);
@@ -200,6 +207,7 @@ const input = createInput(overlayCanvas, board, {
     pen.begin(p);
     timbriApplicati = 0;
     codaGomma = null;
+    memoGomma = {};
     paintLive();
     worst = 0;
     skipFirst = true;

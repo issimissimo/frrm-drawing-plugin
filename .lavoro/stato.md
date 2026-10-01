@@ -1,10 +1,10 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 01/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-29/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-30/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
-Branch `gesso-realistico`, online nella -29: gesso nuovo con bordi a granelli, fondo lavagna generato, cancellino che lascia l'alone del gesso tolto. Daniele: «adesso abbiamo DAVVERO l'effetto gessetto» (30/09); gomma provata sul telefono: «funziona, l'effetto mi piace» (01/10).
+Branch `gesso-realistico`, online nella -30 (la -29 piu' il cancellino veloce, 01/10): gesso nuovo con bordi a granelli, fondo lavagna generato, cancellino che lascia l'alone del gesso tolto. Daniele: «adesso abbiamo DAVVERO l'effetto gessetto» (30/09); gomma provata sul telefono: «funziona, l'effetto mi piace» (01/10).
 Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.7`.
 
 ## Piano attivo
@@ -13,9 +13,9 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 - [ ] QA in produzione su device veri: telefono → mail → Approva → galleria (compreso il purge di Speed Optimizer).
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
-Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **60 fps della -29 su iPhone 13 e S10 ✗** (verificati solo sulla -24) · **sì del cliente ✗**.
-- [ ] Il cliente vede la -29 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
-- [ ] 60 fps della -29 sul telefono, `?debug=1`, disegnando e cancellando a lungo.
+Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **60 fps della -30 su iPhone 13 e S10 ✗** (verificati solo sulla -24) · **sì del cliente ✗**.
+- [ ] Il cliente vede la -30 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
+- [ ] 60 fps della -30 sul telefono, `?debug=1`, disegnando e cancellando a lungo.
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
 - [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
 - [ ] Annotato, non aperto: polvere neutra del cancellino anche sul vuoto.
@@ -38,6 +38,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - **Fondo su un canvas `#fondo` sotto i tratti, e nell'export in destination-over**: la gomma deve scoprirlo, non bucarlo.
 - **Alone del cancellino rimesso ALL'INDIETRO lungo il gesto**: in avanti lo ricancellerebbe il timbro successivo.
 - **Gomma un timbro alla volta, dal vivo incisi per sempre solo i timbri definitivi (`resample(..., info)`), la coda provvisoria incisa e ritirata da una foto**: gomma sotto il dito (22% di gesso residuo, era 84%) e schermo = modello entro 1-2 livelli su poche decine di pixel. L'identità al bit chiederebbe la lavagna in CPU.
+- **Cancellino veloce senza toccare l'estetica (01/10, -30)**: rallentava col gesto perche' `timbra()` consumava il PRNG dall'inizio a ogni timbro (O(n²), 40% del tempo) e la curva si ricampionava da capo tre volte a frame. Ora `mulberry32(seme, salta)` salta in O(1) e `resample(..., memo)` riparte dall'ultimo punto fermo. Pixel identici per costruzione (due test bit per bit). Misurato in Chrome a CPU 1/6, gesto di 20 s: 60 fps fissi (prima, a 1/4, da 59 a 6 in 10 s). Resta la parte GPU (~16 drawImage a timbro, 3 travasi fra canvas): **non misurabile qui, si vede solo sul telefono**.
 - **Spessore/velocità chiuso il 17/09** col gesso vecchio (`PRESSURE_*` non si toccano).
 
 ## Trappole
@@ -59,7 +60,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - **PHP non è installato sul PC.**
 - **`.lavoro/` non è gitignorata e il repo è pubblico**: niente credenziali. Token GitHub e password dello staging passati in chiaro in transcript: **da ruotare**. `esempio.jpg` (foto stock con filigrana) e i due `disegno-da-aggiungere-*.jpg` stanno nella root, fuori da git: non vanno committati.
 - **FTP**: solo `temp/frmm-drawing-plugin*`. Online `frmm`, repo `frrm`: non correggere.
-- Verifiche: `node prototipo/test/run.js` (81) · `python .lavoro/pacchetto.py` (import versionati) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
+- Verifiche: `node prototipo/test/run.js` (84) · `python .lavoro/pacchetto.py` (import versionati) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
 
 ## Prossimo passo
-Daniele mostra la -29 al cliente e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`).
+Daniele prova la -30 sul telefono (`?debug=1`, cancellando a lungo). Poi mostra la -30 al cliente e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`).
