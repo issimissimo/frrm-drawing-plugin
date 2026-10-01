@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 02/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-38/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-39/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -25,6 +25,13 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
 - [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
 - [ ] Annotato, non aperto: polvere neutra del cancellino anche sul vuoto.
+
+**C. Avvio e finestre (02/10/2026)** — in main (`000bcdc`) e nel branch (cherry-pick), online nella **-39** (= -38 + queste due).
+- [x] All'apertura non si vede piu' il rettangolo scuro al centro (canvas a 300x150 prima del primo layout): `.app` invisibile fino a `pronta`, poi dissolvenza 0,2 s. Verificato trattenendo `main.js`: durante l'attesa solo il fondo pieno. Online l'attesa dura ~1 s sul PC in hotspot.
+- [x] Cestino e salvataggio fallito in `finestra.js` invece di `confirm()`/`alert()`. Nel cestino il primario e' **NO, LO TENGO** (scelta di Daniele: il cestino non si annulla). Verificati NO, Esc, SI', cestino a lavagna vuota, telefono a 360 px.
+- [x] Difetto trovato strada facendo: `scarica()` lancia in modo sincrono, il `.catch()` di `salva()` non lo vedeva → nessun messaggio, SALVA spento fino al tratto dopo. Provato con `toDataURL` che lancia, prima e dopo.
+- [ ] Prova sul telefono vero (dito, Safari e Chrome).
+- [ ] In produzione serve una versione nuova del plugin da main: decisione di Daniele. Lo zip NON si costruisce dal branch (vedi Trappole).
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.
