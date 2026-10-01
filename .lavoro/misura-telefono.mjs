@@ -29,7 +29,8 @@ const { chromium } = require('playwright-core');
 const [root, sec, ampArg, ...resto] = process.argv.slice(2);
 const secondi = Number(sec), amp = Number(ampArg);
 const trace = resto.includes('--trace');
-const queries = resto.filter((q) => q !== '--trace');
+const profilo = resto.includes('--profilo');
+const queries = resto.filter((q) => q !== '--trace' && q !== '--profilo');
 const tipi = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.woff2': 'font/woff2' };
 const srv = http.createServer((q, r) => {
   const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/\/$/, '/index.html'));
@@ -46,7 +47,7 @@ async function gesto(q) {
   await page.evaluate(() => { const b = document.getElementById('btn-chiudi'); if (b && b.offsetParent) b.click(); });
   await page.waitForTimeout(300);
   // Disegno quasi pieno: righe fitte di gesso spesso, poi il cancellino.
-  return page.evaluate(({ secondi, amp, vel }) => new Promise((fine) => {
+  return page.evaluate(({ secondi, amp, vel, strumento }) => new Promise((fine) => {
     const cv = document.getElementById('overlay');
     const bx = cv.getBoundingClientRect();
     const X = (u) => bx.left + u * bx.width, Y = (v) => bx.top + v * bx.height;
@@ -69,7 +70,9 @@ async function gesto(q) {
       }, 16);
     };
     const gomma = () => {
-      document.getElementById('tool-eraser').click();
+      // STRUMENTO=gesso: lo stesso gesto col gessetto bianco, spessore medio.
+      if (strumento === 'gesso') { colori[0]?.click(); larghi[1]?.click(); }
+      else document.getElementById('tool-eraser').click();
       const f = [];
       const loop = (t) => { f.push(t); raf = requestAnimationFrame(loop); };
       let raf = requestAnimationFrame(loop);
@@ -91,7 +94,28 @@ async function gesto(q) {
       setTimeout(passo, 4);
     };
     riga();
-  }), { secondi, amp, vel: Number(process.env.VEL || 1) });
+  }), { secondi, amp, vel: Number(process.env.VEL || 1), strumento: process.env.STRUMENTO || 'gomma' });
+}
+
+// --profilo: tempo proprio per funzione JS durante disegno + gesto.
+async function conProfilo(q) {
+  const c = await ctx.newCDPSession(page);
+  await c.send('Profiler.enable');
+  await c.send('Profiler.setSamplingInterval', { interval: 500 });
+  await c.send('Profiler.start');
+  const r = await gesto(q);
+  const { profile } = await c.send('Profiler.stop');
+  const byId = new Map(profile.nodes.map((n) => [n.id, n]));
+  const self = new Map();
+  profile.samples.forEach((id, k) => {
+    const cf = byId.get(id).callFrame;
+    const chiave = `${cf.functionName || '(anon)'} ${path.basename(cf.url)}:${cf.lineNumber + 1}`;
+    self.set(chiave, (self.get(chiave) || 0) + (profile.timeDeltas[k] || 0));
+  });
+  const tot = [...self.values()].reduce((x, y) => x + y, 0);
+  [...self.entries()].sort((x, y) => y[1] - x[1]).slice(0, 15)
+    .forEach(([k, us]) => console.log(`    ${(100 * us / tot).toFixed(1).padStart(5)}%  ${k}`));
+  return r;
 }
 
 for (const q of queries) {
@@ -100,6 +124,7 @@ for (const q of queries) {
     cdp = await ctx.newCDPSession(page);
   }
   const r = await (async () => {
+    if (profilo) return conProfilo(q);
     if (!cdp) return gesto(q);
     // La traccia parte dopo il disegno: la avvio prima e la filtro per tempo.
     await cdp.send('Tracing.start', { categories: 'toplevel,gpu,cc,viz,blink.canvas,disabled-by-default-devtools.timeline,devtools.timeline,v8', transferMode: 'ReturnAsStream' });
@@ -117,7 +142,11 @@ for (const q of queries) {
   const iv = []; for (let k = 1; k < f.length; k++) iv.push(f[k] - f[k - 1]);
   const s = [...iv].sort((a, b) => a - b);
   const durata = (f[f.length - 1] - f[0]) / 1000;
-  console.log(`[${q || 'base'}] amp ${amp}  fps ${(iv.length / durata).toFixed(1)}  mediana ${s[s.length >> 1].toFixed(1)}  p90 ${s[Math.floor(s.length * 0.9)].toFixed(1)}  max ${s[s.length - 1].toFixed(1)}  mosse ${r.mosse}  css ${r.w.toFixed(0)} dpr ${r.dpr}`);
+  // fps secondo per secondo: un costo che cresce col tratto si vede qui.
+  const perSec = [];
+  for (let k = 1; k < f.length; k++) { const j = Math.floor((f[k] - f[0]) / 1000); perSec[j] = (perSec[j] || 0) + 1; }
+  console.log(`[${q || 'base'}] ${process.env.STRUMENTO || 'gomma'} amp ${amp}  fps ${(iv.length / durata).toFixed(1)}  mediana ${s[s.length >> 1].toFixed(1)}  p90 ${s[Math.floor(s.length * 0.9)].toFixed(1)}  max ${s[s.length - 1].toFixed(1)}  mosse ${r.mosse}  css ${r.w.toFixed(0)} dpr ${r.dpr}
+    per secondo: ${perSec.join(' ')}`);
 }
 await page.close();
 await browser.close().catch(() => {});

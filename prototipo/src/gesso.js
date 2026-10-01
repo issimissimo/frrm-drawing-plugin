@@ -33,7 +33,7 @@
  * stesso tremolio, a qualunque risoluzione.
  */
 
-import { timbra, mulberry32 } from './chalk.js';
+import { timbra, mulberry32, passoTimbri } from './chalk.js';
 import { resample, count, length } from './geom.js';
 import { GESSO, PRESSURE_MIN, PRESSURE_ALPHA_MIN } from './palette.js';
 
@@ -293,12 +293,19 @@ export const passoPunta = (w) => lunghezzaPunta(w) * 0.4;
 /**
  * Trascina la punta lungo il tratto, sul contesto `ctx` gia' ripulito.
  * `m` e' la trasformazione della lavagna.
+ *
+ * `da` e `a` limitano le strisce posate a [da, a), con le strisce del
+ * ventaglio che precedono ciascuna: servono al tratto dal vivo, che posa
+ * ogni striscia definitiva una volta sola (disegnaGessoVivo). Ogni striscia
+ * dipende solo dal suo indice, dai vicini e dalla lunghezza del tratto,
+ * quindi a pezzi o tutte insieme sono le stesse strisce nello stesso ordine.
+ * `pts` e' il tratto gia' ricampionato col passo della punta, se c'e'.
  */
-function trascina(ctx, m, stroke) {
+export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
   const { width: w, seed } = stroke;
   const lungo = lunghezzaPunta(w);
   const passo = passoPunta(w);
-  const pts = resample(stroke.pts, passo);
+  if (!pts) pts = resample(stroke.pts, passo);
   const n = count(pts);
   const k = m.a;
   const img = punta(seed, w, lungo, k);
@@ -349,11 +356,15 @@ function trascina(ctx, m, stroke) {
   };
 
   let prec = null;   // [x, y, angolo, p] della striscia precedente
-  for (let i = 0; i < n; i++) {
+  const fine = Math.min(a, n);
+  for (let i = Math.max(0, da - 1); i < fine; i++) {
     const x = pts[i * 3], y = pts[i * 3 + 1], p = pts[i * 3 + 2];
-    const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
-    const ang = Math.atan2(pts[b * 3 + 1] - pts[a * 3 + 1], pts[b * 3] - pts[a * 3]);
+    const ia = Math.max(0, i - 1), ib = Math.min(n - 1, i + 1);
+    const ang = Math.atan2(pts[ib * 3 + 1] - pts[ia * 3 + 1], pts[ib * 3] - pts[ia * 3]);
     const s = i * passo;
+    // La striscia prima di `da` non si posa: serve solo al ventaglio della
+    // prima, che si apre a partire da lei.
+    if (i < da) { prec = [x, y, ang, p]; continue; }
 
     // Dove il gesto gira stretto — le inversioni dello scarabocchio — fra
     // una striscia e la successiva l'angolo salta, e sul lato esterno della
@@ -442,55 +453,26 @@ export function rettangoloTratto(pts, width) {
 }
 
 /**
- * Disegna un tratto di gesso su `ctx`, che e' gia' in unita' di lavagna.
+ * Valli, soglia, guadagno e colore, sul rettangolo in pixel (px0, py0, pw,
+ * ph), con il deposito gia' in `a.dep`; poi il risultato su `ctx`.
  *
- * @param {number[]} pts il tratto ricampionato col passo di chalk.js
- *   (strokeGeometry): serve al rettangolo e ai tratti-punto.
- * @returns {number} quanti punti ha il tratto ricampionato
+ * Sono tutte operazioni punto per punto: lo stesso pixel da' lo stesso
+ * risultato che il rettangolo sia tutto il tratto o un pezzo. E' cio' che
+ * permette al tratto dal vivo di rifarle solo dove e' cambiato qualcosa.
+ *
+ * Con `sopra` il rettangolo di `ctx` si svuota prima: e' l'overlay, che
+ * dentro quel rettangolo aveva la versione precedente dello stesso tratto.
  */
-export function disegnaGesso(ctx, stroke, pts) {
-  const { color, width, seed } = stroke;
-  const n = count(pts);
-  if (n === 0) return 0;
-  const m = ctx.getTransform();
+function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   const k = m.a;
-  const W = ctx.canvas.width, H = ctx.canvas.height;
-  const a = appoggio(W, H);
-  const dep = a.dep, aux = a.aux, fin = a.fin;
-
-  // Il rettangolo in pixel, intero e dentro il canvas: tutte le passate
-  // successive lavorano solo li'.
-  const r = rettangoloTratto(pts, width);
-  const px0 = Math.max(0, Math.floor(r.x * k + m.e));
-  const py0 = Math.max(0, Math.floor(r.y * k + m.f));
-  const px1 = Math.min(W, Math.ceil((r.x + r.w) * k + m.e));
-  const py1 = Math.min(H, Math.ceil((r.y + r.h) * k + m.f));
-  const pw = px1 - px0, ph = py1 - py0;
-  if (pw <= 0 || ph <= 0) return n;
-
-  // 1. Deposito, in bianco: il colore arriva alla fine, cosi' le somme della
-  //    soglia lavorano su una maschera e non alterano la tinta.
-  dep.setTransform(1, 0, 0, 1, 0, 0);
-  dep.globalCompositeOperation = 'source-over';
-  dep.globalAlpha = 1;
-  dep.clearRect(0, 0, W, H);
-  if (length(stroke.pts) < width * 0.3) {
-    // Un tocco senza trascinare: non c'e' una direzione in cui trascinare la
-    // punta. Il timbro tondo di chalk.js fa il punto.
-    dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-    timbra(dep, pts, { color: '#ffffff', width, seed, alpha: GESSO.deposito });
-  } else {
-    trascina(dep, m, stroke);
-  }
-  dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
-  dep.globalAlpha = 1;
+  const { dep, aux, fin } = a;
 
   // 1b. Il velo: il gesso lascia polvere anche nelle valli, poca. Si prende
   //     dal deposito prima che le valli lo buchino.
   fin.setTransform(1, 0, 0, 1, 0, 0);
   fin.globalCompositeOperation = 'source-over';
   fin.globalAlpha = 1;
-  fin.clearRect(0, 0, W, H);
+  fin.clearRect(px0, py0, pw, ph);
   fin.globalCompositeOperation = 'lighter';
   if (GESSO.velo > 0) {
     fin.globalAlpha = GESSO.velo;
@@ -523,9 +505,17 @@ export function disegnaGesso(ctx, stroke, pts) {
   aux.drawImage(dep.canvas, px0, py0, pw, ph, px0, py0, pw, ph);     // 1 - D
   aux.globalCompositeOperation = 'lighter';
   aux.globalAlpha = GESSO.profondita;
+  // La trama si stende su TUTTO il canvas, senza ritaglio, qualunque sia il
+  // rettangolo: la GPU interpola le coordinate del motivo sul quadrilatero
+  // che riempie, e quadrilateri diversi la campionano con arrotondamenti
+  // diversi. Dal vivo il rettangolo cambia a ogni frame (disegnaGessoVivo):
+  // riempiendo solo quello, il tratto dal vivo e quello dal modello
+  // differivano di 1-4 livelli su file di pixel (misurato il 01/10/2026;
+  // anche un clip rimpicciolisce il quadrilatero). Fuori dal rettangolo
+  // `aux` non si legge mai.
   aux.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
   aux.fillStyle = pat;
-  aux.fillRect(r.x, r.y, r.w, r.h);                                   // + p x valle
+  aux.fillRect(-m.e / k - 1, -m.f / k - 1, (aux.canvas.width + 2) / k, (aux.canvas.height + 2) / k);   // + p x valle
   aux.setTransform(1, 0, 0, 1, 0, 0);
   aux.fillStyle = '#ffffff';
   aux.globalAlpha = GESSO.soglia;
@@ -552,7 +542,203 @@ export function disegnaGesso(ctx, stroke, pts) {
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (sopra) ctx.clearRect(px0, py0, pw, ph);
   ctx.drawImage(fin.canvas, px0, py0, pw, ph, px0, py0, pw, ph);
   ctx.restore();
+}
+
+/**
+ * Disegna un tratto di gesso su `ctx`, che e' gia' in unita' di lavagna.
+ *
+ * @param {number[]} pts il tratto ricampionato col passo di chalk.js
+ *   (strokeGeometry): serve al rettangolo e ai tratti-punto.
+ * @returns {number} quanti punti ha il tratto ricampionato
+ */
+export function disegnaGesso(ctx, stroke, pts) {
+  const { color, width, seed } = stroke;
+  const n = count(pts);
+  if (n === 0) return 0;
+  const m = ctx.getTransform();
+  const k = m.a;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const a = appoggio(W, H);
+  const dep = a.dep;
+
+  // Il rettangolo in pixel, intero e dentro il canvas: tutte le passate
+  // successive lavorano solo li'.
+  const r = rettangoloTratto(pts, width);
+  const px0 = Math.max(0, Math.floor(r.x * k + m.e));
+  const py0 = Math.max(0, Math.floor(r.y * k + m.f));
+  const px1 = Math.min(W, Math.ceil((r.x + r.w) * k + m.e));
+  const py1 = Math.min(H, Math.ceil((r.y + r.h) * k + m.f));
+  const pw = px1 - px0, ph = py1 - py0;
+  if (pw <= 0 || ph <= 0) return n;
+
+  // 1. Deposito, in bianco: il colore arriva alla fine, cosi' le somme della
+  //    soglia lavorano su una maschera e non alterano la tinta.
+  dep.setTransform(1, 0, 0, 1, 0, 0);
+  dep.globalCompositeOperation = 'source-over';
+  dep.globalAlpha = 1;
+  dep.clearRect(0, 0, W, H);
+  if (length(stroke.pts) < width * 0.3) {
+    // Un tocco senza trascinare: non c'e' una direzione in cui trascinare la
+    // punta. Il timbro tondo di chalk.js fa il punto.
+    dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+    timbra(dep, pts, { color: '#ffffff', width, seed, alpha: GESSO.deposito });
+  } else {
+    trascina(dep, m, stroke);
+  }
+  dep.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+  dep.globalAlpha = 1;
+
+  passate(ctx, a, m, color, seed, px0, py0, pw, ph);
   return n;
+}
+
+/* --- Il tratto dal vivo ---------------------------------------------------- */
+
+/**
+ * Il tratto in corso, sull'overlay, a ogni frame. Fino al 01/10/2026 si
+ * rifaceva da capo: tutte le strisce, e tutte le passate su tutto il suo
+ * rettangolo. Su un Galaxy S10, uno zig-zag ampio di 8 secondi scendeva da
+ * 60 a 32 fps, col thread di JavaScript al 99% (posa() da sola un quarto
+ * del tempo) e quello della GPU all'86%; 15 secondi a velocita' doppia, da
+ * 58 a 9. Cosi', 60 fps fissi in entrambi i casi.
+ *
+ * Ora:
+ *   1. le strisce DEFINITIVE si posano una volta sola su un deposito che
+ *      resta per tutto il tratto (`depositoVivo`);
+ *   2. a ogni frame si rifanno solo le PROVVISORIE, sopra una copia del
+ *      deposito, nel rettangolo che e' cambiato;
+ *   3. valli, soglia, guadagno e colore si rifanno solo in quel rettangolo:
+ *      sono operazioni punto per punto (passate()).
+ *
+ * Il rettangolo cambiato e' l'unione di: le strisce appena diventate
+ * definitive, le provvisorie di adesso, le provvisorie del frame prima (che
+ * vanno tolte). Fuori da li' il deposito non e' cambiato, quindi nemmeno il
+ * risultato.
+ *
+ * Una striscia e' definitiva quando non puo' piu' cambiare:
+ *   - il suo punto e il successivo (da cui prende la direzione) vengono da
+ *     punti del tratto che la penna non tocchera' piu' (`fissi`, pen.js) e
+ *     da segmenti della curva gia' chiusi (resample() con `info`);
+ *   - e' lontana almeno mezza larghezza dalla fine: vicino ai capi la
+ *     striscia si stringe (posa()), e la fine si sposta finche' il dito va.
+ *
+ * Le strisce si posano nello stesso ordine del render dal modello, quindi il
+ * deposito e' lo stesso. Misurato: dal vivo e dal modello differiscono in
+ * ~100 pixel su ~230.000 di gesso, di un livello, come quando si rifaceva
+ * tutto. Per arrivarci la trama si stende su tutto il canvas (passate()).
+ */
+let vivo = null;
+let depositoVivo = null;
+
+/** Il tratto dal vivo ricomincia da capo al prossimo frame: overlay compreso. */
+export const azzeraGessoVivo = () => { vivo = null; };
+
+/**
+ * Il rettangolo in pixel dei punti [da, a) di `pts`, col margine di
+ * rettangoloTratto(). Intero e dentro il canvas; null se vuoto.
+ */
+function rettangoloPixel(pts, da, a, width, m, W, H) {
+  da = Math.max(0, da);
+  a = Math.min(a, count(pts));
+  if (a <= da) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = da; i < a; i++) {
+    const x = pts[i * 3], y = pts[i * 3 + 1];
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const mg = width * 1.4 + 4;
+  const k = m.a;
+  const px0 = Math.max(0, Math.floor((x0 - mg) * k + m.e)), py0 = Math.max(0, Math.floor((y0 - mg) * k + m.f));
+  const px1 = Math.min(W, Math.ceil((x1 + mg) * k + m.e)), py1 = Math.min(H, Math.ceil((y1 + mg) * k + m.f));
+  if (px1 <= px0 || py1 <= py0) return null;
+  return { x: px0, y: py0, w: px1 - px0, h: py1 - py0 };
+}
+
+const unisci = (r, q) => {
+  if (!r) return q;
+  if (!q) return r;
+  const x = Math.min(r.x, q.x), y = Math.min(r.y, q.y);
+  return { x, y, w: Math.max(r.x + r.w, q.x + q.w) - x, h: Math.max(r.y + r.h, q.y + q.h) - y };
+};
+
+/**
+ * Disegna il tratto in corso su `ctx` (l'overlay, in unita' di lavagna),
+ * rifacendo solo quel che e' cambiato dal frame prima.
+ *
+ * @param {number} fissi quanti punti di `stroke.pts` la penna non cambiera'
+ *   piu' (pen.fissi)
+ */
+export function disegnaGessoVivo(ctx, stroke, fissi) {
+  const { color, width: w, seed } = stroke;
+  const m = ctx.getTransform();
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const svuota = () => {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.restore();
+  };
+
+  // Un tocco senza trascinare si fa col timbro tondo, come in disegnaGesso():
+  // e' piccolo, si rifa' intero.
+  if (length(stroke.pts) < w * 0.3) {
+    vivo = null;
+    svuota();
+    disegnaGesso(ctx, stroke, resample(stroke.pts, passoTimbri(w)));
+    return;
+  }
+
+  if (!vivo || vivo.stroke !== stroke || vivo.W !== W || vivo.H !== H) {
+    if (!depositoVivo || depositoVivo.canvas.width !== W || depositoVivo.canvas.height !== H) {
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      depositoVivo = cv.getContext('2d');
+    }
+    depositoVivo.setTransform(1, 0, 0, 1, 0, 0);
+    depositoVivo.globalCompositeOperation = 'source-over';
+    depositoVivo.globalAlpha = 1;
+    depositoVivo.clearRect(0, 0, W, H);
+    svuota();
+    // Con niente di posato, il rettangolo cambiato sara' tutto il tratto.
+    vivo = { stroke, W, H, posate: 0, prima: null };
+  }
+
+  const passo = passoPunta(w);
+  const pts = resample(stroke.pts, passo);
+  const n = count(pts);
+  const info = {};
+  resample(stroke.pts.slice(0, fissi * 3), passo, info);
+  const stabili = info.stabili;
+  const definitive = Math.max(0, Math.min(n, stabili - 1, Math.floor(stabili - (w / 2) / passo)));
+
+  // 1. Le strisce appena diventate definitive, sul deposito che resta.
+  let R = null;
+  if (definitive > vivo.posate) {
+    trascina(depositoVivo, m, stroke, vivo.posate, definitive, pts);
+    R = rettangoloPixel(pts, vivo.posate - 1, definitive, w, m, W, H);
+    vivo.posate = definitive;
+  }
+
+  // 2. Dove si rifa': quelle, le provvisorie di adesso e quelle di prima.
+  const coda = rettangoloPixel(pts, vivo.posate - 1, n, w, m, W, H);
+  R = unisci(unisci(R, coda), vivo.prima);
+  vivo.prima = coda;
+  if (!R) return;
+
+  // 3. Il deposito di quel rettangolo: il definitivo, piu' le provvisorie.
+  const a = appoggio(W, H);
+  const dep = a.dep;
+  dep.setTransform(1, 0, 0, 1, 0, 0);
+  dep.globalCompositeOperation = 'source-over';
+  dep.globalAlpha = 1;
+  dep.clearRect(R.x, R.y, R.w, R.h);
+  dep.drawImage(depositoVivo.canvas, R.x, R.y, R.w, R.h, R.x, R.y, R.w, R.h);
+  trascina(dep, m, stroke, vivo.posate, n, pts);
+
+  // 4. Valli, soglia, colore, e sull'overlay al posto di prima.
+  passate(ctx, a, m, color, seed, R.x, R.y, R.w, R.h, true);
 }

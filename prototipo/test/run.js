@@ -13,7 +13,8 @@ import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
 import { mulberry32, timbra, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
 import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
-         lunghezzaPunta, passoPunta, granelli } from '../src/gesso.js';
+         lunghezzaPunta, passoPunta, granelli, trascina } from '../src/gesso.js';
+import { createPen } from '../src/pen.js';
 import { FONDO, nuvola, spugnate, strisciate } from '../src/fondo.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
@@ -647,6 +648,80 @@ test('gomma: a pezzi come dal vivo fa le stesse operazioni che tutta insieme', (
     }
   } finally {
     impostaGruppo(6);
+    globalThis.document = prima;
+  }
+});
+
+test('penna: i punti fissi non cambiano piu\', qualunque campione arrivi', () => {
+  // Il gesso dal vivo posa una volta sola le strisce che dipendono da questi
+  // punti (disegnaGessoVivo). Se la semplificazione ne toccasse uno, quelle
+  // strisce resterebbero sullo schermo diverse dal render dal modello.
+  const rnd = mulberry32(99);
+  for (const eps of [3, 10, 25]) {
+    const pen = createPen({ tool: 'chalk', color: '#fff', width: 21, eps });
+    let x = 300, y = 300, t = 0;
+    pen.begin({ x, y, t, pressure: 0.5, pointerType: 'touch' });
+    const visti = [];                     // [indice, x, y, p] dei punti fissi gia' visti
+    let massimo = 0;
+    for (let k = 0; k < 400; k++) {
+      const lotto = [];
+      for (let j = 0, q = 1 + Math.floor(rnd() * 3); j < q; j++) {
+        t += 16;
+        x += Math.cos(k * 0.15) * (2 + rnd() * 25); y += Math.sin(k * 0.11) * (2 + rnd() * 25);
+        lotto.push({ x, y, t, pressure: 0.5 });
+      }
+      pen.extend(lotto);
+      const pts = pen.current.pts;
+      for (const [i, vx, vy, vp] of visti)
+        assert(pts[i * 3] === vx && pts[i * 3 + 1] === vy && pts[i * 3 + 2] === vp, `eps ${eps}: il punto fisso ${i} e' cambiato al lotto ${k}`);
+      assert(pen.fissi >= massimo, `eps ${eps}: i fissi calano da ${massimo} a ${pen.fissi}`);
+      for (let i = massimo; i < pen.fissi; i++) visti.push([i, pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2]]);
+      massimo = pen.fissi;
+    }
+    // E non e' una garanzia vuota: quasi tutto il tratto diventa fisso.
+    assert(massimo > pen.current.pts.length / 3 - 20, `eps ${eps}: fissi solo ${massimo} di ${pen.current.pts.length / 3}`);
+  }
+});
+
+test('gesso: le strisce posate a pezzi sono quelle posate tutte insieme', () => {
+  // Il gesso dal vivo posa le strisce definitive un frame alla volta, e ogni
+  // frame quelle provvisorie dalla prima non definitiva in poi. Devono essere
+  // le stesse strisce, ventaglio compreso, nello stesso ordine.
+  const registro = [];
+  const finto = () => {
+    const cv = { width: 0, height: 0 };
+    cv.getContext = () => ctx;
+    const ctx = {
+      canvas: cv, globalAlpha: 1, t: [1, 0, 0, 1, 0, 0],
+      setTransform(...x) { this.t = x; },
+      drawImage(img, ...x) { registro.push([this.globalAlpha, ...this.t, ...x]); },
+      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {},
+    };
+    return ctx;
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => finto().canvas };
+  try {
+    const rnd = mulberry32(12);
+    const pts = [];
+    // Uno scarabocchio con inversioni strette, dove nasce il ventaglio.
+    for (let i = 0; i < 60; i++) pts.push(400 + 200 * Math.sin(i * 0.5), 300 + i * 4, 0.3 + 0.7 * rnd());
+    const m = { a: 0.9, b: 0, c: 0, d: 0.9, e: 0, f: 0 };
+    for (const width of [21, 50]) {
+      const stroke = { tool: 'chalk', color: '#fff', width, seed: 0xBADC0DE, pts };
+      const ctx = finto();
+      registro.length = 0;
+      const n = trascina(ctx, m, stroke);
+      const tutte = registro.slice();
+      registro.length = 0;
+      let da = 0;
+      for (const a of [1, 1, 7, 30, 31, 80, 150, Infinity]) { trascina(ctx, m, stroke, da, a); da = Math.min(a, n); }
+      assert(tutte.length > n, `larghezza ${width}: nessun ventaglio (${tutte.length} strisce su ${n} punti)`);
+      assert(registro.length === tutte.length, `larghezza ${width}: ${registro.length} strisce contro ${tutte.length}`);
+      for (let i = 0; i < tutte.length; i++)
+        assert(tutte[i].every((v, k) => v === registro[i][k]), `larghezza ${width}: la striscia ${i} cambia`);
+    }
+  } finally {
     globalThis.document = prima;
   }
 });

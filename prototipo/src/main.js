@@ -27,7 +27,7 @@ import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
-import { precaricaTrama } from './gesso.js';
+import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo } from './gesso.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
 import { impostaAlone, impostaGruppo, gruppoAttuale, aloneAttuale, cancella, velaCoda } from './gomma.js';
 import { count, resample } from './geom.js';
@@ -161,6 +161,9 @@ function paintLive() {
     timbriApplicati = cancella(board.base, pen.current, pts, timbriApplicati, definitivi);
     board.clearOverlay();
     velaCoda(board.overlay, fondoCanvas, pen.current, pts, timbriApplicati);
+  } else if (gessoAttuale() === 'nuovo') {
+    // Solo quel che e' cambiato dal frame prima: vedi disegnaGessoVivo().
+    disegnaGessoVivo(board.overlay, pen.current, pen.fissi);
   } else {
     board.clearOverlay();
     renderStroke(board.overlay, pen.current);
@@ -211,6 +214,7 @@ const input = createInput(overlayCanvas, board, {
       else renderStroke(board.base, stroke, timbriApplicati);
     }
     board.clearOverlay();
+    azzeraGessoVivo();
     syncButtons();
 
     const ms = input.stats.elapsed;
@@ -440,6 +444,8 @@ function relayout() {
   // un canvas lo svuota. Costa qualche millisecondo, una volta per layout.
   dipingiFondo(board.fondo, boardHeight());
   repaint();
+  // layout() ha svuotato l'overlay: il tratto in corso va rifatto intero.
+  azzeraGessoVivo();
   paintLive();
 }
 
