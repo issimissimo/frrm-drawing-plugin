@@ -382,6 +382,7 @@ src/chalk.js    le impronte e il timbro (il gesso vecchio, e il deposito del nuo
 src/gesso.js    il gesso nuovo: punta trascinata, trama della lavagna, soglia
 src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/tutorial.js i sette passi, il riquadro e il "gia visto"
+src/finestra.js la finestra al posto di confirm() e alert()
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
 confronto-gesso.html  vecchio e nuovo affiancati (?taratura per i cursori)
