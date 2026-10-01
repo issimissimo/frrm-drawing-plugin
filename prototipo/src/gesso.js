@@ -41,65 +41,68 @@ import { GESSO, PRESSURE_MIN, PRESSURE_ALPHA_MIN } from './palette.js';
 const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
 
 /**
- * Quanto gesso in meno deposita il gesto piu' veloce (p = 0), oltre a quello
- * che toglie gia' PRESSURE_ALPHA_MIN: 0,25 vuol dire un quarto in meno a ogni
- * passaggio. `?opacita=` lo cambia per il confronto sul device (main.js); a 0
- * il tratto e' quello della -32. Chiesto da Daniele il 01/10/2026: il tratto
- * veloce deve coprire meno.
+ * La taratura del deposito, dal 01/10/2026: quattro valori che Daniele muove
+ * dal vivo (`?taratura`, taratura.js) o dall'URL (`?lento=`, `?veloce=`,
+ * `?riempie=`, `?curva=`, letti da main.js) per trovare la combinazione.
+ * Tutti i render li leggono da qui, schermo, annulla e immagine salvata.
  *
- * Sul deposito, PRIMA della soglia: il gesto veloce lascia meno grani, non
- * grani semitrasparenti. La -33 provava la trasparenza uniforme applicata al
- * tratto finito, ed e' stata scartata provandola (Daniele, 01/10/2026): un
- * velo grigio dove si strofina, e un colore veloce sopra un altro che si
- * mescolava (il rosso sul bianco diventava salmone) invece di posarci sopra
- * i suoi grani. Cosi' invece ripassare accumula, come col gesso vero.
+ *   lento    quanto gesso deposita il gesto lento (p = 1), come frazione di
+ *            quello della -32. Sopra 1 la singola striscia arriva prima al
+ *            pieno (l'alpha di una striscia non supera 1).
+ *   veloce   lo stesso per il gesto veloce (p = 0), oltre a quello che toglie
+ *            gia' PRESSURE_ALPHA_MIN. 0,75 = un quarto in meno (la -34).
+ *   curva    come si passa dall'uno all'altro: lento + (veloce - lento) x
+ *            (1 - p^curva). Sotto 1 il gesso resta alto fino a gesti piu'
+ *            veloci, sopra 1 cala gia' coi gesti medi. Esiste perche' la
+ *            velocita' a cui p arriva a 0 (SPEED_MAX) e' la stessa dello
+ *            spessore, chiuso il 17/09/2026: questa la sposta senza toccarlo.
+ *   riempie  quanto il gesso abbondante chiude le valli della lavagna: le
+ *            valli tolgono profondita x valle x (1 - riempie x D) invece di
+ *            profondita x valle (passate()). Dove il gesso e' tanto (gesto
+ *            lento, ripassato) si chiudono, dove e' poco (veloce, frangia dei
+ *            granelli) restano. Daniele, 01/10/2026: «quando il tratto e'
+ *            lento, il deposito deve essere quasi totale, come se ci fossi
+ *            passato sopra piu' volte».
  *
- * La soglia amplifica, quindi non scala in proporzione. Misurato il
- * 01/10/2026 (spessore 27, profilo medio su cinque semi), inchiostro rispetto
- * alla -32 e larghezza:
+ * Perche' sul deposito e non sul tratto finito: la -33 applicava una
+ * trasparenza uniforme dopo la soglia, ed e' stata scartata provandola
+ * (Daniele, 01/10/2026): velo grigio dove si strofina, e un colore veloce
+ * sopra un altro che si mescolava (rosso sul bianco -> salmone) invece di
+ * posarci sopra i suoi grani. Sul deposito ripassare accumula, come col gesso.
  *
- *              p 0,5    p 0,2    p 0     larghezza a p 0,2
- *   0,15       -19%     -32%     -40%    22 (come la -32)
- *   0,25       -31%     -50%     -61%    22
- *   0,40       -48%     -72%     -84%    21
- *   0,60       -67%     -91%     -97%    20  il veloce e' quasi tratteggiato
+ * Perche' `riempie`: il solo deposito non basta. D arriva al massimo a 1 e la
+ * valle piu' profonda ne toglie 0,9: una passata sola non riempie mai le
+ * valli profonde. Nel cuore di un tratto lento D e' ~0,63, veloce ~0,43.
  *
- * Non e' la questione spessore/velocita' chiusa il 17/09/2026: PRESSURE_MIN
- * e PRESSURE_ALPHA_MIN restano dove sono, e la larghezza non si muove.
+ * Misure del 01/10/2026 (spessore 27, profilo medio su cinque semi):
+ *
+ *   - `veloce` da solo (riempie 0) indebolisce anche i grani che restano: a
+ *     p 0,2 con 0,75 i grani pieni scendono dal 10% al 3%, e un colore
+ *     veloce sopra un altro sbiadisce (rosso sul bianco -> rosa). Inchiostro
+ *     rispetto alla -32, veloce 0,85 / 0,75 / 0,6: a p 0,2 -32 / -50 / -72%.
+ *     La larghezza non si muove (22 px a p 0,2).
+ *   - `riempie` 1: lento con alpha media 0,85 e 72% di grani pieni (contro
+ *     0,54 e 19%), ma il tratto legge a pennarello e i filamenti della punta
+ *     diventano righe. 0,5 e' la via di mezzo scelta come partenza.
+ *
+ * Prezzo dichiarato di `riempie`: un colore passato lento sopra un altro lo
+ * copre quasi tutto. Il 29/09/2026 una passata copriva ~60% proprio perche'
+ * due colori si mescolassero; resta vero per i gesti veloci.
  */
-let calo = 0.25;
-export const impostaOpacita = (v) => {
-  const x = Number(v);
-  if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) calo = Math.min(1, Math.max(0, x));
-};
-export const opacitaAttuale = () => calo;
+export const TARATURA_PREDEFINITA = Object.freeze({ lento: 1, veloce: 0.75, curva: 1, riempie: 0.5 });
+export const TARATURA = { ...TARATURA_PREDEFINITA };
+export const LIMITI_TARATURA = { lento: [0.5, 1.25], veloce: [0.2, 1.25], curva: [0.25, 3], riempie: [0, 1] };
 
-/**
- * Quanto il gesso abbondante riempie le valli della lavagna (Daniele,
- * 01/10/2026: «quando il tratto e' lento, il deposito deve essere quasi
- * totale, come se ci fossi passato sopra piu' volte»). Le valli tolgono
- *
- *   profondita x valle x (1 - riempie x D)
- *
- * invece di profondita x valle: dove il gesso e' tanto (gesto lento,
- * ripassato) le valli si chiudono, dove e' poco (gesto veloce, frangia dei
- * granelli) restano come prima. `?riempie=` lo cambia; a 0 e' la -34 al bit.
- *
- * Non si poteva avere col solo deposito: D arriva al massimo a 1 e la valle
- * piu' profonda ne toglie 0,9, quindi una passata sola non riempie mai le
- * valli profonde, qualunque gesso ci sia. E nel cuore di un tratto lento D
- * e' ~0,63 (veloce ~0,43, misurato il 01/10/2026).
- *
- * Prezzo dichiarato: un colore passato lento sopra un altro lo copre quasi
- * tutto. Il 29/09/2026 una passata copriva ~60% proprio perche' due colori
- * si mescolassero; resta vero per i gesti veloci.
- */
-let riempie = 1;
-export const impostaRiempie = (v) => {
-  const x = Number(v);
-  if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) riempie = Math.min(1, Math.max(0, x));
-};
-export const riempieAttuale = () => riempie;
+/** Imposta i valori validi fra quelli dati; ignora null, vuoti e non numeri. */
+export function impostaTaratura(valori) {
+  for (const [chiave, [min, max]] of Object.entries(LIMITI_TARATURA)) {
+    const v = valori[chiave];
+    const x = Number(v);
+    if (v !== null && v !== undefined && v !== '' && Number.isFinite(x)) TARATURA[chiave] = Math.min(max, Math.max(min, x));
+  }
+}
+
+const depositoVelocita = (p) => TARATURA.veloce + (TARATURA.lento - TARATURA.veloce) * p ** TARATURA.curva;
 
 const liscia = (t) => t * t * (3 - 2 * t);
 const tra = (a, b, x) => liscia(Math.min(1, Math.max(0, (x - a) / (b - a))));
@@ -210,7 +213,7 @@ function tessera(k) {
 }
 
 /**
- * La tessera del riempimento (vedi `riempie` e passate()): alpha
+ * La tessera del riempimento (vedi TARATURA.riempie e passate()): alpha
  * (1 + p r valle) / (1 + p r), con p la profondita'. Stessa griglia della
  * tessera della trama, quindi le due si sovrappongono pixel per pixel.
  */
@@ -263,7 +266,7 @@ function tesseraPer(k, r = 0) {
  * layout: senza, la prima tessera si genererebbe al primo tocco, e a DPR 2
  * sono qualche decina di millisecondi proprio sul primo tratto.
  */
-export const precaricaTrama = (k) => { tesseraPer(k); if (riempie > 0) tesseraPer(k, riempie); };
+export const precaricaTrama = (k) => { tesseraPer(k); if (TARATURA.riempie > 0) tesseraPer(k, TARATURA.riempie); };
 
 /* --- La punta del gessetto -------------------------------------------------- */
 
@@ -439,7 +442,7 @@ export function trascina(ctx, m, stroke, da = 0, a = Infinity, pts = null) {
     // Senza, la soglia la schiacciava al 9%.
     ctx.globalAlpha = GESSO.deposito * peso * (0.75 + 0.25 * dose(s))
       * (PRESSURE_ALPHA_MIN + (1 - PRESSURE_ALPHA_MIN) * p)
-      * (1 - calo * (1 - p));
+      * depositoVelocita(p);
     ctx.drawImage(img, -lungo / 2, off - sx * sporge, lungo, (sx + dx) * sporge);
   };
 
@@ -583,6 +586,7 @@ function passate(ctx, a, m, color, seed, px0, py0, pw, ph, sopra = false) {
   //      M   = (1 + p r valle) / (1 + p r)        (tesseraRiempie())
   //    da' 1 - aux = X / (1 + p r), e il guadagno moltiplica per (1 + p r).
   //    A r = 0 sono le operazioni di prima, una per una.
+  const riempie = TARATURA.riempie;
   const pr = GESSO.profondita * riempie;
   const pat = patternTrama(a, aux, k);
   const s = TRAMA / tesseraPer(k).width;

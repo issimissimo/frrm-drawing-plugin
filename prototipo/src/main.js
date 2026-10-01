@@ -27,7 +27,8 @@ import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
 import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
-import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo, impostaOpacita, opacitaAttuale, impostaRiempie, riempieAttuale } from './gesso.js';
+import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo, impostaTaratura, TARATURA } from './gesso.js';
+import { creaTaratura } from './taratura.js';
 import { dipingiFondo, impostaFondo } from './fondo.js';
 import { impostaAlone, impostaGruppo, gruppoAttuale, aloneAttuale, cancella, velaCoda } from './gomma.js';
 import { count, resample } from './geom.js';
@@ -58,12 +59,13 @@ impostaAlone(new URLSearchParams(location.search).get('alone'));
 // `?gruppo=1` torna all'alone timbro per timbro della -30 (gomma.js), per il
 // confronto sul device.
 impostaGruppo(new URLSearchParams(location.search).get('gruppo'));
-// `?opacita=0.2` cambia quanto si schiarisce il gesto veloce (gesso.js), per
-// scegliere sul device; `?opacita=0` e' il tratto della -32.
-impostaOpacita(new URLSearchParams(location.search).get('opacita'));
-// `?riempie=0.5` cambia quanto il gesso abbondante riempie le valli
-// (gesso.js); `?riempie=0` e' il tratto della -34.
-impostaRiempie(new URLSearchParams(location.search).get('riempie'));
+// `?lento=`, `?veloce=`, `?curva=`, `?riempie=` tarano quanto gesso deposita
+// il gesto (TARATURA in gesso.js); `?taratura` apre il pannello coi cursori
+// (taratura.js, in fondo a questo file).
+{
+  const q = new URLSearchParams(location.search);
+  impostaTaratura({ lento: q.get('lento'), veloce: q.get('veloce'), curva: q.get('curva'), riempie: q.get('riempie') });
+}
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -559,7 +561,7 @@ function tick(now = performance.now()) {
       `  timbri     ${disegnati}`,
       `  punta      ${punta}`,
       ``,
-      `gesso        ${gessoAttuale()}, veloce -${Math.round(opacitaAttuale() * 100)}%, riempie ${riempieAttuale()}`,
+      `gesso        ${gessoAttuale()}, lento ${TARATURA.lento} veloce ${TARATURA.veloce} curva ${TARATURA.curva} riempie ${TARATURA.riempie}`,
       `gomma        alone ${aloneAttuale()}, gruppo ${gruppoAttuale()}`,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,
@@ -628,3 +630,7 @@ if (gessoAttuale() === 'nuovo') precaricaTrama(EXPORT_W / drawing.board.w);
  */
 const forzaTutorial = new URLSearchParams(location.search).has('tutorial');
 if (tutorial && (forzaTutorial || !giaVisto())) tutorial.apri(0);
+
+// Il pannello di taratura del gesso: ogni cursore ridisegna dal modello il
+// disegno che c'e' gia' (taratura.js).
+if (new URLSearchParams(location.search).has('taratura')) creaTaratura(repaint);

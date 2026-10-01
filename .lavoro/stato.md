@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 01/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-35/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-37/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -15,8 +15,9 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
 Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
-- [ ] **Daniele confronta la -35 e la -36** (01/10, sua richiesta: «quando il tratto è lento il deposito deve essere quasi totale, come se ci fossi passato sopra più volte»). -35 = -34 + `riempie` (le valli si chiudono dove il gesso è tanto); -36 = punta che salta + `riempie`, dal branch **locale** `prova-punta-che-salta` (non pushato). Default `riempie` 1: lento pieno (alpha media 0,85, grani pieni 72% contro 19%), ma il tratto legge **a pennarello** e il veloce della -35 quasi pieno, con i filamenti della punta che diventano righe. **`?riempie=0.5` sulla -35 è il compromesso che consiglio**: interno della strofinata pieno, veloce ancora granuloso e leggero, marrone veloce sul bianco leggibile. Da scegliere: -35 o -36, e il valore di `riempie`.
-- [ ] Prestazioni sul S10 della -35 e della -36 **non misurate** (telefono scollegato): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame.
+- [ ] **Daniele cerca la combinazione del deposito sulla -37** (01/10): `?taratura` apre un pannello con quattro cursori (`taratura.js`) che ridisegnano il disegno esistente e riscrivono l'URL; COPIA LINK dà la combinazione. Parametri anche da URL: `lento` (deposito a p 1, 0,5–1,25, def. 1), `veloce` (a p 0, 0,2–1,25, def. 0,75), `curva` (esponente del passaggio, 0,25–3, def. 1), `riempie` (0–1, def. 0,5). Ai default la -37 = -35 con `?riempie=0.5`, al bit. Quando Daniele manda la combinazione, diventa il default in `TARATURA_PREDEFINITA` (`gesso.js`).
+- La **punta che salta è abbandonata** (Daniele, 01/10: «preferisco la 35»). Branch locale `prova-punta-che-salta` lasciato com'è, non pushato; la -36 resta online come le altre.
+- [ ] Prestazioni sul S10 della -35/-37 **non misurate** (telefono scollegato): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame.
 - Difetto della -34 (resta nella -35 a `riempie` 0, non a 1): un colore veloce sopra un altro sbiadisce, perché togliere deposito indebolisce i grani rimasti. Con `riempie` 1 a p 0,2 i grani pieni tornano al 14% (-34: 3%).
 - [ ] Il cliente vede la -32 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
