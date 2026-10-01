@@ -1,11 +1,11 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
-Ultimo aggiornamento: 01/10/2026
+Ultimo aggiornamento: 02/10/2026
 Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-38/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
 Branch `gesso-realistico`, online nella -32: gesso nuovo a granelli, fondo generato, cancellino con l'alone; **ottimizzazione prestazioni CHIUSA il 01/10** (Daniele, S10: «il cancellino funziona benissimo», gesso «ottimo»): 60 fps fissi su gomma e gesso anche a gesto lungo e veloce.
-**-34 (01/10)**: la -32 più il **gesto veloce che deposita meno gesso** (Daniele): −25% di deposito a pseudo-pressione 0 (metà inchiostro a p 0,2), larghezza invariata; `?opacita=0.15`/`0.4` per scegliere, `?opacita=0` = la -32 al bit. Non ancora provata a mano sul telefono. La **-33** (trasparenza uniforme sul tratto finito) è **scartata**: non va data a nessuno.
+**Tratto del gessetto CHIUSO il 02/10/2026** (Daniele): la versione è la **-38**, densità che varia con la velocità (lento pieno, veloce leggero). **Porta aperta solo sui quattro parametri di densità** lento / veloce / curva / riempie: `?taratura` apre il pannello, o da URL. Il resto non si riapre senza Daniele. Scartate, da non ridare a nessuno: **-33** (trasparenza uniforme sul tratto finito: velo e blocchi), **-34** (solo meno gesso: un colore veloce sopra un altro sbiadisce), **-36** (punta che salta).
 Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.7`.
 
 ## Piano attivo
@@ -15,11 +15,12 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
 Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
-- [x] **Combinazione del deposito scelta da Daniele col pannello della -37** (01/10): **lento 1,15, veloce 0,5, curva 1,1, riempie 0,25**, default dalla **-38** (`TARATURA_PREDEFINITA` in `gesso.js`). Il pannello resta: `?taratura` (`taratura.js`), e i parametri da URL. Misure (spessore 27) contro la -32: lento alpha media 0,72 (-32: 0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel -57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Quindi il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
-- **Difetto trovato e corretto nella -38**: con `curva` ≠ 1 la Catmull-Rom che sfora sotto p = 0 dava `NaN`, e il canvas teneva l'alpha della striscia prima: schermo ≠ immagine salvata fino a 242 livelli. Era nella -37 con `?curva=`. Test in `run.js` (88), con controprova: fallisce sul codice senza la correzione.
-- La **punta che salta è abbandonata** (Daniele, 01/10: «preferisco la 35»). Branch locale `prova-punta-che-salta` lasciato com'è, non pushato; la -36 resta online come le altre.
-- [ ] Prestazioni sul S10 della -35/-37 **non misurate** (telefono scollegato): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame.
-- Difetto della -34 (resta nella -35 a `riempie` 0, non a 1): un colore veloce sopra un altro sbiadisce, perché togliere deposito indebolisce i grani rimasti. Con `riempie` 1 a p 0,2 i grani pieni tornano al 14% (-34: 3%).
+- [x] **Tratto chiuso il 02/10 alla -38.** Deposito scelto da Daniele col pannello: **lento 1,15, veloce 0,5, curva 1,1, riempie 0,25** (`TARATURA_PREDEFINITA` in `gesso.js`). Misure (spessore 27) contro la -32: lento alpha media 0,72 (0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel −57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
+  - **Porta aperta**: solo i quattro valori di densità, col pannello (`?taratura`, `taratura.js`) o da URL. Nuovi valori → `TARATURA_PREDEFINITA`, cartella nuova.
+  - **Non adottata (02/10)**: opacità uniforme per passata che si accumula anche senza staccare il dito (`?opacita=`, impronte di Hann su una maschera ridotta). Funzionava e verificata (a 1 = -38 al bit, uniforme fra velocità, vivo = modello), ma Daniele: troppo complicata da capire per chi usa la lavagna. Branch **locale** `prova-opacita-per-passata` (712e14e), mai pubblicata.
+  - **Abbandonate**: la punta che salta (-36, branch locale `prova-punta-che-salta`), la trasparenza sul tratto finito (-33), il solo calo di deposito (-34).
+  - Difetto corretto nella -38: con `curva` ≠ 1 la Catmull-Rom sforava sotto p = 0, `NaN` nell'alpha, schermo ≠ immagine salvata fino a 242 livelli. Test in `run.js` (88) con controprova.
+- [ ] **Prestazioni sul S10 della -38 non misurate** (telefono scollegato dal 01/10): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame. Da fare prima di dare la -38 al cliente: `STRUMENTO=gesso VEL=2 node .lavoro/misura-telefono.mjs prototipo 15 0.42 "" "riempie=0"`.
 - [ ] Il cliente vede la -32 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
 - [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
@@ -72,4 +73,5 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - Verifiche: `node prototipo/test/run.js` (87) · `python .lavoro/pacchetto.py` (import versionati) · `php … plugin/test/validazione.php` (81) · `php plugin/test/galleria.php` (9) · `prova-invio.py` (40) · `prova-mail.py` (33) · `prova-bacheca.py` (14) · `prova-abuso.py` · `prova-retention.py` · `diagnostica-ip.py` (sola lettura).
 
 ## Prossimo passo
-Daniele mostra la -32 al cliente e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`).
+1. Misurare la -38 sul S10 (vedi sopra): è l'unica verifica del tratto chiuso rimasta scoperta.
+2. Daniele mostra la **-38** al cliente (non più la -32) e gli fa scegliere l'intensità dell'alone (`?alone=0.3` / default 0,5 / `?alone=0.7`, valgono anche sulla -38).
