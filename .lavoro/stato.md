@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 02/10/2026
-Versione corrente: `frmm-lavagna` **1.14.0 su staging** (la -41, approvata dal cliente il 02/10/2026), **1.12.0 in produzione** (aggiornamento in attesa della prova di Daniele sul telefono); `custom-marquee` **1.2.1** su entrambi. Prototipo: **`temp/frmm-drawing-plugin-41/`**, il branch `gesso-realistico` **unito in main il 02/10/2026**. Stato approvato dal cliente: tag `approvato-cliente-02102026` (prima `approvato-cliente-25092026`).
+Versione corrente: `frmm-lavagna` **1.14.0 su staging e in produzione** (la -41, approvata dal cliente il 02/10/2026; in produzione dal 02/10, dopo la prova di Daniele sul telefono nello staging); `custom-marquee` **1.2.1** su entrambi. Prototipo: **`temp/frmm-drawing-plugin-41/`**, il branch `gesso-realistico` **unito in main il 02/10/2026**. Stato approvato dal cliente: tag `approvato-cliente-02102026` (prima `approvato-cliente-25092026`).
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -33,7 +33,8 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - [ ] Prova sul telefono vero (dito, Safari e Chrome).
 - [x] **Arancio `#FF822A`** al posto di `#F1A366` (Daniele: «molto simile a un marrone chiaro»), in main (`cdc7a46`) e nel branch, online nella **-40** (= -39 + l'arancio). Scelto da Daniele fra quattro candidati su due confronti col motore vero (gesso nuovo e gesso al 35%); numeri in `fase-0-specifiche.md` §3.2.
 - [ ] Prova sul telefono dell'arancio: i colori sullo schermo del telefono non sono quelli del monitor.
-- [ ] **Produzione alla 1.14.0**: Daniele prova sul telefono la pagina dello staging, poi `python .lavoro/installa-staging.py 1.14.0 --produzione`.
+- [x] **Produzione alla 1.14.0 il 02/10/2026**: Daniele ha provato sul telefono la pagina dello staging («funziona»). Verificato da anonimo su `/disegna/`: iframe e moduli a `?v=1.14.0` (proxy MISS, nessun purge servito), arancio e `curva` 0,65, nessun errore. Nessun invio di prova in produzione.
+- [ ] Da tenere d'occhio: la galleria ora mescola disegni col gesso vecchio e col nuovo; il JPEG inviato pesa di piu' (~400-750 KB contro ~350).
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.

@@ -47,6 +47,8 @@ Dettagli e misure in `.lavoro/stato.md`.
 >
 > ⚠️ **Due scostamenti dal brief da non dimenticare**: **D1 (aspect 4:3 fisso) è stato violato** in Fase 4 — la lavagna si adatta alla finestra e la motivazione di D1 era «gallery coerente», conto da pagare prima della Fase 6 — e la **Fase 5 (persistenza locale) è in scope v1 del brief**, non un extra. Censimento completo nello stato.
 >
+> **In produzione dal 02/10/2026 la 1.14.0, cioè la -41 approvata dal cliente** (tag `approvato-cliente-02102026`): gesso nuovo, fondo lavorato, cancellino con l'alone, arancio `#FF822A`, finestra del cestino, avvio senza rettangolo. Prima c'era la 1.12.0: con lei arrivano anche il gessetto nero e la mensola su due righe della 1.13.0, che in produzione non erano mai andati. Provata da Daniele sul telefono nella pagina dello staging prima di installarla. La pagina pubblica è `/disegna/`, quella dello staging `/lavagna-prova-plugin/`.
+>
 > Dettaglio in `.lavoro/stato.md`.
 
 
@@ -143,9 +145,9 @@ Cose da non disfare per sbaglio:
 
 **Opacità del tratto a 0.35 dal 23/09/2026** (`CHALK_ALPHA`, prima 0.80), chiesta dal cliente e scelta da Daniele su un confronto. Il valore non scala in proporzione, perché le impronte si sommano. Prezzi dichiarati nel commento della costante: colori più spenti, rosso e marrone sottili che si perdono, e bordi più trasparenti che fanno *sembrare* il tratto più sottile. **Se torna la lamentela "tratti sottili", la causa è questa, non `PRESSURE_*`.**
 
-**Gesso nuovo sul branch `gesso-realistico` (29/09/2026)**: una punta con filamenti trascinata lungo il gesto, trama fine, soglia vera in GPU, una passata semitrasparente che si accumula anche senza staccare il dito, bordi che si allargano e si stringono (`prototipo/src/gesso.js`). Il fondo resta pieno: la trama si vede solo dove c'è gesso. Non è in main e non è in produzione.
+**Gesso nuovo sul branch `gesso-realistico` (29/09/2026)**: una punta con filamenti trascinata lungo il gesto, trama fine, soglia vera in GPU, una passata semitrasparente che si accumula anche senza staccare il dito, bordi che si allargano e si stringono (`prototipo/src/gesso.js`). Il fondo resta pieno: la trama si vede solo dove c'è gesso. **Unito in main e in produzione dal 02/10/2026** (plugin 1.14.0).
 
-**Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
+**Il fondo lavagna resta un colore pieno, senza texture** (deciso il 04/09/2026; **superato dal fondo generato di `fondo.js`, in produzione dal 02/10/2026** — la conseguenza qui sotto vale ancora, il fondo sta su un canvas suo sotto i tratti). Conseguenza architetturale: il canvas dei tratti è trasparente e il fondo sta nel CSS, altrimenti il cancellino in `destination-out` aprirebbe buchi neri invece di scoprire la lavagna.
 
 Verificato: due render dello stesso Drawing danno 0 pixel diversi, il render a 800/1600/3200 px differisce dello 0,44%, un tratto costa 0,17 ms.
 
