@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 02/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-40/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-41/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -15,7 +15,7 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
 Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
-- [x] **Tratto chiuso il 02/10 alla -38.** Deposito scelto da Daniele col pannello: **lento 1,15, veloce 0,5, curva 1,1, riempie 0,25** (`TARATURA_PREDEFINITA` in `gesso.js`). Misure (spessore 27) contro la -32: lento alpha media 0,72 (0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel −57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
+- [x] **Tratto chiuso il 02/10 alla -38.** Deposito scelto da Daniele col pannello: **lento 1,15, veloce 0,5, curva 1,1 (0,65 dalla -41, Daniele 02/10: piu' denso a velocita' intermedia, deposito a p 0,5 da 0,80 a 0,91), riempie 0,25** (`TARATURA_PREDEFINITA` in `gesso.js`). Misure (spessore 27) contro la -32: lento alpha media 0,72 (0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel −57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
   - **Porta aperta**: solo i quattro valori di densità, col pannello (`?taratura`, `taratura.js`) o da URL. Nuovi valori → `TARATURA_PREDEFINITA`, cartella nuova.
   - **Non adottata (02/10)**: opacità uniforme per passata che si accumula anche senza staccare il dito (`?opacita=`, impronte di Hann su una maschera ridotta). Funzionava e verificata (a 1 = -38 al bit, uniforme fra velocità, vivo = modello), ma Daniele: troppo complicata da capire per chi usa la lavagna. Branch **locale** `prova-opacita-per-passata` (712e14e), mai pubblicata.
   - **Abbandonate**: la punta che salta (-36, branch locale `prova-punta-che-salta`), la trasparenza sul tratto finito (-33), il solo calo di deposito (-34).

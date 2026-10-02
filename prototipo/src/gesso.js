@@ -86,13 +86,15 @@ const PRESSIONE_BANDA = (p) => PRESSURE_MIN + (1 - PRESSURE_MIN) * p;
  *     diventano righe.
  *
  * Valori scelti da Daniele il 01/10/2026 col pannello (`?taratura`, -37):
- * lento 1,15, veloce 0,5, curva 1,1, riempie 0,25.
+ * lento 1,15, veloce 0,5, curva 1,1, riempie 0,25. Il 02/10/2026 curva
+ * 0,65 (-41): il gesto a velocita' intermedia deposita piu' denso (a p 0,5
+ * 0,91 invece di 0,80); gli estremi non cambiano.
  *
  * Prezzo dichiarato di `riempie`: un colore passato lento sopra un altro lo
  * copre quasi tutto. Il 29/09/2026 una passata copriva ~60% proprio perche'
  * due colori si mescolassero; resta vero per i gesti veloci.
  */
-export const TARATURA_PREDEFINITA = Object.freeze({ lento: 1.15, veloce: 0.5, curva: 1.1, riempie: 0.25 });
+export const TARATURA_PREDEFINITA = Object.freeze({ lento: 1.15, veloce: 0.5, curva: 0.65, riempie: 0.25 });
 export const TARATURA = { ...TARATURA_PREDEFINITA };
 export const LIMITI_TARATURA = { lento: [0.5, 1.25], veloce: [0.2, 1.25], curva: [0.25, 3], riempie: [0, 1] };
 
