@@ -1,6 +1,6 @@
 # Stato — Lavagna (FRRM - Drawing plugin)
 Ultimo aggiornamento: 02/10/2026
-Versione corrente: `frmm-lavagna` **1.13.0 su staging**, **1.12.0 in produzione**; `custom-marquee` **1.2.1** su entrambi. Prototipo: `temp/frmm-drawing-plugin-20/` (main), **`-41/` (branch `gesso-realistico`, non in main)**. Stato approvato dal cliente: tag `approvato-cliente-25092026`.
+Versione corrente: `frmm-lavagna` **1.14.0 su staging** (la -41, approvata dal cliente il 02/10/2026), **1.12.0 in produzione** (aggiornamento in attesa della prova di Daniele sul telefono); `custom-marquee` **1.2.1** su entrambi. Prototipo: **`temp/frmm-drawing-plugin-41/`**, il branch `gesso-realistico` **unito in main il 02/10/2026**. Stato approvato dal cliente: tag `approvato-cliente-02102026` (prima `approvato-cliente-25092026`).
 
 ## Dove siamo
 Produzione: la lavagna salva e manda il disegno; bacheca, moderazione dalla mail, galleria, retention; niente rate limit dalla 1.12.0. Mail ancora ad `admin_email`.
@@ -14,7 +14,7 @@ Confronti sul device: `?gesso=vecchio`, `?fondo=pieno`, `?alone=0` / `0.3` / `0.
 - [ ] QA in produzione su device veri: telefono → mail → Approva → galleria (compreso il purge di Speed Optimizer).
 
 **B. Gesso realistico (branch `gesso-realistico`)** — solo prototipi su FTP.
-Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✗**.
+Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ · bordi a granelli ✅ (Daniele, via di mezzo) · fondo lavorato ✅ · cancellino con l'alone ✅ (Daniele, 01/10) · **intensità dell'alone ✗ (la decide il cliente)** · **prestazioni ✅ (chiuse 01/10: S10 misurato e provato col dito; iPhone 13 non misurato)** · **sì del cliente ✅ (02/10/2026, sulla -41)**.
 - [x] **Tratto chiuso il 02/10 alla -38.** Deposito scelto da Daniele col pannello: **lento 1,15, veloce 0,5, curva 1,1 (0,65 dalla -41, Daniele 02/10: piu' denso a velocita' intermedia, deposito a p 0,5 da 0,80 a 0,91), riempie 0,25** (`TARATURA_PREDEFINITA` in `gesso.js`). Misure (spessore 27) contro la -32: lento alpha media 0,72 (0,54), grani pieni 44% (19%); a p 0,2 alpha 0,27 (0,46), grani pieni 0% (10%), pixel −57%; larghezza 26 / 22 / 20 / 19 px a p 1 / 0,5 / 0,2 / 0 (-32: 26 / 24 / 22 / 21). Il veloce è molto leggero e un colore veloce sopra un altro si vede poco: scelto guardandolo.
   - **Porta aperta**: solo i quattro valori di densità, col pannello (`?taratura`, `taratura.js`) o da URL. Nuovi valori → `TARATURA_PREDEFINITA`, cartella nuova.
   - **Non adottata (02/10)**: opacità uniforme per passata che si accumula anche senza staccare il dito (`?opacita=`, impronte di Hann su una maschera ridotta). Funzionava e verificata (a 1 = -38 al bit, uniforme fra velocità, vivo = modello), ma Daniele: troppo complicata da capire per chi usa la lavagna. Branch **locale** `prova-opacita-per-passata` (712e14e), mai pubblicata.
@@ -23,7 +23,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - [ ] **Prestazioni sul S10 della -38 non misurate** (telefono scollegato dal 01/10): `riempie` aggiunge un riempimento con motivo a tutto canvas per frame. Da fare prima di dare la -38 al cliente: `STRUMENTO=gesso VEL=2 node .lavoro/misura-telefono.mjs prototipo 15 0.42 "" "riempie=0"`.
 - [ ] Il cliente vede la -32 e sceglie l'intensità dell'alone (default 0,5 in `gomma.js`; la -28 a 0,2 «non si notava»).
 - [ ] Da vedere col cliente: sul gesto veloce il tratto si stringe del ~12% (lento 21 px, veloce 18,5); il 15/09 aveva chiesto ~20%.
-- [ ] **Prima di unire a main** (decisione di Daniele, dopo il sì del cliente): cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
+- [x] **Unito a main il 02/10/2026**, plugin **1.14.0** (staging verificato: versione, pagina `/lavagna-prova-plugin/`, invio 201 con JPEG 1600x806 da 406 KB, disegno di prova 11827 lasciato in attesa). Prezzi dichiarati prima di unire: cambia l'aspetto approvato il 25/09; la galleria mescolerebbe gesso, fondo e gomma vecchi e nuovi (le immagini approvate non si rigenerano; 11973/11975 non hanno un Drawing vero); il JPEG passa da ~354 a ~739 KB. All'unione: versione nuova del plugin, `pacchetto.py`, staging.
 - [ ] Annotato, non aperto: polvere neutra del cancellino anche sul vuoto.
 
 **C. Avvio e finestre (02/10/2026)** — in main (`000bcdc`) e nel branch (cherry-pick), online nella **-39** (= -38 + queste due).
@@ -33,7 +33,7 @@ Criterio di finito: confronto affiancato ✅ · ripassare riempie i buchi ✅ ·
 - [ ] Prova sul telefono vero (dito, Safari e Chrome).
 - [x] **Arancio `#FF822A`** al posto di `#F1A366` (Daniele: «molto simile a un marrone chiaro»), in main (`cdc7a46`) e nel branch, online nella **-40** (= -39 + l'arancio). Scelto da Daniele fra quattro candidati su due confronti col motore vero (gesso nuovo e gesso al 35%); numeri in `fase-0-specifiche.md` §3.2.
 - [ ] Prova sul telefono dell'arancio: i colori sullo schermo del telefono non sono quelli del monitor.
-- [ ] In produzione serve una versione nuova del plugin da main: decisione di Daniele. Lo zip NON si costruisce dal branch (vedi Trappole).
+- [ ] **Produzione alla 1.14.0**: Daniele prova sul telefono la pagina dello staging, poi `python .lavoro/installa-staging.py 1.14.0 --produzione`.
 
 ## Decisioni prese e perché
 - **Produzione con l'invio acceso dal 23/09/2026** (Daniele), contro il consiglio di un interruttore spento fino ai passi 4-6.
