@@ -257,4 +257,125 @@ export const CHALK_ALPHA = 0.35;
  */
 export const ERASER_ALPHA = 0.85;
 
+/**
+ * Il gesso nuovo (gesso.js, dal 29/09/2026). Col gesso nuovo CHALK_ALPHA non
+ * si usa piu': vale solo per `?gesso=vecchio`.
+ *
+ * Un oggetto e non costanti sciolte perche' la pagina di confronto
+ * (confronto-gesso.html?taratura) li muove dal vivo: nel prototipo nessuno
+ * li cambia.
+ *
+ * Il valore di ciascun pixel e', in ordine:
+ *
+ *   X = max(0, deposito - profondita x valle - soglia)
+ *   min(1, guadagno x X) + velo x deposito
+ *   ... x opacita, nel colore del gessetto
+ *
+ * La valle si SOTTRAE: con poco gesso si accendono solo le creste, con tanto
+ * si riempiono anche le valli. E' cio' che fa sparire i buchi ripassando
+ * anche SENZA staccare il dito (Daniele, 30/09/2026). Fino ad allora la
+ * cresta si moltiplicava: una valle a zero restava zero per qualunque
+ * deposito, e i buchi sparivano solo staccando.
+ *
+ *   deposito   opacita' di ciascuna striscia della punta: quanto gesso
+ *              arriva a ogni passaggio.
+ *   soglia     il deposito sotto cui non resta niente. E' cio' che fa il
+ *              bordo netto invece che sfumato: a 0 torna l'alone.
+ *   profondita quanto deposito chiede la valle piu' profonda per riempirsi.
+ *              Piu' alta = piu' buchi alla prima passata e piu' passate per
+ *              il pieno.
+ *   guadagno   quanto in fretta, sopra la soglia, il gesso diventa pieno.
+ *   opacita    il tetto: quanto copre il gesso quando ce n'e' tanto.
+ *              Quanto copre UNA passata lo decidono deposito e guadagno
+ *              (~60%): senza pressione vera, e' ripassando che il bambino
+ *              fa il pieno, e due colori si mescolano (Daniele, 29/09/2026).
+ *              Fino al 30/09 era un 0,7 applicato al tratto intero, e
+ *              ripassare SENZA staccare il dito non aumentava niente.
+ *   valle      altezza della lavagna che conta come valle piena,
+ *   picco      e come cresta piena. Larghi (0,15-0,85) di proposito: con le
+ *              valli tutte della stessa profondita' si riempivano tutte
+ *              insieme, e alla seconda passata non restava niente in mezzo.
+ *   velo       la polvere che resta nelle valli, come frazione del deposito.
+ *              Sopra 0,15 torna l'alone grigio attorno ai tratti.
+ *   filamenti  quanto si vedono i filamenti lungo il gesto: 0 punta liscia,
+ *              1 punta a righe.
+ *   bordo      quanto e' largo il bordo sfumato della punta, come frazione
+ *              della larghezza. Piu' largo = tratto che SEMBRA piu' sottile.
+ *   inclinazione  quanto il gesso inclinato allarga o stringe ciascun bordo,
+ *              lentamente (su ~70 unita'). Frazione della meta' larghezza.
+ *   sfrangia   l'irregolarita' fine del bordo (su ~5 unita'): organico,
+ *              non tirato. Frazione della meta' larghezza.
+ *   ventaglio  il deposito delle strisce aggiunte nelle curve strette, come
+ *              frazione di quelle normali: a 1 ogni inversione dello
+ *              scarabocchio diventa un punto bianco.
+ *   granelli   di quanto la punta sporge per lato oltre la larghezza
+ *              nominale, come frazione della larghezza: li' il deposito cala
+ *              piano e la soglia lascia solo le creste, cioe' granelli
+ *              staccati (Daniele, 30/09/2026: "bordi meno definiti", come la
+ *              "I" della foto). 0 = il bordo della -24. La -25 era a 0,25:
+ *              "non male, farei una via di mezzo" (Daniele), quindi 0,13.
+ *              A 0,35 il tratto ingrassa senza sgranarsi di piu'.
+ *
+ * Il 30/09/2026, coi granelli, il VELO e' sceso da 0,1 a 0: si prende dal
+ * deposito, e nella fascia dei granelli il deposito e' basso ma non nullo, cosi'
+ * diventava un alone grigio continuo attorno al tratto: l'aerografo. Dentro il
+ * tratto non si vede la differenza. E la SFRANGIA e' salita da 0,05 a 0,1.
+ *
+ * Misure del 30/09/2026 (export 1600, bianco 27; larghezza dove il profilo
+ * medio supera meta' del massimo, e dove supera un decimo):
+ *
+ *                            lento: larg. / decimo / inchiostro   veloce (p 0,2)
+ *   -24                      22 / 25   / 2387                     21 / 23   / 1292
+ *   questi (granelli 0,13)   21 / 28   / 2459                     18,5 / 25 / 1212
+ *   -25 (granelli 0,25)      24,5 / 30,5 / 2769                   19 / 26   / 1334
+ *   rampa centrata sul bordo 16,5 / 23,5 / 1872                   11 / 19,5 / 919
+ *
+ * L'ultima riga e' la strada scartata: allungare la rampa anche verso
+ * l'interno toglie deposito al nucleo, e le linee sottili diventano esili.
+ *
+ * Tarati il 29/09/2026 su una foto di disegni a gesso (dreamstime 189200205,
+ * scelta da Daniele) e sulla larghezza percepita del vecchio, misurata sul
+ * profilo medio del tratto a meta' altezza (export 1600, spessore 27):
+ *
+ *                     lento    inchiostro   veloce (p 0,2): inchiostro, larghezza
+ *   vecchio (-20)     25 px    3252         -30%, -28%
+ *   -22               24 px    2056         -29%,  -8%
+ *   -23               23 px    2047         -31%,  -4%
+ *   questi            22 px    2428         -45%, -18%
+ *
+ * E una linea ripassata N volte, al centro del tratto: opacita' media / pixel
+ * con meno di un quarto di gesso ("buchi"). Media su quattro semi:
+ *
+ *   passate                      1        2        3        4        6
+ *   un tratto, senza staccare  46/36%   87/1%    91/0%    93/0%    94/0%
+ *   tratti separati            45/37%   72/10%   83/3%    92/0%    97/0%
+ *   la -23, senza staccare     buchi che restavano a ogni passata
+ *
+ * Staccando serve una passata in piu': ogni tratto passa la sua soglia
+ * prima di sommarsi agli altri, mentre dentro un tratto si somma il deposito.
+ *
+ * L'inchiostro e' due terzi del vecchio di proposito: e' la passata
+ * semitrasparente. Sul gesto veloce il gesso nuovo diventa piu' rado, non
+ * piu' stretto, perche' il bordo resta netto: e' quel che fa il gesso vero,
+ * ma e' diverso da quel che il cliente aveva chiesto il 15/09. Da decidere.
+ *
+ * Le combinazioni scartate, e perche', in .lavoro/stato.md.
+ */
+export const GESSO = {
+  deposito: 0.8,
+  soglia: 0.03,
+  profondita: 0.9,
+  guadagno: 3,
+  opacita: 0.95,
+  valle: 0.15,
+  picco: 0.85,
+  velo: 0,
+  filamenti: 0.4,
+  bordo: 0.04,
+  inclinazione: 0.12,
+  sfrangia: 0.1,
+  ventaglio: 0.35,
+  granelli: 0.13,
+};
+
 export const chalkById = (id) => CHALKS.find((c) => c.id === id) || CHALKS[0];

@@ -65,6 +65,9 @@ args=()
 push() { args+=( -T "$1" "ftp://$FTP_HOST:$FTP_PORT$2" ); }
 
 push "$LOCAL/index.html" "$DEST/index.html"
+# La pagina di confronto del gesso (dal 29/09/2026): serve a mostrare vecchio
+# e nuovo affiancati. Se un giorno sparisse dal prototipo, non si carica.
+[[ -f "$LOCAL/confronto-gesso.html" ]] && push "$LOCAL/confronto-gesso.html" "$DEST/confronto-gesso.html"
 for f in "$LOCAL"/src/*.js; do
   push "$f" "$DEST/src/$(basename "$f")"
 done

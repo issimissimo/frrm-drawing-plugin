@@ -9,15 +9,21 @@
 import { createOneEuro2D } from '../src/filter.js';
 import { ONE_EURO, SMOOTHING, WIDTHS, PRESSURE_MIN,
          PRESSURE_ALPHA_MIN, BOARD_W, boardHeight, freezeBoardHeight,
-         unfreezeBoardHeight, CHALKS, BOARD_BG } from '../src/palette.js';
+         unfreezeBoardHeight, CHALKS, BOARD_BG, GESSO } from '../src/palette.js';
 import { resample, simplify, count, length, STRIDE } from '../src/geom.js';
-import { mulberry32, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
+import { mulberry32, timbra, passoTimbri, bandaEffettiva, puntaBase, affiancate } from '../src/chalk.js';
+import { TRAMA, OTTAVE, altezza, cresta, rettangoloTratto, profiloPunta,
+         lunghezzaPunta, passoPunta, granelli, trascina,
+         impostaTaratura, TARATURA_PREDEFINITA } from '../src/gesso.js';
+import { createPen } from '../src/pen.js';
+import { FONDO, nuvola, spugnate, strisciate } from '../src/fondo.js';
 import { nomeFile, haDisegno, dimensioni, EXPORT_W,
          larghezzaLogo, rettangoloLogo, LOGO_W_STRETTA, LOGO_W_LARGA,
          LOGO_MARGINE } from '../src/export.js';
 import { clientId, CHIAVE_CLIENT, endpointInvio, payloadDisegno, firma,
          motivoDaStatus, inviaVoce, createCoda, MAX_TENTATIVI, MAX_CODA } from '../src/invio.js';
 import { createDrawing, adattaLavagna } from '../src/model.js';
+import { cancella, impostaGruppo } from '../src/gomma.js';
 import { STEPS, testoStep, areaUnione, posizionaFinestra,
          giaVisto, segnaVisto, chiaveVisto, CHIAVE_VISTO } from '../src/tutorial.js';
 
@@ -338,6 +344,51 @@ test('gessetto: il PRNG e ripetibile dallo stesso seme', () => {
   }
 });
 
+test('gessetto: saltare n estrazioni e\' come farle', () => {
+  // timbra() riparte dal timbro `da` saltando la sequenza invece di
+  // consumarla (01/10/2026): se il salto sbagliasse anche di un'estrazione,
+  // la gomma dal vivo non darebbe piu' i pixel del render dal modello.
+  for (const seme of [0, 1, 12345, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF]) {
+    for (const n of [0, 1, 7, 20, 1000, 123457]) {
+      const a = mulberry32(seme);
+      for (let i = 0; i < n; i++) a();
+      const b = mulberry32(seme, n);
+      for (let i = 0; i < 5; i++) {
+        const va = a(), vb = b();
+        assert(va === vb, `seme ${seme}, salto ${n}: ${va} / ${vb}`);
+      }
+    }
+  }
+});
+
+test('gomma: timbra() a pezzi fa le stesse impronte che tutta insieme', () => {
+  // E' la proprieta' su cui regge la gomma dal vivo: un timbro alla volta
+  // (gomma.js), con il salto della sequenza, deve posare le stesse impronte,
+  // nello stesso ordine e con la stessa opacita', del tratto in una chiamata.
+  const finto = () => ({ createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+    putImageData() {}, drawImage() {}, fillRect() {} });
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => ({ getContext: finto }) };
+  try {
+    const registra = (out) => ({ globalAlpha: 1, drawImage(img, x, y, w, h) { out.push([this.globalAlpha, x, y, w, h]); } });
+    const rnd = mulberry32(31);
+    const pts = [];
+    for (let i = 0; i < 80; i++) pts.push(200 + i * 17, 300 + 40 * Math.sin(i * 0.3), rnd());
+    for (const width of [10, 44, 180]) {
+      const opz = { color: '#ffffff', width, seed: 0xDEADBEEF, alpha: 0.85 };
+      const tutto = [], pezzi = [];
+      timbra(registra(tutto), pts, opz);
+      for (let i = 0; i < 80; i++) timbra(registra(pezzi), pts, { ...opz, da: i, a: i + 1 });
+      assert(tutto.length >= 80, `larghezza ${width}: solo ${tutto.length} impronte`);
+      assert(pezzi.length === tutto.length, `larghezza ${width}: ${pezzi.length} impronte contro ${tutto.length}`);
+      for (let i = 0; i < tutto.length; i++)
+        assert(tutto[i].every((v, k) => v === pezzi[i][k]), `larghezza ${width}: l'impronta ${i} cambia`);
+    }
+  } finally {
+    globalThis.document = prima;
+  }
+});
+
 test('gessetto: semi diversi danno sequenze diverse', () => {
   const a = mulberry32(1), b = mulberry32(2);
   let uguali = 0;
@@ -378,6 +429,394 @@ test('gessetto: le impronte affiancate coprono la banda senza buchi', () => {
     const passo = (w - lato) / (k - 1);
     assert(passo <= lato * 0.61, `larghezza ${w}: strisce distanti ${passo.toFixed(1)} su lato ${lato.toFixed(1)}`);
   }
+});
+
+/*
+ * Il gesso nuovo (gesso.js). Le passate in GPU non si testano qui; la trama
+ * della lavagna e il rettangolo del tratto si'.
+ */
+
+test('gesso: la trama si ripete senza cucitura su TRAMA', () => {
+  // Se non fosse periodica, la tessera ripetuta mostrerebbe una riga ogni
+  // 512 unita': una griglia sulla lavagna, visibile in ogni riempimento.
+  for (const [u, v] of [[0, 0], [3.3, 7.1], [100.25, 511.9], [37, 400]]) {
+    const a = altezza(u, v);
+    assert(Math.abs(altezza(u + TRAMA, v) - a) < 1e-9, `(${u}, ${v}) diversa a +TRAMA in x`);
+    assert(Math.abs(altezza(u, v + TRAMA) - a) < 1e-9, `(${u}, ${v}) diversa a +TRAMA in y`);
+  }
+});
+
+test('gesso: le ottave dividono la tessera e pesano 1 in tutto', () => {
+  let somma = 0;
+  for (const { cella, peso } of OTTAVE) {
+    assert(TRAMA % cella === 0, `cella ${cella} non divide ${TRAMA}: la tessera avrebbe una cucitura`);
+    somma += peso;
+  }
+  assert(Math.abs(somma - 1) < 1e-9, `pesi a ${somma}: la cresta non starebbe in [0, 1]`);
+});
+
+test('gesso: la lavagna ha creste, valli e profondita intermedie', () => {
+  // Dal 30/09/2026 la valle si SOTTRAE al deposito: ripassare la riempie.
+  // Servono tutte e tre le cose: creste (la prima passata si accende),
+  // valli profonde (restano buchi), e profondita' intermedie. Con la trama
+  // quasi a due livelli le valli si riempivano tutte insieme alla seconda
+  // passata, e fra una e l'altra non c'era niente.
+  let creste = 0, valli = 0, mezzo = 0, fuori = 0;
+  const N = 20000, r = mulberry32(99);
+  for (let i = 0; i < N; i++) {
+    const c = cresta(r() * TRAMA, r() * TRAMA);
+    if (c < 0 || c > 1) fuori++;
+    if (c > 0.7) creste++;
+    else if (c < 0.3) valli++;
+    else mezzo++;
+  }
+  const pc = (x) => (100 * x / N).toFixed(1);
+  assert(fuori === 0, `${fuori} valori fuori da [0, 1]`);
+  assert(creste / N > 0.1, `creste al ${pc(creste)}%: la prima passata non si accenderebbe`);
+  assert(valli / N > 0.1, `valli al ${pc(valli)}%: una passata non lascerebbe buchi`);
+  assert(mezzo / N > 0.25, `intermedie al ${pc(mezzo)}%: le valli si riempirebbero tutte insieme`);
+});
+
+test('gesso: la trama e la stessa a ogni avvio', () => {
+  // D1: stesso Drawing, stessa immagine. Il valore e' fissato qui perche'
+  // un hash cambiato per sbaglio cambierebbe la grana di tutti i disegni.
+  const v = altezza(123.4, 567.8);
+  assert(Math.abs(altezza(123.4, 567.8) - v) < 1e-12, 'non deterministica');
+  assert(v > 0 && v < 1, `altezza fuori intervallo: ${v}`);
+});
+
+test('gesso: la punta ha filamenti al centro e bordi che vanno a zero', () => {
+  // I filamenti sono la grana allungata: se il profilo fosse piatto, il
+  // tratto trascinato sarebbe una striscia uniforme. E ai bordi deve
+  // arrivare a zero, o il tratto avrebbe un filo netto come un nastro.
+  // La punta e' larga w piu' la fascia dei granelli per lato.
+  for (const w of [21, 27, 50, 108]) {
+    const p = profiloPunta(1234, w);
+    const est = granelli(w), wt = w + 2 * est;
+    let min = 1, max = 0;
+    for (let v = est + w * 0.25; v <= est + w * 0.75; v += 0.1) { const x = p(v); min = Math.min(min, x); max = Math.max(max, x); }
+    assert(max - min > 0.2, `larghezza ${w}: profilo quasi piatto (${min.toFixed(2)}..${max.toFixed(2)})`);
+    assert(max <= 1 && min >= 0, `larghezza ${w}: profilo fuori da [0, 1]`);
+    assert(p(0) < 0.01 && p(wt) < 0.01, `larghezza ${w}: i bordi non vanno a zero`);
+  }
+});
+
+test('gesso: la fascia dei granelli sta fuori dal tratto, il nucleo resta pieno', () => {
+  // Centrata sul bordo, la rampa toglieva deposito anche dentro e le linee
+  // sottili sembravano esili (16,5 px contro 22 della -24). Senza filamenti
+  // il profilo e' la sola rampa: dentro la larghezza nominale, lontano dal
+  // bordo di prima, deve valere 1; nella fascia deve salire da 0 senza buchi.
+  const salvati = { ...GESSO };
+  try {
+    GESSO.filamenti = 0;
+    for (const w of [21, 27, 50, 108]) {
+      const p = profiloPunta(1, w);
+      const est = granelli(w);
+      assert(est > 0, `larghezza ${w}: nessuna fascia di granelli`);
+      const bordo = Math.min(w * 0.18, 1 + w * GESSO.bordo);
+      for (let v = est + bordo; v <= est + w - bordo; v += 0.25)
+        assert(p(v) > 0.999, `larghezza ${w}: nucleo indebolito in ${v.toFixed(2)} (${p(v).toFixed(3)})`);
+      let prec = -1;
+      for (let v = 0; v <= est + bordo; v += 0.25) {
+        assert(p(v) >= prec - 1e-9, `larghezza ${w}: la fascia non sale in ${v.toFixed(2)}`);
+        prec = p(v);
+      }
+      const meta = p(est / 2);
+      assert(meta > 0.05 && meta < 0.6, `larghezza ${w}: a meta' fascia il deposito e' ${meta.toFixed(2)}, non parziale`);
+    }
+  } finally {
+    Object.assign(GESSO, salvati);
+  }
+});
+
+test('gomma: i timbri dichiarati definitivi non cambiano piu\', bit per bit', () => {
+  // La gomma dal vivo incide solo questi (main.js, timbriDefinitivi). Se uno
+  // cambiasse quando arriva il campione dopo, lo schermo non sarebbe piu'
+  // identico al render dal modello — annulla, rotazione, immagine salvata.
+  const rnd = mulberry32(4242);
+  for (const passo of [4, 11.3, 30]) {
+    const pts = [];
+    let x = 300, y = 300;
+    for (let i = 0; i < 60; i++) {
+      // Passi irregolari, anche un dito fermo (passo zero) e uno veloce.
+      const v = i % 13 === 5 ? 0 : 2 + rnd() * 40;
+      const ang = i * 0.3 + rnd();
+      x += Math.cos(ang) * v; y += Math.sin(ang) * v;
+      pts.push(x, y, rnd());
+    }
+    const tutto = resample(pts, passo);
+    let definitiviMax = 0;
+    for (let m = 1; m <= 60; m++) {
+      const info = {};
+      const parziale = resample(pts.slice(0, m * STRIDE), passo, info);
+      assert(info.stabili <= count(parziale), `passo ${passo}, ${m} campioni: stabili oltre la fine`);
+      for (let i = 0; i < info.stabili * STRIDE; i++) {
+        assert(parziale[i] === tutto[i], `passo ${passo}, ${m} campioni: il timbro ${Math.floor(i / 3)} cambia (${parziale[i]} / ${tutto[i]})`);
+      }
+      definitiviMax = Math.max(definitiviMax, info.stabili);
+    }
+    // E non e' una garanzia vuota: quasi tutto il tratto diventa definitivo.
+    assert(definitiviMax > count(tutto) * 0.8, `passo ${passo}: definitivi solo ${definitiviMax} di ${count(tutto)}`);
+  }
+});
+
+test('gomma: il ricampionamento incrementale da\' lo stesso tratto, bit per bit', () => {
+  // La gomma dal vivo ricampiona riprendendo dall'ultimo punto fermo (memo,
+  // 01/10/2026). Deve dare esattamente cio' che da' il ricampionamento da
+  // capo — punti e timbri definitivi — a ogni campione che arriva.
+  const rnd = mulberry32(777);
+  for (const passo of [2, 11.3, 18]) {
+    for (let prova = 0; prova < 4; prova++) {
+      const pts = [], memo = {};
+      let x = 400, y = 400;
+      for (let m = 1; m <= 90; m++) {
+        // Anche il dito fermo (campioni ripetuti) e qualche salto lungo.
+        const v = m % 11 === 3 ? 0 : 1 + rnd() * (prova * 15 + 8);
+        const ang = m * 0.4 + rnd() * 2;
+        x += Math.cos(ang) * v; y += Math.sin(ang) * v;
+        pts.push(x, y, rnd());
+        // Non a ogni campione: dal vivo ne arrivano anche due o tre per frame.
+        if (rnd() < 0.3 && m < 90) continue;
+        const iA = {}, iB = {};
+        const a = resample(pts, passo, iA, memo);
+        const b = resample(pts.slice(), passo, iB);
+        assert(a.length === b.length, `passo ${passo}, ${m} campioni: ${a.length / 3} punti contro ${b.length / 3}`);
+        for (let i = 0; i < a.length; i++)
+          assert(a[i] === b[i], `passo ${passo}, ${m} campioni: il punto ${Math.floor(i / 3)} cambia (${a[i]} / ${b[i]})`);
+        assert(iA.stabili === iB.stabili, `passo ${passo}, ${m} campioni: definitivi ${iA.stabili} contro ${iB.stabili}`);
+      }
+    }
+  }
+  // Un array diverso non riprende dal memo di un altro tratto.
+  const memo = {};
+  resample([0, 0, 1, 100, 0, 1, 200, 50, 1], 5, null, memo);
+  const altro = [0, 0, 1, 30, 30, 1, 60, 0, 1, 90, 30, 1];
+  const r = resample(altro, 5, null, memo);
+  const atteso = resample(altro.slice(), 5);
+  assert(r.length === atteso.length && r.every((v, i) => v === atteso[i]), 'il memo di un altro tratto e\' stato usato');
+});
+
+test('gomma: a pezzi come dal vivo fa le stesse operazioni che tutta insieme', () => {
+  // Dal vivo cancella() riceve fin dove i timbri sono definitivi, frame per
+  // frame, e incide solo gruppi interi; dal modello riceve tutto il tratto.
+  // Le due strade devono posare gli stessi gruppi con le stesse operazioni,
+  // o lo schermo non e' piu' quel che danno annulla, rotazione ed export.
+  const registro = [];
+  const finto = (nome, w, h) => {
+    const cv = { width: w, height: h };
+    const ctx = {
+      canvas: cv, globalAlpha: 1, globalCompositeOperation: 'source-over', t: [1, 0, 0, 1, 0, 0],
+      getTransform() { const [a, b, c, d, e, f] = this.t; return { a, b, c, d, e, f }; },
+      setTransform(...x) { this.t = x.length === 1 ? [x[0].a, x[0].b, x[0].c, x[0].d, x[0].e, x[0].f] : x; },
+      pila: [],
+      save() { this.pila.push([this.t, this.globalAlpha, this.globalCompositeOperation]); },
+      restore() { [this.t, this.globalAlpha, this.globalCompositeOperation] = this.pila.pop(); },
+      clearRect(...x) { registro.push([nome, 'clear', ...x]); },
+      drawImage(img, ...x) {
+        registro.push([nome, this.globalCompositeOperation, this.globalAlpha, img === cv ? 'se' : (img.nome || 'impronta'), ...this.t, ...x]);
+      },
+      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {}, fillRect() {},
+    };
+    cv.getContext = () => ctx;
+    cv.nome = nome;
+    return ctx;
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => finto('appoggio', 0, 0).canvas };
+  try {
+    const rnd = mulberry32(5);
+    const pts = [];
+    for (let i = 0; i < 70; i++) pts.push(300 + i * 18, 400 + 120 * Math.sin(i * 0.2), rnd());
+    const stroke = { tool: 'eraser', width: 180, seed: 0xC0FFEE, pts: [] };
+    for (const g of [1, 4, 6]) {
+      impostaGruppo(g);
+      const tutta = () => { const c = finto('lavagna', 1440, 1080); c.setTransform(0.9, 0, 0, 0.9, 0, 0); return c; };
+      cancella(tutta(), stroke, pts);                  // impronte colorate in cache
+      registro.length = 0;
+      assert(cancella(tutta(), stroke, pts) === 70, `gruppi da ${g}: non arriva in fondo`);
+      const modello = registro.slice();
+      registro.length = 0;
+      const vivo = tutta();
+      let fatti = 0;
+      for (const definitivi of [0, 3, 3, 9, 10, 17, 30, 31, 52, 68]) {
+        fatti = cancella(vivo, stroke, pts, fatti, definitivi);
+        assert(fatti % g === 0 && fatti <= definitivi, `gruppi da ${g}: inciso fino a ${fatti} con ${definitivi} definitivi`);
+      }
+      cancella(vivo, stroke, pts, fatti);                // il rilascio
+      assert(registro.length === modello.length, `gruppi da ${g}: ${registro.length} operazioni contro ${modello.length}`);
+      for (let i = 0; i < modello.length; i++)
+        assert(modello[i].every((v, k) => v === registro[i][k]), `gruppi da ${g}: l'operazione ${i} cambia: ${JSON.stringify(modello[i])} / ${JSON.stringify(registro[i])}`);
+    }
+  } finally {
+    impostaGruppo(6);
+    globalThis.document = prima;
+  }
+});
+
+test('penna: i punti fissi non cambiano piu\', qualunque campione arrivi', () => {
+  // Il gesso dal vivo posa una volta sola le strisce che dipendono da questi
+  // punti (disegnaGessoVivo). Se la semplificazione ne toccasse uno, quelle
+  // strisce resterebbero sullo schermo diverse dal render dal modello.
+  const rnd = mulberry32(99);
+  for (const eps of [3, 10, 25]) {
+    const pen = createPen({ tool: 'chalk', color: '#fff', width: 21, eps });
+    let x = 300, y = 300, t = 0;
+    pen.begin({ x, y, t, pressure: 0.5, pointerType: 'touch' });
+    const visti = [];                     // [indice, x, y, p] dei punti fissi gia' visti
+    let massimo = 0;
+    for (let k = 0; k < 400; k++) {
+      const lotto = [];
+      for (let j = 0, q = 1 + Math.floor(rnd() * 3); j < q; j++) {
+        t += 16;
+        x += Math.cos(k * 0.15) * (2 + rnd() * 25); y += Math.sin(k * 0.11) * (2 + rnd() * 25);
+        lotto.push({ x, y, t, pressure: 0.5 });
+      }
+      pen.extend(lotto);
+      const pts = pen.current.pts;
+      for (const [i, vx, vy, vp] of visti)
+        assert(pts[i * 3] === vx && pts[i * 3 + 1] === vy && pts[i * 3 + 2] === vp, `eps ${eps}: il punto fisso ${i} e' cambiato al lotto ${k}`);
+      assert(pen.fissi >= massimo, `eps ${eps}: i fissi calano da ${massimo} a ${pen.fissi}`);
+      for (let i = massimo; i < pen.fissi; i++) visti.push([i, pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2]]);
+      massimo = pen.fissi;
+    }
+    // E non e' una garanzia vuota: quasi tutto il tratto diventa fisso.
+    assert(massimo > pen.current.pts.length / 3 - 20, `eps ${eps}: fissi solo ${massimo} di ${pen.current.pts.length / 3}`);
+  }
+});
+
+test('gesso: le strisce posate a pezzi sono quelle posate tutte insieme', () => {
+  // Il gesso dal vivo posa le strisce definitive un frame alla volta, e ogni
+  // frame quelle provvisorie dalla prima non definitiva in poi. Devono essere
+  // le stesse strisce, ventaglio compreso, nello stesso ordine.
+  const registro = [];
+  const finto = () => {
+    const cv = { width: 0, height: 0 };
+    cv.getContext = () => ctx;
+    const ctx = {
+      canvas: cv, globalAlpha: 1, t: [1, 0, 0, 1, 0, 0],
+      setTransform(...x) { this.t = x; },
+      drawImage(img, ...x) { registro.push([this.globalAlpha, ...this.t, ...x]); },
+      createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {},
+    };
+    return ctx;
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => finto().canvas };
+  try {
+    const rnd = mulberry32(12);
+    const pts = [];
+    // Uno scarabocchio con inversioni strette, dove nasce il ventaglio.
+    for (let i = 0; i < 60; i++) pts.push(400 + 200 * Math.sin(i * 0.5), 300 + i * 4, 0.3 + 0.7 * rnd());
+    const m = { a: 0.9, b: 0, c: 0, d: 0.9, e: 0, f: 0 };
+    for (const width of [21, 50]) {
+      const stroke = { tool: 'chalk', color: '#fff', width, seed: 0xBADC0DE, pts };
+      const ctx = finto();
+      registro.length = 0;
+      const n = trascina(ctx, m, stroke);
+      const tutte = registro.slice();
+      registro.length = 0;
+      let da = 0;
+      for (const a of [1, 1, 7, 30, 31, 80, 150, Infinity]) { trascina(ctx, m, stroke, da, a); da = Math.min(a, n); }
+      assert(tutte.length > n, `larghezza ${width}: nessun ventaglio (${tutte.length} strisce su ${n} punti)`);
+      assert(registro.length === tutte.length, `larghezza ${width}: ${registro.length} strisce contro ${tutte.length}`);
+      for (let i = 0; i < tutte.length; i++)
+        assert(tutte[i].every((v, k) => v === registro[i][k]), `larghezza ${width}: la striscia ${i} cambia`);
+    }
+  } finally {
+    globalThis.document = prima;
+  }
+});
+
+test('gesso: nessuna striscia con alpha non finito, qualunque curva', () => {
+  // La Catmull-Rom del ricampionamento sfora appena sotto p = 0 sui gesti
+  // veloci, e (-x) ** 1,1 e' NaN. Il canvas vero ignora un globalAlpha NaN e
+  // tiene quello della striscia prima: dal vivo e dal modello e' diversa, e
+  // con curva 1,1 lo schermo differiva dall'immagine salvata fino a 242
+  // livelli (01/10/2026). Il canvas finto invece il NaN lo tiene: si vede qui.
+  const alfa = [];
+  const ctx = {
+    canvas: { width: 0, height: 0 }, globalAlpha: 1,
+    setTransform() {}, drawImage() { alfa.push(this.globalAlpha); },
+    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {},
+  };
+  const prima = globalThis.document;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) };
+  try {
+    // p che scende, resta un tratto appena sotto zero (come dopo lo sforo
+    // della curva) e torna su.
+    const pts = [];
+    for (let i = 0; i < 40; i++) pts.push(100 + i * 12, 200, i >= 15 && i <= 25 ? -0.01 : Math.abs(i - 20) / 20);
+    for (const curva of [0.25, 1, 1.1, 3]) {
+      impostaTaratura({ curva });
+      alfa.length = 0;
+      trascina(ctx, { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }, { tool: 'chalk', color: '#fff', width: 27, seed: 5, pts });
+      assert(alfa.length > 0, `curva ${curva}: nessuna striscia`);
+      assert(alfa.every(Number.isFinite), `curva ${curva}: alpha non finito`);
+    }
+  } finally {
+    impostaTaratura(TARATURA_PREDEFINITA);
+    globalThis.document = prima;
+  }
+});
+
+test('fondo: le nuvole sono deterministiche e non si ripetono', () => {
+  // Deterministiche: lo schermo e l'immagine salvata hanno lo stesso fondo.
+  for (const [u, v] of [[0, 0], [123.4, 987.6], [1599, 2400]])
+    assert(nuvola(u, v) === nuvola(u, v), `nuvola(${u}, ${v}) cambia fra due chiamate`);
+  // Non periodiche: il vincolo di Daniele e' che il fondo non sembri un
+  // motivo ripetuto. Se ci fosse un periodo P fino a 1600, spostando la
+  // griglia di P i valori coinciderebbero tutti.
+  const punti = [];
+  for (let y = 0; y < 1200; y += 37) for (let x = 0; x < 1600; x += 41) punti.push([x, y]);
+  for (const P of [128, 256, 400, 420, 512, 640, 800, 1024, 1600]) {
+    let uguali = 0;
+    for (const [x, y] of punti) if (Math.abs(nuvola(x, y) - nuvola(x + P, y)) < 1e-9) uguali++;
+    assert(uguali < punti.length * 0.5, `le nuvole si ripetono ogni ${P} unita' (${uguali}/${punti.length})`);
+  }
+  // E coprono tutta la gamma: una lavagna tutta pulita o tutta velata.
+  let min = 1, max = 0;
+  for (const [x, y] of punti) { const n = nuvola(x, y); min = Math.min(min, n); max = Math.max(max, n); }
+  assert(min < 0.05 && max > 0.6, `nuvole piatte (${min.toFixed(2)}..${max.toFixed(2)})`);
+});
+
+test('fondo: una lavagna piu\' alta allunga il fondo, non lo rimescola', () => {
+  // Spugnate e strisciate si decidono per celle fisse: la parte in alto di
+  // una lavagna 4:3 deve essere la stessa di una lavagna da telefono in
+  // verticale. Altrimenti ruotare il telefono a lavagna vuota rimescolerebbe
+  // tutto, e l'export di una lavagna alta non somiglierebbe alla stessa
+  // lavagna vista piu' bassa.
+  for (const fn of [spugnate, strisciate]) {
+    const chiave = (s) => `${s.x.toFixed(3)}:${s.y.toFixed(3)}:${s.r.toFixed(3)}:${s.seme}`;
+    const bassa = new Set(fn(0, 1200).map(chiave));
+    const alta = new Set(fn(0, 2800).map(chiave));
+    for (const k of bassa) assert(alta.has(k), `${fn.name}: la lavagna alta perde ${k}`);
+    assert(alta.size > bassa.size, `${fn.name}: la lavagna alta non ne ha di piu'`);
+    assert(fn(0, 1200).map(chiave).join() === fn(0, 1200).map(chiave).join(), `${fn.name}: non deterministiche`);
+  }
+});
+
+test('fondo: la base e\' piu\' scura del #1F2225, che resta la luminosita\' media', () => {
+  // La velatura schiarisce: se la base fosse il colore di prima, il fondo
+  // medio sarebbe piu' chiaro e i gessetti — tarati sul #1F2225 — perderebbero
+  // contrasto. La media vera si misura nel browser (README).
+  const lum = (hex) => [1, 3, 5].reduce((s, i) => s + parseInt(hex.slice(i, i + 2), 16), 0);
+  assert(lum(FONDO.base) < lum(BOARD_BG), `base ${FONDO.base} non piu' scura di ${BOARD_BG}`);
+});
+
+test('gesso: la punta si posa abbastanza fitta da non lasciare buchi', () => {
+  // Le strisce sfumano ai capi (Hann): distanziate piu' di meta' della loro
+  // lunghezza, il tratto si spezzerebbe in trattini.
+  for (const w of [10, 21, 50, 108, 180]) {
+    assert(passoPunta(w) <= lunghezzaPunta(w) * 0.5, `larghezza ${w}: passo troppo lungo`);
+    assert(lunghezzaPunta(w) <= 12, `larghezza ${w}: striscia troppo lunga per seguire le curve`);
+  }
+});
+
+test('gesso: il rettangolo del tratto contiene punti e margine', () => {
+  const pts = [100, 200, 1, 300, 250, 0.5, 180, 400, 1];
+  const r = rettangoloTratto(pts, 27);
+  assert(r.x < 100 - 27 && r.y < 200 - 27, 'margine sinistro/superiore troppo stretto');
+  assert(r.x + r.w > 300 + 27 && r.y + r.h > 400 + 27, 'margine destro/inferiore troppo stretto');
 });
 
 test('gessetto: il passo non degenera sui tratti sottilissimi', () => {

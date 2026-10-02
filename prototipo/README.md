@@ -139,6 +139,62 @@ Il prezzo di `eps 10` è il dettaglio fine: un tratto molto corto può venire ri
 
 La prima riga è la Definition of Done della fase. Regge **per costruzione**, non per attenzione: il contesto è trasformato in unità di lavagna una volta sola in `board.js`, quindi il codice di render non sa nulla di scala, pixel o DPR e non ha modo di dipenderne.
 
+## Il gesso nuovo (29–30/09/2026, branch `gesso-realistico`)
+
+Il gesso di sopra leggeva come **pastello morbido**: bordo sfumato con un alone, grana a macchie larghe e grigie, riempimenti piatti come un pennarello. Il limite era strutturale, non di taratura: la grana stava **nell'impronta tonda**, e dieci impronte sovrapposte per punto la mediano via.
+
+`src/gesso.js`, tutto in GPU (niente `getImageData`, che su Safari riporterebbe i pixel dalla GPU a ogni frame):
+
+1. **punta trascinata**: una striscia sottile con un profilo di filamenti attraverso la larghezza, posata ogni 0,4 della sua lunghezza e ruotata nella direzione del gesto. I filamenti restano allineati da un capo all'altro: è la grana **allungata** del gesso vero. Capi arrotondati; ciascun bordo si allarga e si stringe per conto suo, lentamente (il gesso inclinato) e con un'irregolarità fine (il bordo organico);
+2. **lavagna**: dal deposito si **sottrae** la profondità delle valli di una trama finissima (cella di 1 unità, più nuvole larghe). Con poco gesso si accendono solo le creste, con tanto si riempiono anche le valli: ripassare riempie i buchi **anche senza staccare il dito**. La trama è spostata a caso per ogni tratto, così due tratti diversi si completano;
+3. **soglia vera**: la stessa sottrazione, con una costante in più: `max(0, D − p·valle − c)`. Canvas 2D non sottrae, ma inverte (`destination-out` sopra un pieno dà 1 − a) e somma con tetto (`lighter`): 1 − min(1, (1 − D) + p·valle + c). Senza la costante resta l'alone;
+4. **guadagno**, colore in `source-in`. **L'opacità nasce dal deposito**, non da un tetto sul tratto: una passata copre ~60%, e ripassare aumenta, **anche senza staccare il dito**. Due colori si mescolano.
+
+La gomma resta quella di prima; un tocco senza trascinare usa il timbro tondo di `chalk.js`. `?gesso=vecchio` rimette il gesso della -20, anche nell'immagine salvata. Tutti i numeri sono in `GESSO` in `palette.js`, con il perché.
+
+**`confronto-gesso.html`**: lo stesso disegno sintetico reso due volte, sopra col gesso nuovo della -24 (o col vecchio della -20, a scelta) e sotto con questa versione, alle risoluzioni di telefono, export e desktop DPR 2, con una lente senza ammorbidimento. In alto a sinistra: una, due e tre passate sulla stessa zona, e giallo sotto azzurro. Con `?taratura` compaiono i cursori.
+
+Cose da sapere prima di toccarlo:
+
+- **Il bordo si sgrana in granelli, non sfuma** (30/09/2026): la punta sporge per lato di una frazione della larghezza (`granelli`) e lì il deposito cala piano, così la soglia lascia solo le creste. La -25 l'aveva a 0,25; Daniele ha chiesto una via di mezzo con la -24, e dalla -26 è **0,13** (tratto lento 21 px, la -24 22). La rampa si allunga **solo verso l'esterno**: centrata sul bordo toglieva deposito al nucleo e il tratto lento scendeva da 22 a 16,5 px.
+- **Il velo è a zero dai granelli in poi**: si prende dal deposito, e nella fascia il deposito è basso ma non nullo, quindi faceva un alone continuo, l'aerografo. Chi lo rimettesse lo prenda da un deposito già sogliato, non da quello grezzo.
+- **La larghezza percepita è vicina al vecchio**: 22 px contro 25 (profilo medio a metà altezza, spessore 27, export 1600). Con la passata semitrasparente il rischio «tratti sottili» è più alto di prima: chi ritocca `bordo`, `soglia`, `deposito` o `guadagno` rimisuri.
+- **Ripassare senza staccare deve riempire i buchi.** Due errori già fatti, entrambi il 30/09: un tetto di opacità (0,7) sul tratto intero, che bloccava l'accumulo; e la trama **moltiplicata** per il deposito, per cui una valle restava zero a qualunque deposito e i buchi sparivano solo staccando. Ora la valle si sottrae e `opacita` è solo un tetto a 0,95. Le zone in alto a sinistra del confronto lo verificano: sopra tratti separati, sotto un tratto solo. Numeri in `palette.js`.
+- **Valli di profondità diverse** (`valle` 0,15 / `picco` 0,85, larghi): con la trama quasi a due livelli le valli si riempivano tutte insieme alla seconda passata.
+- **Sul gesto veloce il tratto si fa più rado e un po' più stretto**: inchiostro −45%, larghezza −18% contro −28% del vecchio. Il −18% non è stato cercato: con meno deposito i bordi si erodono di più. Vicino al ~20% chiesto dal cliente il 15/09, ma da vedere col suo occhio.
+- **Le strisce del ventaglio pesano un terzo** (`ventaglio`): da quando il deposito si accumula dentro il tratto, a peso pieno ogni inversione dello scarabocchio era un punto bianco.
+- **Nelle curve strette si posano strisce in più** (una ogni 0,15 radianti). Senza, alle inversioni dello scarabocchio le strisce si aprivano a ventaglio e i filamenti facevano un pettine.
+- **Il filamento «medio» è a 2 unità, non di più**: a 3,2 disegnava corsie, e un'ellisse sembrava un binario.
+- **La trama NON è ancorata alla lavagna.** Era la prima idea (le valli sempre nello stesso posto) e ha un difetto grave: ripassare schiariva sempre gli stessi granelli e i buchi restavano buchi.
+- **Tre canvas d'appoggio grandi quanto la lavagna**: ~14 MB su un telefono a DPR 2, ~60 MB su un desktop a DPR 2. La tessera della trama si genera al layout (`precaricaTrama()`), non al primo tocco.
+- **Il tratto in corso non si rifà da capo a ogni frame** (dalla -32, `disegnaGessoVivo()`): le strisce che non possono più cambiare si posano una volta sola su un deposito che resta per tutto il tratto, e soglia, trama e colore si rifanno solo nel rettangolo cambiato. Una striscia è definitiva quando dipende solo da punti che la penna non tocca più (`pen.fissi`) ed è a più di mezza larghezza dalla fine. Sul Galaxy S10, zig-zag ampio di 15 s a velocità doppia: **da 58→9 fps a 60 fissi**. Dal vivo = modello entro un livello su ~100 pixel.
+- **La trama si stende su tutto il canvas, non sul rettangolo del tratto** (dalla -32): la GPU campiona il motivo in base al quadrilatero che riempie, e rettangoli diversi davano 1-4 livelli di differenza in file di pixel fra tratto dal vivo e modello. Rispetto alla -31 il render dal modello cambia nel campionamento: 8,6% dei pixel di gesso, al massimo 6 livelli su 255.
+- **Annulla non cambia la grana**, né col vecchio né col nuovo: 0% di pixel diversi, misurato. Il ~30% dichiarato più su per «undo/redo o resize» su annulla non si ritrova; sul resize non è stato misurato. Il tratto non salta al rilascio: overlay e livello dei tratti coincidono pixel per pixel.
+
+### Il cancellino che lascia l'alone (30/09/2026, dalla -28)
+
+`src/gomma.js`. Il cancellino non pulisce, spalma: per ogni gruppo di timbri fotografa quel che c'è sotto, cancella, e rimette una frazione del gesso tolto (la foto ritagliata dalla forma della gomma) in quattro copie spostate **all'indietro** lungo il gesto. Sul rosso resta un velo rosato, sul bianco uno grigio, sulla lavagna pulita niente. `?alone=0.3` cambia l'intensità (default 0,5; 0 = la gomma di prima). La -28 aveva 0,2 e sul telefono «non si nota minimamente» (Daniele): misurata alla geometria del telefono, la scia era +4 livelli sulla gomma pulita, a 0,4 è +12, a 0,6 +16.
+
+- **Lo schermo coincide con il render dal modello.** La gomma lavora per **gruppi fissi di 6 timbri** (`[0,6)`, `[6,12)`…) in tutte e due le strade, e dal vivo incide **per sempre** solo i gruppi interi e definitivi — `resample(pts, passo, info)` dice quanti timbri non cambieranno più, e se ne toglie uno perché la direzione di un timbro dipende anche dal successivo. Misurato: ~10 pixel su ~800.000 diversi dal modello, di meno di un livello.
+- **Quel che non è ancora inciso si vede sull'overlay** (dalla -31): il gruppo in corso e la coda che la curva sposta ancora, disegnati come **fondo della lavagna attraverso i timbri** (`velaCoda()`). A schermo è identico a cancellare, per qualunque opacità del gesso sotto, e non legge la lavagna. Senza, la gomma restava indietro sotto il dito «in maniera fastidiosa» (Daniele, -29). L'alone di quel pezzo compare quando il gruppo si incide, un frame o due dopo. Dalla -29 alla -30 la coda si incideva e al frame dopo si rimetteva da una foto: due letture di canvas a frame, e non esatte al bit (±1 sui pixel semitrasparenti in GPU).
+- **All'indietro, non in avanti**: in avanti il timbro successivo ricancellerebbe l'alone e lo trascinerebbe fino in fondo alla passata.
+- **Sulla lavagna vuota 0 pixel**, misurato: non c'è niente da fotografare.
+- **`timbra()` salta la sequenza casuale fino al timbro `da`** con `mulberry32(seme, salta)`, in un passo solo: dà gli stessi numeri che consumarla tutta, ed è ciò che rende uguale incidere a pezzi e incidere tutto insieme. Fino alla -29 la consumava dall'inizio a ogni timbro: quadratico sul gesto.
+- **Costo: si conta in letture fra canvas, e si misura sul telefono.** Ogni volta che un canvas legge un altro canvas, Chrome consegna alla GPU tutto quel che aveva in sospeso: sul Galaxy S10 **2,2 ms a consegna**, sul PC un decimo. Timbro per timbro erano tre a timbro: uno zig-zag ampio faceva **5 fps** sul S10 e 60 sul PC. Per gruppi da 6, due a gruppo: **58 fps** (47 a velocità doppia). Misure e strumenti in `.lavoro/stato.md` e `.lavoro/misura-telefono.mjs`. Il render dal modello (annulla, export) paga lo stesso per ogni gruppo di gomma del disegno.
+
+### Il fondo della lavagna (30/09/2026, dalla -27)
+
+`src/fondo.js`. Non più un colore pieno: velature larghe di gesso cancellato, passate di spugna ad arco, strisciate corte di mano e panno, e la grana della superficie. La velatura passa per una maschera di polvere, così è puntinata e non liscia. `?fondo=pieno` rimette il colore della -26, anche nell'immagine salvata.
+
+- **Non è una piastrella.** Nuvole, spugnate e strisciate sono funzioni della posizione sull'intera lavagna. Si ripete solo la grana, un granello per unità e senza forme da riconoscere, su due piastrelle di lati primi fra loro (241 e 256). Era il vincolo di Daniele.
+- **Stessa luminosità media del `#1F2225`**: la base è più scura (`#15181B`) e la velatura la riporta lì. I gessetti sono tarati su quel fondo. Numeri e confronto con la foto in `FONDO`.
+- **Sta su un canvas suo, `#fondo`, sotto i tratti**, per la stessa ragione per cui prima il colore stava nel CSS: il cancellino lavora in `destination-out` e deve scoprirlo, non bucarlo. Nell'export si compone in `destination-over` (`componiSotto`).
+- **Una lavagna più alta allunga il fondo, non lo rimescola**: spugnate e strisciate si decidono per celle fisse. Coperto da un test.
+- **Costo**: si dipinge solo al layout, mai durante il gesto. Prima volta ~100-200 ms (grana e nuvole si generano), poi 25-100 ms. Nell'export il fondo resta in memoria: il secondo export uguale (SALVA E INVIA) non lo rigenera.
+- **Prezzo dichiarato: il JPEG pesa il doppio**, 739 KB contro 354 sul disegno di prova (la grana per il JPEG è rumore). Lontano dai 5 MB del plugin, ma è mezzo secondo in più d'invio da telefono.
+
+Misurato su Chrome desktop, headless, a misura di telefono: il nuovo costa **meno** del vecchio — un tratto lungo quanto la lavagna 15 ms contro 21, uno scarabocchio enorme 53 contro 236 (con CPU rallentata 4x: 35 contro 49, 176 contro 593). Poche strisce invece di migliaia di timbri. **Non è misurato su device.**
+
 ## Il pannello Info
 
 Serve sul telefono, dove non c'è una console.
@@ -322,11 +378,14 @@ src/geom.js     Catmull-Rom, ricampionamento, RDP
 src/model.js    Drawing / Stroke, undo, redo
 src/pen.js      costruisce lo stroke mentre il dito si muove
 src/render.js   render puro e deterministico
+src/chalk.js    le impronte e il timbro (il gesso vecchio, e il deposito del nuovo)
+src/gesso.js    il gesso nuovo: punta trascinata, trama della lavagna, soglia
 src/export.js   il disegno in JPEG, download o foglio di condivisione
 src/tutorial.js i sette passi, il riquadro e il "gia visto"
 src/finestra.js la finestra al posto di confirm() e alert()
 src/main.js     colla e diagnostica
 test/run.js     test delle funzioni pure
+confronto-gesso.html  vecchio e nuovo affiancati (?taratura per i cursori)
 font/           i .woff2 della Fondazione, NON versionati (vedi sopra)
 images/logo.png il logo, solo per l'immagine che l'utente si porta via
 ```

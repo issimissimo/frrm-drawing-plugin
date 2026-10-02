@@ -30,8 +30,9 @@
  *     file non fosse pronto, l'immagine esce senza logo invece di non uscire.
  */
 
-import { BOARD_W, BOARD_BG, SOGLIA_STRETTA } from './palette.js';
+import { BOARD_W, SOGLIA_STRETTA } from './palette.js';
 import { render } from './render.js';
+import { componiSotto } from './fondo.js';
 
 /** 0.92 sta sotto i 400 KB su un disegno pieno e non mostra artefatti sul nero. */
 export const JPEG_QUALITY = 0.92;
@@ -160,11 +161,11 @@ export function disegnaSuCanvas(drawing, larghezza = EXPORT_W, logoW = 0) {
     ctx.drawImage(logo, r.x, r.y, r.w, r.h);
   }
 
+  // Il fondo della lavagna, lo stesso dello schermo (fondo.js): sotto
+  // tratti e logo, per la ragione della nota 2. Fino alla -26 qui c'era un
+  // fillRect di BOARD_BG, che resta con `?fondo=pieno`.
+  componiSotto(ctx, drawing.board.h);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = BOARD_BG;
-  ctx.fillRect(0, 0, w, h);
-  ctx.globalCompositeOperation = 'source-over';
 
   return cv;
 }

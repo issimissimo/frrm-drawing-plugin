@@ -122,5 +122,12 @@ export function createPen({ tool = 'chalk', color, width, oneEuro = ONE_EURO, ep
     get active() { return stroke !== null; },
     /** Lo stroke in costruzione, per disegnarlo prima che sia chiuso. */
     get current() { return stroke; },
+    /**
+     * Quanti punti, dall'inizio, non cambieranno piu': consolida() riparte
+     * sempre dall'ultimo di questi e lo tiene. Serve al gesso dal vivo
+     * (disegnaGessoVivo in gesso.js), che posa una volta sola le strisce
+     * che ne dipendono. La gomma non semplifica: per lei vale 0.
+     */
+    get fissi() { return stabili; },
   };
 }

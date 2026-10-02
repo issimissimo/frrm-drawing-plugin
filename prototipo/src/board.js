@@ -18,13 +18,16 @@
 
 import { BOARD_W, boardHeight, freezeBoardHeight, DPR_CAP } from './palette.js';
 
-export function createBoard(baseCanvas, overlayCanvas, host) {
-  // Trasparente, non opaco: il colore della lavagna sta nel CSS sotto il
-  // canvas. Se il fondo fosse dipinto qui, il cancellino — che lavora in
-  // destination-out — aprirebbe buchi trasparenti invece di scoprire la
-  // lavagna.
+export function createBoard(baseCanvas, overlayCanvas, host, fondoCanvas = null) {
+  // Trasparente, non opaco: il fondo della lavagna sta SOTTO il canvas, su
+  // `fondoCanvas` (fondo.js) e nel CSS. Se fosse dipinto qui, il cancellino —
+  // che lavora in destination-out — aprirebbe buchi trasparenti invece di
+  // scoprire la lavagna.
   const base = baseCanvas.getContext('2d');
   const overlay = overlayCanvas.getContext('2d');
+  // Il fondo si dipinge una volta per layout e poi non si tocca: non serve
+  // rileggerlo, e il browser puo' tenerlo in GPU.
+  const fondo = fondoCanvas ? fondoCanvas.getContext('2d', { alpha: false }) : null;
 
   /**
    * Rect in coordinate viewport. Rileggerlo a ogni pointermove costerebbe un
@@ -60,7 +63,9 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
     const pxW = Math.round(cssW * dpr);
     const pxH = Math.round(cssH * dpr);
 
-    for (const [cv, ctx] of [[baseCanvas, base], [overlayCanvas, overlay]]) {
+    const livelli = [[baseCanvas, base], [overlayCanvas, overlay]];
+    if (fondo) livelli.push([fondoCanvas, fondo]);
+    for (const [cv, ctx] of livelli) {
       cv.style.width = `${cssW}px`;
       cv.style.height = `${cssH}px`;
       cv.width = pxW;
@@ -130,6 +135,7 @@ export function createBoard(baseCanvas, overlayCanvas, host) {
   return {
     base,
     overlay,
+    fondo,
     canvas: baseCanvas,
     layout,
     refreshRect,

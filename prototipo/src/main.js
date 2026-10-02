@@ -4,8 +4,9 @@
  * Il tratto passa per: One Euro (live) -> pseudo-pressione -> RDP (a fine
  * gesto) -> ricampionamento su curva (al render). Vedi pen.js e render.js.
  *
- * Il tratto non e' disegnato ma timbrato: vedi chalk.js. Il fondo lavagna e'
- * un colore pieno nel CSS, senza texture.
+ * Il tratto non e' disegnato ma timbrato: vedi chalk.js. Il fondo lavagna sta
+ * su un canvas suo sotto i tratti (fondo.js), dal 30/09/2026; prima era un
+ * colore pieno nel CSS.
  *
  * La mensola: i gessetti sono oggetti, non pastiglie di colore. Selezionare
  * significa sollevare — nessun bordo, nessun anello, nessuna spunta. Il
@@ -20,15 +21,19 @@
 
 import { CHALKS, chalkById, DEFAULT_CHALK, WIDTHS, DEFAULT_WIDTH, ERASER_WIDTH,
          SMOOTHING, DEFAULT_SMOOTHING, SOGLIA_STRETTA,
-         unfreezeBoardHeight } from './palette.js';
+         unfreezeBoardHeight, boardHeight } from './palette.js';
 import { createBoard } from './board.js';
 import { createInput } from './input.js';
 import { createPen } from './pen.js';
 import { createDrawing, createHistory, adattaLavagna } from './model.js';
-import { render, renderStroke, strokeGeometry } from './render.js';
-import { count } from './geom.js';
-import { affiancate, puntaBase } from './chalk.js';
-import { scarica, haDisegno, precaricaLogo, larghezzaLogo } from './export.js';
+import { render, renderStroke, strokeGeometry, impostaGesso, gessoAttuale } from './render.js';
+import { precaricaTrama, disegnaGessoVivo, azzeraGessoVivo, impostaTaratura, TARATURA } from './gesso.js';
+import { creaTaratura } from './taratura.js';
+import { dipingiFondo, impostaFondo } from './fondo.js';
+import { impostaAlone, impostaGruppo, gruppoAttuale, aloneAttuale, cancella, velaCoda } from './gomma.js';
+import { count, resample } from './geom.js';
+import { affiancate, puntaBase, passoTimbri } from './chalk.js';
+import { scarica, haDisegno, precaricaLogo, larghezzaLogo, EXPORT_W } from './export.js';
 import { createTutorial, giaVisto } from './tutorial.js';
 import { createDomanda, createCoda, endpointInvio, firma } from './invio.js';
 import { createFinestra } from './finestra.js';
@@ -37,9 +42,31 @@ const stage = document.getElementById('stage');
 const layers = document.getElementById('layers');
 const baseCanvas = document.getElementById('base');
 const overlayCanvas = document.getElementById('overlay');
+const fondoCanvas = document.getElementById('fondo');
 const hud = document.getElementById('hud');
 
-const board = createBoard(baseCanvas, overlayCanvas, stage);
+const board = createBoard(baseCanvas, overlayCanvas, stage, fondoCanvas);
+
+/* Il gesso nuovo (gesso.js) e' il default dal 29/09/2026. `?gesso=vecchio`
+   rimette quello della -20, per confrontarli sullo stesso device. Vale per
+   tutto — schermo, annulla, immagine salvata — perche' e' uno stato del
+   modulo di render e non un parametro da passare in giro. `?fondo=pieno`
+   fa lo stesso col fondo della lavagna (fondo.js). */
+impostaGesso(new URLSearchParams(location.search).get('gesso'));
+impostaFondo(new URLSearchParams(location.search).get('fondo'));
+// `?alone=0.1` cambia quanto gesso lascia il cancellino (gomma.js), per
+// scegliere l'intensita' sul device.
+impostaAlone(new URLSearchParams(location.search).get('alone'));
+// `?gruppo=1` torna all'alone timbro per timbro della -30 (gomma.js), per il
+// confronto sul device.
+impostaGruppo(new URLSearchParams(location.search).get('gruppo'));
+// `?lento=`, `?veloce=`, `?curva=`, `?riempie=` tarano quanto gesso deposita
+// il gesto (TARATURA in gesso.js); `?taratura` apre il pannello coi cursori
+// (taratura.js, in fondo a questo file).
+{
+  const q = new URLSearchParams(location.search);
+  impostaTaratura({ lento: q.get('lento'), veloce: q.get('veloce'), curva: q.get('curva'), riempie: q.get('riempie') });
+}
 
 /* Il primo layout congela il rapporto della lavagna sul viewport (vedi
    freezeBoardHeight in palette.js). Deve avvenire PRIMA di createDrawing():
@@ -100,15 +127,52 @@ function repaint() {
  * Il gesso vive sull'overlay e si ridisegna intero a ogni frame: e' corto e
  * costa poco. La gomma no: lavora in destination-out, e sull'overlay
  * cancellerebbe l'overlay stesso, che e' vuoto — non si vedrebbe nulla fino
- * al rilascio. Va applicata al livello dei tratti, e solo sul pezzo nuovo,
- * perche' ripassare cancella ogni volta di piu'.
+ * al rilascio. Va incisa sul livello dei tratti, e solo sul pezzo nuovo,
+ * perche' ripassare cancella ogni volta di piu'. Quel che non si puo' ancora
+ * incidere si vede sull'overlay (velaCoda() in gomma.js).
  */
 let timbriApplicati = 0;
 
+/**
+ * I timbri della gomma in corso, e fin dove si puo' incidere per sempre: i
+ * timbri che la curva non spostera' piu', meno uno, perche' ogni timbro prende
+ * la direzione anche dal vicino successivo. Cosi' lo schermo e' identico al
+ * render dal modello (gomma.js).
+ *
+ * Una sola volta per frame, e ripartendo dall'ultimo punto fermo
+ * (`memoGomma`, vedi resample()): fino al 01/10/2026 si ricampionava da capo
+ * tre volte per frame (qui, in renderStroke() e per la coda provvisoria), e il costo
+ * cresceva con la lunghezza del gesto.
+ */
+let memoGomma = {};
+
+function geometriaGomma(stroke) {
+  const info = {};
+  const pts = resample(stroke.pts, passoTimbri(stroke.width), info, memoGomma);
+  return { pts, definitivi: Math.max(0, info.stabili - 1) };
+}
+
+/**
+ * La gomma sta sotto il dito anche dove non e' ancora incisa: il gruppo in
+ * corso e la coda che la curva sposta ancora si vedono sull'overlay, come
+ * fondo della lavagna attraverso i timbri. Senza, la gomma restava indietro
+ * di un tratto fra due campioni, «in maniera fastidiosa» sul telefono
+ * (Daniele, 30/09/2026).
+ *
+ * Fino alla -30 la coda si incideva sulla lavagna e al frame dopo si
+ * rimetteva com'era da una foto: due letture di canvas a frame, che su un
+ * S10 costano ~2 ms l'una sul thread della GPU (gomma.js).
+ */
 function paintLive() {
   if (!pen || !pen.current || !pen.current.pts.length) return;
   if (pen.current.tool === 'eraser') {
-    timbriApplicati = renderStroke(board.base, pen.current, timbriApplicati);
+    const { pts, definitivi } = geometriaGomma(pen.current);
+    timbriApplicati = cancella(board.base, pen.current, pts, timbriApplicati, definitivi);
+    board.clearOverlay();
+    velaCoda(board.overlay, fondoCanvas, pen.current, pts, timbriApplicati);
+  } else if (gessoAttuale() === 'nuovo') {
+    // Solo quel che e' cambiato dal frame prima: vedi disegnaGessoVivo().
+    disegnaGessoVivo(board.overlay, pen.current, pen.fissi);
   } else {
     board.clearOverlay();
     renderStroke(board.overlay, pen.current);
@@ -128,6 +192,7 @@ const input = createInput(overlayCanvas, board, {
     });
     pen.begin(p);
     timbriApplicati = 0;
+    memoGomma = {};
     paintLive();
     worst = 0;
     skipFirst = true;
@@ -151,9 +216,14 @@ const input = createInput(overlayCanvas, board, {
       // schermo e' gia' il risultato giusto, e ricostruirlo cambierebbe la
       // grana di TUTTI i tratti, non solo di quello appena chiuso.
       if (stroke.tool !== 'eraser') board.commitOverlay();
-      // La gomma ha gia' inciso il livello durante il gesto: nulla da fare.
+      // La gomma ha gia' inciso il livello durante il gesto, per gruppi
+      // interi e definitivi: al rilascio si incidono gli ultimi, gli stessi
+      // gruppi che incide il render dal modello. La coda sull'overlay si
+      // svuota qui sotto.
+      else renderStroke(board.base, stroke, timbriApplicati);
     }
     board.clearOverlay();
+    azzeraGessoVivo();
     syncButtons();
 
     const ms = input.stats.elapsed;
@@ -402,7 +472,15 @@ function relayout() {
   // I canvas sovrapposti hanno la stessa taglia: il contenitore la eredita.
   layers.style.width = `${lastLayout.cssW}px`;
   layers.style.height = `${lastLayout.cssH}px`;
+  // La trama della lavagna alla scala nuova, prima del ridisegno e prima del
+  // primo tocco: vedi precaricaTrama().
+  if (gessoAttuale() === 'nuovo') precaricaTrama(lastLayout.scale);
+  // Il fondo: layout() ha appena ridimensionato il suo canvas, e ridimensionare
+  // un canvas lo svuota. Costa qualche millisecondo, una volta per layout.
+  dipingiFondo(board.fondo, boardHeight());
   repaint();
+  // layout() ha svuotato l'overlay: il tratto in corso va rifatto intero.
+  azzeraGessoVivo();
   paintLive();
 }
 
@@ -510,6 +588,8 @@ function tick(now = performance.now()) {
       `  timbri     ${disegnati}`,
       `  punta      ${punta}`,
       ``,
+      `gesso        ${gessoAttuale()}, lento ${TARATURA.lento} veloce ${TARATURA.veloce} curva ${TARATURA.curva} riempie ${TARATURA.riempie}`,
+      `gomma        alone ${aloneAttuale()}, gruppo ${gruppoAttuale()}`,
       `smoothing    ${smoothing}`,
       `  eps        ${SMOOTHING[smoothing].eps}`,
       `stroke       ${history.count}`,
@@ -565,6 +645,10 @@ document.querySelector('.app').classList.add('pronta');
    bastassero, l'immagine esce senza logo e il disegno si salva lo stesso. */
 precaricaLogo();
 
+// E la trama alla scala dell'immagine salvata, per la stessa ragione: al
+// click di SALVA l'export e' sincrono e non deve anche generarla.
+if (gessoAttuale() === 'nuovo') precaricaTrama(EXPORT_W / drawing.board.w);
+
 /**
  * Alla prima apertura il tutorial parte da solo, poi mai piu'.
  *
@@ -577,3 +661,7 @@ precaricaLogo();
  */
 const forzaTutorial = new URLSearchParams(location.search).has('tutorial');
 if (tutorial && (forzaTutorial || !giaVisto())) tutorial.apri(0);
+
+// Il pannello di taratura del gesso: ogni cursore ridisegna dal modello il
+// disegno che c'e' gia' (taratura.js).
+if (new URLSearchParams(location.search).has('taratura')) creaTaratura(repaint);
